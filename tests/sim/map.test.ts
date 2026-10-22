@@ -108,7 +108,7 @@ describe('movement', () => {
 
 describe('creep waves', () => {
   const cfg = data.match.creeps;
-  const stats = { hp: cfg.hp, attack: cfg.attack, structureAttack: cfg.structureAttack };
+  const stats = { hp: cfg.hp, armor: cfg.armor, attack: cfg.attack, structureAttack: cfg.structureAttack };
 
   for (const lane of LANES) {
     it(`${lane} wave passes the lane midpoint on schedule (both sides)`, () => {
