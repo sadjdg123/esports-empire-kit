@@ -148,7 +148,7 @@ describe('safe storage', () => {
 describe('import / export', () => {
   it('builds a readable file name and validates imports', () => {
     const s = game();
-    expect(exportFileName(s, '20261022')).toBe('电竞帝国_存档测试_第0轮_20261022.json');
+    expect(exportFileName(s, '20261022')).toBe('esports-empire_round0_20261022.json');
     expect(importSave(serialize(s, meta)).ok).toBe(true);
     expect(importSave('hello').ok).toBe(false);
   });

@@ -25,9 +25,9 @@ const TACTIC_NAME: Record<Tactic, string> = {
   EARLY_AGGRO: '前期猛攻', STEADY_MACRO: '稳健运营', TEAMFIGHT_PUSH: '团战推进', SPLIT_PUSH: '分带牵制',
 };
 
-function teamName(data: GameData, input: MatchInput, side: Side): string {
+function teamName(data: GameData, input: MatchInput, side: Side, names?: Record<string, string>): string {
   const clubId = (side === 'BLUE' ? input.blue : input.red).lineup.clubId;
-  return data.clubs.find((c) => c.id === clubId)?.name ?? SIDE_NAME[side];
+  return names?.[clubId] ?? data.clubs.find((c) => c.id === clubId)?.name ?? SIDE_NAME[side];
 }
 
 function avgAbility(players: Player[]): number {
@@ -44,13 +44,14 @@ function minutes(t: number): number {
   return Math.max(1, Math.round(t / 60));
 }
 
-export function buildReport(result: MatchResult, input: MatchInput, data: GameData): MatchReport {
+/** `names` optionally maps club ids to display names (e.g. the player's own club). */
+export function buildReport(result: MatchResult, input: MatchInput, data: GameData, names?: Record<string, string>): MatchReport {
   const winner = result.winner;
   const loser: Side = winner === 'BLUE' ? 'RED' : 'BLUE';
   const W = winner === 'BLUE' ? input.blue : input.red;
   const L = winner === 'BLUE' ? input.red : input.blue;
-  const wName = teamName(data, input, winner);
-  const lName = teamName(data, input, loser);
+  const wName = teamName(data, input, winner, names);
+  const lName = teamName(data, input, loser, names);
   const wTactic = W.lineup.tactic;
   const lTactic = L.lineup.tactic;
   const ev = result.events;

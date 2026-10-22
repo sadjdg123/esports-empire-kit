@@ -157,10 +157,12 @@ export function loadGame(storage: StorageAdapter, key: string): LoadOutcome {
   return { status: 'failed', error: m.error };
 }
 
-/** File name for exporting a save. `date` is supplied by the UI (YYYYMMDD). */
+/**
+ * File name for exporting a save. `date` is supplied by the UI (YYYYMMDD).
+ * ASCII only: some browsers drop non-ASCII download names.
+ */
 export function exportFileName(state: SavableGame, date: string): string {
-  const safe = state.club.name.replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 20) || 'save';
-  return `电竞帝国_${safe}_第${state.week}轮_${date}.json`;
+  return `esports-empire_round${state.week}_${date}.json`;
 }
 
 /** Validates an imported file before it may replace the current game. */

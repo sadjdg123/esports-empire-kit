@@ -256,7 +256,8 @@ export function commitWeek(state: GameState, data: GameData, playerMatchResult?:
     const won = fr.winner === PLAYER_CLUB_ID;
     const mySide = f.blue === PLAYER_CLUB_ID ? 'BLUE' : 'RED';
     addLedger(state, { week: round, kind: 'PRIZE', amount: won ? eco.prizeWin : eco.prizeLoss, note: won ? '比赛胜利奖金' : '比赛出场奖金' });
-    const rep = buildReport(r, input, data);
+    const names = Object.fromEntries([state.club, ...state.aiClubs].map((c) => [c.id, c.name]));
+    const rep = buildReport(r, input, data, names);
     report = {
       round, opponent: mySide === 'BLUE' ? f.red : f.blue, won,
       headline: rep.headline, keyReasons: rep.keyReasons, mvp: rep.mvp, ratings: rep.ratings, durationSec: r.durationSec,
