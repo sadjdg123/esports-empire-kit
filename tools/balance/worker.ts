@@ -5,6 +5,9 @@ import { hashString } from '../../src/core/rng';
 import { runMatch } from '../../src/sim';
 import { buildReport } from '../../src/sim/report';
 import { buildCase, type ScenarioId } from './scenarios';
+import { PLAYER_CLUB_ID, advanceWeek, newGame, signValueSquad, standings, weeklySalaries } from '../../src/game';
+
+export interface EconomyRecord { seed: number; ratio: number; wins: number; salaries: number; afterSigning: number; rank: number }
 
 export interface MatchRecord {
   i: number;
@@ -32,9 +35,27 @@ function goldAt(tl: { t: number; diff: number }[], t: number): number {
   return v;
 }
 
-const { scenario, from, to, repeat } = workerData as { scenario: ScenarioId; from: number; to: number; repeat: boolean };
+const { scenario, from, to, repeat, mode } = workerData as { scenario: ScenarioId; from: number; to: number; repeat: boolean; mode?: 'economy' };
 const data = loadGameData();
 const out: MatchRecord[] = [];
+if (mode === 'economy') {
+  const rows: EconomyRecord[] = [];
+  for (let seed = from; seed < to; seed++) {
+    const s = newGame('校准', '#3a7bd5', 10_000 + seed, data);
+    const signed = signValueSquad(s, data);
+    if (!signed.ok) throw new Error(signed.error);
+    const salaries = weeklySalaries(s);
+    const afterSigning = s.funds;
+    let wins = 0;
+    for (let w = 0; w < s.totalRounds; w++) {
+      const r = advanceWeek(s, data);
+      if (!r.ok) throw new Error(r.error);
+      if (r.value.playerResult?.winner === PLAYER_CLUB_ID) wins++;
+    }
+    rows.push({ seed, ratio: s.funds / s.startingFunds, wins, salaries, afterSigning, rank: standings(s).findIndex((x) => x.clubId === PLAYER_CLUB_ID) + 1 });
+  }
+  parentPort!.postMessage(rows);
+} else {
 for (let i = from; i < to; i++) {
   const c = buildCase(data, scenario, i);
   const t0 = performance.now();
@@ -70,3 +91,4 @@ for (let i = from; i < to; i++) {
   out.push(rec);
 }
 parentPort!.postMessage(out);
+}
