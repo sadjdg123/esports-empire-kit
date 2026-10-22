@@ -52,7 +52,7 @@ function who(book: NameBook, ids: readonly string[] | undefined): string {
 const REASON_NAME: Record<string, string> = {
   'tactic:EARLY_AGGRO': '前期猛攻战术', 'tactic:STEADY_MACRO': '稳健运营战术', 'tactic:TEAMFIGHT_PUSH': '团战推进战术', 'tactic:SPLIT_PUSH': '分带牵制战术',
   mastery_high: '英雄熟练度高', mastery_low: '英雄熟练度低', offrole: '打非擅长位置', gank: '被抓', teamfight: '团战', timeout: '超时判定',
-  sudden_death: '决胜阶段', role: '位置职责', tower: '防御塔', solo: '单挑', executed: '被防御塔/小兵击杀',
+  sudden_death: '决胜阶段', overtime: '加时', group: '抱团推进', split: '分带', role: '位置职责', tower: '防御塔', solo: '单挑', executed: '被防御塔/小兵击杀',
 };
 
 export function reasonName(reason: string | undefined): string {
