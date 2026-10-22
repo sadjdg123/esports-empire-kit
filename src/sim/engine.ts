@@ -597,15 +597,19 @@ export function finalize(s: MatchState): MatchResult {
   if (!s.over) throw new Error('finalize: match is not over');
   const winner = s.winner!;
   const players: PlayerMatchStats[] = [];
+  const totalKills = s.heroes.reduce((a, h) => a + h.kills, 0);
   for (const side of SIDES) {
     const team = s.heroes.filter((h) => h.side === side);
     const avgGold = team.reduce((a, h) => a + h.gold, 0) / team.length || 1;
     const avgDmg = team.reduce((a, h) => a + h.heroDamage, 0) / team.length || 1;
     for (const h of team) {
-      const raw = 5 + (side === winner ? 0.8 : -0.4)
-        + 0.25 * (h.kills + 0.5 * h.assists - 0.7 * h.deaths)
-        + 1.2 * (h.heroDamage / avgDmg - 1)
-        + 0.8 * (h.gold / avgGold - 1);
+      // Kill involvement is scaled by how bloody the match was, and every term saturates,
+      // so ratings spread over 3-9 instead of piling up at 10.
+      const perf = (h.kills + 0.6 * h.assists - 0.8 * h.deaths) / Math.max(3, totalKills / 10);
+      const raw = 5.6 + (side === winner ? 0.7 : -0.7)
+        + 1.6 * Math.tanh(perf / 2)
+        + 0.8 * Math.tanh(h.heroDamage / avgDmg - 1)
+        + 0.6 * Math.tanh(h.gold / avgGold - 1);
       players.push({
         playerId: h.player.id, heroId: h.hero.id, side, kills: h.kills, deaths: h.deaths, assists: h.assists,
         gold: Math.round(h.gold), damageDealt: Math.round(h.damageDealt), rating: Math.round(clamp(raw, 1, 10) * 10) / 10,
