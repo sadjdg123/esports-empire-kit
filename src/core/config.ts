@@ -317,7 +317,7 @@ function checkMatch(c: Checker, raw: unknown, heroIds: Set<string>): void {
   const ai = c.obj(o.ai, `${p}.ai`);
   if (ai) {
     c.obj(ai.baseUtility, `${p}.ai.baseUtility`);
-    for (const k of ['hysteresis', 'engageRadius', 'awarenessRadius', 'groupStartSec', 'groupRampPerMin', 'gankMinSec', 'recallHpFraction', 'teamPlanIntervalSec', 'teamfightRadius', 'teamfightMinPerSide', 'teamfightEndQuietSec']) {
+    for (const k of ['hysteresis', 'engageRadius', 'awarenessRadius', 'groupStartSec', 'farmDecayStartSec', 'farmDecayEndSec', 'farmDecayMin', 'groupRampPerMin', 'gankMinSec', 'recallHpFraction', 'teamPlanIntervalSec', 'teamfightRadius', 'teamfightMinPerSide', 'teamfightEndQuietSec']) {
       c.num(ai, k, `${p}.ai`, 0);
     }
   }

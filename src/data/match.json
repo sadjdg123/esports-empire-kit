@@ -417,14 +417,14 @@
   },
   "towers": {
     "T1": {
-      "hp": 3500,
+      "hp": 2600,
       "armor": 40,
       "attack": 150,
       "creepAttack": 80,
       "range": 180
     },
     "T2": {
-      "hp": 4500,
+      "hp": 3200,
       "armor": 45,
       "attack": 170,
       "creepAttack": 90,
@@ -432,7 +432,7 @@
     }
   },
   "base": {
-    "hp": 6000,
+    "hp": 4500,
     "armor": 50,
     "attack": 180,
     "creepAttack": 90,
@@ -487,17 +487,17 @@
     "respawnPerLevel": 2,
     "maxLevel": 12,
     "xpPerLevel": [
-      180,
-      240,
-      300,
-      360,
-      420,
-      480,
-      540,
-      600,
-      660,
-      720,
-      780
+      243,
+      324,
+      405,
+      486,
+      567,
+      648,
+      729,
+      810,
+      891,
+      972,
+      1053
     ],
     "passiveGoldPerSec": 2,
     "passiveXpPerSec": 2,
@@ -577,18 +577,18 @@
         "JUNGLE": 1.0
       },
       "GANK": {
-        "JUNGLE": 0.7,
-        "SUPPORT": 0.35,
-        "MID": 0.3,
-        "TOP": 0.15,
+        "JUNGLE": 0.9,
+        "SUPPORT": 0.45,
+        "MID": 0.4,
+        "TOP": 0.2,
         "ADC": 0.05
       },
       "CONTEST_OBJECTIVE": {
-        "JUNGLE": 0.6,
-        "SUPPORT": 0.5,
-        "MID": 0.45,
-        "TOP": 0.35,
-        "ADC": 0.4
+        "JUNGLE": 0.9,
+        "SUPPORT": 0.8,
+        "MID": 0.7,
+        "TOP": 0.6,
+        "ADC": 0.65
       },
       "PUSH": {
         "TOP": 0.45,
@@ -633,14 +633,17 @@
     "hysteresis": 0.15,
     "engageRadius": 160,
     "awarenessRadius": 450,
-    "groupStartSec": 840,
+    "groupStartSec": 660,
     "groupRampPerMin": 0.03,
     "gankMinSec": 90,
     "recallHpFraction": 0.45,
     "teamPlanIntervalSec": 5,
     "teamfightRadius": 450,
     "teamfightMinPerSide": 3,
-    "teamfightEndQuietSec": 5
+    "teamfightEndQuietSec": 5,
+    "farmDecayStartSec": 600,
+    "farmDecayEndSec": 1500,
+    "farmDecayMin": 0.6
   },
   "tactics": {
     "EARLY_AGGRO": {

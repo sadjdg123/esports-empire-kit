@@ -5,10 +5,10 @@ import { createRng, hashString } from '../core/rng';
 import {
   ROLES, SIDES, type GameData, type MatchInput, type MatchResult, type PlayerMatchStats, type RenderSnapshot, type Side, type SnapshotUnit,
 } from '../core/types';
-import { decideSimple, planSimple, type ActionPlan } from './ai';
+import { decideSimple, decideUtility, onGankUtility, planSimple, planUtility, teamPlanUtility, type ActionPlan } from './ai';
 import {
-  applyPending, creepAndStructurePhase, dist2, heroDist, nodeXY, queueHeroAttack, resolveDeaths, respawnHeroes,
-  structureAttackable, tryCastSkill, underEnemyStructure, STRUCTURE_RADIUS, type TargetRef,
+  applyPending, creepAndStructurePhase, dist2, heroDist, heroPower, nodeXY, queueHeroAttack, resolveDeaths, respawnHeroes,
+  structureAttackable, tryCastSkill, STRUCTURE_RADIUS, type TargetRef,
 } from './combat';
 import { emit } from './events';
 import { atNode, buildMap, coordOf, type GameMap } from './map';
@@ -29,7 +29,8 @@ export interface Brain {
 }
 
 const simpleBrain: Brain = { decide: decideSimple, plan: planSimple };
-const brains: Partial<Record<BrainKind, Brain>> = { simple: simpleBrain };
+const utilityBrain: Brain = { decide: decideUtility, plan: planUtility, teamPlan: teamPlanUtility, onGank: onGankUtility };
+const brains: Partial<Record<BrainKind, Brain>> = { simple: simpleBrain, utility: utilityBrain };
 
 /** Lets ai modules register additional brains without a circular import. */
 export function registerBrain(kind: BrainKind, brain: Brain): void {
@@ -93,7 +94,7 @@ export function createMatch(input: MatchInput, data: GameData, opts: MatchOption
   });
 
   const s: MatchState = {
-    input, data, cfg, map, rng: createRng(input.seed), brain: opts.brain ?? 'simple',
+    input, data, cfg, map, rng: createRng(input.seed), brain: opts.brain ?? 'utility',
     t: 0, over: false, winner: null, endReason: '',
     heroes, creeps: [], structures, objectives, camps, teams,
     events: [], tickEventStart: 0, attacks: [], pending: [], skillCasts: [],
@@ -102,6 +103,12 @@ export function createMatch(input: MatchInput, data: GameData, opts: MatchOption
     overtimeAnnounced: false, suddenDeathAnnounced: false, teamfight: null,
     baseDamageMarks: { BLUE: 4, RED: 4 },
     hx: new Float64Array(heroes.length), hy: new Float64Array(heroes.length), hloc: [], cx: [], cy: [],
+    tickCache: {
+      t: -1, power: new Float64Array(heroes.length), attackable: [], threat: new Float64Array(structures.length), front: new Map(),
+      forces: [], underOwnStructure: [], grouping: { BLUE: 0, RED: 0 }, contesting: { BLUE: [], RED: [] },
+    },
+    laneTowers: laneTowersOf(structures),
+    bases: { BLUE: structures.find((st) => st.kind === 'BASE' && st.side === 'BLUE')!, RED: structures.find((st) => st.kind === 'BASE' && st.side === 'RED')! },
   };
   if (!brains[s.brain]) throw new Error(`createMatch: brain "${s.brain}" is not registered (import src/sim/index.ts)`);
   emit(s, { t: 0, type: 'MATCH_START', actors: [], detail: { blueTactic: teams.BLUE.tactic, redTactic: teams.RED.tactic } });
@@ -109,20 +116,62 @@ export function createMatch(input: MatchInput, data: GameData, opts: MatchOption
   return s;
 }
 
+function laneTowersOf(structures: Structure[]): Record<Side, Record<'TOP' | 'MID' | 'BOT', Structure[]>> {
+  const out = { BLUE: { TOP: [], MID: [], BOT: [] }, RED: { TOP: [], MID: [], BOT: [] } } as Record<Side, Record<'TOP' | 'MID' | 'BOT', Structure[]>>;
+  for (const st of structures) if (st.kind === 'TOWER' && st.lane) out[st.side][st.lane].push(st);
+  for (const side of SIDES) for (const lane of ['TOP', 'MID', 'BOT'] as const) out[side][lane].sort((a, b) => a.tier - b.tier);
+  return out;
+}
+
 function cachePositions(s: MatchState): void {
+  const map = s.map;
   for (const h of s.heroes) {
-    const p = coordOf(s.map, h.loc);
-    s.hx[h.idx] = p.x;
-    s.hy[h.idx] = p.y;
-    s.hloc[h.idx] = { ...h.loc };
+    const l = h.loc;
+    const x0 = map.xs[l.from]!;
+    const y0 = map.ys[l.from]!;
+    s.hx[h.idx] = l.from === l.to ? x0 : x0 + (map.xs[l.to]! - x0) * l.progress;
+    s.hy[h.idx] = l.from === l.to ? y0 : y0 + (map.ys[l.to]! - y0) * l.progress;
+    s.hloc[h.idx] = l;
+  }
+  const tc = s.tickCache;
+  tc.t = s.t;
+  for (const h of s.heroes) tc.power[h.idx] = heroPower(s, h);
+  tc.attackable.length = 0;
+  for (const st of s.structures) tc.attackable.push(structureAttackable(s, st));
+  tc.threat.fill(-1);
+  tc.front.clear();
+  tc.forces.length = 0;
+  tc.grouping.BLUE = 0;
+  tc.grouping.RED = 0;
+  tc.contesting.BLUE = s.objectives.map(() => 0);
+  tc.contesting.RED = s.objectives.map(() => 0);
+  for (const h of s.heroes) {
+    if (!h.alive) continue;
+    if (h.action === 'GROUP') tc.grouping[h.side]++;
+    else if (h.action === 'CONTEST_OBJECTIVE' && h.actionTarget >= 0) tc.contesting[h.side][h.actionTarget]!++;
   }
   s.cx.length = s.creeps.length;
   s.cy.length = s.creeps.length;
-  s.creeps.forEach((c, i) => {
-    const p = coordOf(s.map, c.loc);
-    s.cx[i] = p.x;
-    s.cy[i] = p.y;
-  });
+  for (let i = 0; i < s.creeps.length; i++) {
+    const l = s.creeps[i]!.loc;
+    const x0 = map.xs[l.from]!;
+    const y0 = map.ys[l.from]!;
+    s.cx[i] = l.from === l.to ? x0 : x0 + (map.xs[l.to]! - x0) * l.progress;
+    s.cy[i] = l.from === l.to ? y0 : y0 + (map.ys[l.to]! - y0) * l.progress;
+  }
+  tc.underOwnStructure.length = 0;
+  for (const h of s.heroes) {
+    let under = false;
+    if (h.alive) {
+      for (const st of s.structures) {
+        if (!st.alive || st.side !== h.side) continue;
+        const dx = map.xs[st.node]! - s.hx[h.idx]!;
+        const dy = map.ys[st.node]! - s.hy[h.idx]!;
+        if (dx * dx + dy * dy <= st.range * st.range) { under = true; break; }
+      }
+    }
+    tc.underOwnStructure.push(under);
+  }
 }
 
 function teamGold(s: MatchState, side: Side): number {
@@ -196,11 +245,23 @@ function teamFocus(s: MatchState, h: HeroUnit, candidates: number[]): number {
   return best;
 }
 
-function heroTargetAllowed(s: MatchState, h: HeroUnit, e: number, plan: ActionPlan): boolean {
+function heroTargetAllowed(s: MatchState, e: number, plan: ActionPlan): boolean {
   if (plan.dive || e === plan.focus) return true;
   const eh = s.heroes[e]!;
   if (eh.hp / eh.maxHp < 0.2) return true;
-  return !underEnemyStructure(s, h.side, s.hx[e]!, s.hy[e]!);
+  return !s.tickCache.underOwnStructure[e];
+}
+
+/** While farming, a hero only trades with enemies it is clearly beating. */
+export function worthTrading(s: MatchState, h: HeroUnit, e: number): boolean {
+  const eh = s.heroes[e]!;
+  const theirs = (eh.hp + eh.shield) / eh.maxHp;
+  if (theirs < 0.4 || eh.stunnedUntil > s.t) return true;
+  const mine = (h.hp + h.shield) / h.maxHp;
+  if (theirs + 0.2 < mine) return true;
+  // Hit back at someone who is hitting us, unless we are losing the trade.
+  const hitMe = h.damagers.some((d) => d.hero === e && s.t - d.t <= 2);
+  return hitMe && mine >= theirs - 0.1;
 }
 
 function chooseTarget(s: MatchState, h: HeroUnit, plan: ActionPlan): TargetRef | null {
@@ -208,7 +269,8 @@ function chooseTarget(s: MatchState, h: HeroUnit, plan: ActionPlan): TargetRef |
   const x = s.hx[h.idx]!;
   const y = s.hy[h.idx]!;
   // 1-2. enemy heroes
-  const inRange = enemyHeroesInRange(s, h, range).filter((e) => heroTargetAllowed(s, h, e, plan));
+  let inRange = enemyHeroesInRange(s, h, range).filter((e) => heroTargetAllowed(s, e, plan));
+  if (plan.opportunistic && inRange.length > 0) inRange = inRange.filter((e) => worthTrading(s, h, e));
   if (inRange.length > 0) {
     if (plan.focus >= 0 && inRange.includes(plan.focus)) return { kind: 'HERO', idx: plan.focus };
     if (inRange.length === 1) return { kind: 'HERO', idx: inRange[0]! };
@@ -249,7 +311,7 @@ function chooseTarget(s: MatchState, h: HeroUnit, plan: ActionPlan): TargetRef |
     const st = s.structures[si]!;
     if (!st.alive || st.side === h.side) continue;
     const [sx, sy] = nodeXY(s, st.node);
-    if (dist2(x, y, sx, sy) > sr * sr || !structureAttackable(s, st)) continue;
+    if (dist2(x, y, sx, sy) > sr * sr || !s.tickCache.attackable[si]) continue;
     if (plan.siege || creepCovered(s, h.side, st)) return { kind: 'STRUCTURE', idx: si };
   }
   return null;
@@ -264,7 +326,8 @@ function creepCovered(s: MatchState, side: Side, st: Structure): boolean {
 function chaseTarget(s: MatchState, h: HeroUnit, plan: ActionPlan): number {
   if (plan.focus >= 0 && s.heroes[plan.focus]!.alive) return plan.focus;
   const radius = s.cfg.ai.engageRadius + h.hero.base.attackRange;
-  const near = enemyHeroesInRange(s, h, radius).filter((e) => heroTargetAllowed(s, h, e, plan));
+  let near = enemyHeroesInRange(s, h, radius).filter((e) => heroTargetAllowed(s, e, plan));
+  if (plan.opportunistic) near = near.filter((e) => worthTrading(s, h, e));
   if (near.length === 0) return -1;
   let best = -1;
   let bestF = Infinity;
@@ -299,7 +362,10 @@ function heroPhase(s: MatchState, brain: Brain): void {
       }
       continue;
     }
-    if (!plan.flee) tryCastSkill(s, h, { enemies: enemiesOf[h.side], allies: alliesOf[h.side] }, plan.focus);
+    if (!plan.flee) {
+      const foes = plan.opportunistic ? enemiesOf[h.side].filter((e) => worthTrading(s, h, e)) : enemiesOf[h.side];
+      tryCastSkill(s, h, { enemies: foes, allies: alliesOf[h.side] }, plan.focus);
+    }
     const target = plan.flee ? null : chooseTarget(s, h, plan);
     if (target) {
       queueHeroAttack(s, h, target);
@@ -327,8 +393,7 @@ function passivePhase(s: MatchState): void {
     grantGold(cfg, h, cfg.hero.passiveGoldPerSec * dt);
     grantXp(cfg, h, cfg.hero.passiveXpPerSec * dt);
     const [bx, by] = nodeXY(s, s.map.bases[h.side]);
-    const p = coordOf(s.map, h.loc);
-    if (dist2(bx, by, p.x, p.y) <= 120 * 120) h.hp = Math.min(h.maxHp, h.hp + cfg.hero.baseRegenPerSec * h.maxHp * dt);
+    if (dist2(bx, by, s.hx[h.idx]!, s.hy[h.idx]!) <= 120 * 120) h.hp = Math.min(h.maxHp, h.hp + cfg.hero.baseRegenPerSec * h.maxHp * dt);
     else if (s.t - h.lastDamagedAt > 5) h.hp = Math.min(h.maxHp, h.hp + cfg.hero.idleRegenPerSec * h.maxHp * dt);
   }
 }

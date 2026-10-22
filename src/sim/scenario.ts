@@ -23,7 +23,8 @@ export function autoLineup(data: GameData, clubId: string, roster: readonly Play
   const used = new Set<string>();
   const usedHero = new Set<string>();
   const picks = ROLES.map((role) => {
-    const score = (p: Player) => overall(p) * (p.primaryRole === role ? 1 : p.secondaryRole === role ? 0.93 : 0.82);
+    // A natural fit always beats raw ability.
+    const score = (p: Player) => overall(p) + (p.primaryRole === role ? 200 : p.secondaryRole === role ? 100 : 0);
     const candidates = roster.filter((p) => !used.has(p.id)).sort((a, b) => score(b) - score(a) || a.id.localeCompare(b.id));
     const player = candidates[0];
     if (!player) throw new Error(`autoLineup: not enough players for ${clubId}`);

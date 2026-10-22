@@ -6,7 +6,7 @@ import { cloneTeam, syntheticTeam } from '../../src/sim/scenario';
 import type { BrainKind } from '../../src/sim/state';
 
 const n = Number(process.argv[2] ?? 100);
-const brain = (process.argv[3] ?? 'simple') as BrainKind;
+const brain = (process.argv[3] ?? 'utility') as BrainKind;
 const data = loadGameData();
 const durs: number[] = [];
 let blue = 0, timeouts = 0, kills = 0, towers = 0;

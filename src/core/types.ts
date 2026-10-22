@@ -343,6 +343,9 @@ export interface MatchConfig {
     engageRadius: number;
     awarenessRadius: number;
     groupStartSec: number;
+    farmDecayStartSec: number; // farming utility starts to fall off here...
+    farmDecayEndSec: number; // ...reaching farmDecayMin here
+    farmDecayMin: number;
     groupRampPerMin: number;
     gankMinSec: number;
     recallHpFraction: number;

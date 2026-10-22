@@ -174,6 +174,7 @@ export interface HeroUnit {
   lastHeroDamageAt: number; // last time this hero hit an enemy hero
   damagers: { hero: number; t: number }[];
   lastSplitEventAt: number;
+  gankSeen: number[]; // per enemy hero: actionSince of the gank already rolled for detection
   // stats
   kills: number;
   deaths: number;
@@ -274,6 +275,7 @@ export function createHero(cfg: MatchConfig, idx: number, side: Side, role: Role
     lastHeroDamageAt: -999,
     damagers: [],
     lastSplitEventAt: -999,
+    gankSeen: new Array<number>(10).fill(-1),
     kills: 0,
     deaths: 0,
     assists: 0,

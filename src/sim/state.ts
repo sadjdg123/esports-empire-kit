@@ -66,6 +66,8 @@ export interface MatchState {
   objectives: Objective[];
   camps: Camp[];
   teams: Record<Side, TeamState>;
+  laneTowers: Record<Side, Record<Lane, Structure[]>>; // tier 1 then tier 2
+  bases: Record<Side, Structure>;
   events: MatchEvent[];
   tickEventStart: number;
   attacks: SnapshotAttack[];
@@ -82,9 +84,32 @@ export interface MatchState {
   hx: Float64Array;
   hy: Float64Array;
   hloc: Loc[]; // hero locations at the start of the tick
+  tickCache: TickCache;
   cx: number[];
   cy: number[];
 }
+
+/** Values derived once per tick and shared by every hero's decision. */
+export interface TickCache {
+  t: number;
+  power: Float64Array; // heroPower per hero
+  attackable: boolean[]; // per structure
+  threat: Float64Array; // per structure: enemy pressure around it (-1 = not computed)
+  front: Map<string, Loc>; // `${side}:${lane}` -> lane front
+  forces: (LocalForces | null)[]; // per hero, heroes within FORCE_RADIUS
+  underOwnStructure: boolean[]; // per hero: protected by one of its own structures
+  grouping: Record<Side, number>; // heroes on GROUP at tick start
+  contesting: Record<Side, number[]>; // per objective, heroes contesting it at tick start
+}
+
+export interface LocalForces {
+  ally: number; // summed power, including the hero itself
+  enemy: number;
+  enemies: number[];
+  allies: number[]; // excluding the hero itself
+}
+
+export const FORCE_RADIUS = 500;
 
 export function enemyOf(side: Side): Side {
   return side === 'BLUE' ? 'RED' : 'BLUE';

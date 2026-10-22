@@ -97,7 +97,9 @@ export function nodeIndex(map: GameMap, id: string): number {
 }
 
 export function edgeLength(map: GameMap, a: number, b: number): number {
-  return Math.hypot(map.xs[a]! - map.xs[b]!, map.ys[a]! - map.ys[b]!);
+  const dx = map.xs[a]! - map.xs[b]!;
+  const dy = map.ys[a]! - map.ys[b]!;
+  return Math.sqrt(dx * dx + dy * dy);
 }
 
 export function nodeDistance(map: GameMap, a: number, b: number): number {
@@ -147,13 +149,6 @@ interface Route {
   cost: number;
 }
 
-/** Ends of a location with the cost to reach each from that location. */
-function ends(map: GameMap, loc: Loc): [number, number][] {
-  if (loc.from === loc.to) return [[loc.from, 0]];
-  const len = edgeLength(map, loc.from, loc.to);
-  return [[loc.from, loc.progress * len], [loc.to, (1 - loc.progress) * len]];
-}
-
 function sameEdge(a: Loc, b: Loc): boolean {
   if (a.from === a.to || b.from === b.to) return false;
   return (a.from === b.from && a.to === b.to) || (a.from === b.to && a.to === b.from);
@@ -164,20 +159,40 @@ function paramOnEdgeOf(a: Loc, b: Loc): number {
   return b.from === a.from ? b.progress : 1 - b.progress;
 }
 
+const scratchRoute: Route = { exit: -1, entry: -1, cost: 0 };
+
+/** Best exit/entry pair. Returns a shared object: copy fields before the next call. */
 function planRoute(map: GameMap, loc: Loc, target: Loc): Route {
+  const r = scratchRoute;
   if (sameEdge(loc, target)) {
-    const len = edgeLength(map, loc.from, loc.to);
-    return { exit: -1, entry: -1, cost: Math.abs(paramOnEdgeOf(loc, target) - loc.progress) * len };
+    r.exit = -1;
+    r.entry = -1;
+    r.cost = Math.abs(paramOnEdgeOf(loc, target) - loc.progress) * edgeLength(map, loc.from, loc.to);
+    return r;
   }
-  // A unit on a node that is an endpoint of the target edge walks straight in.
-  let best: Route = { exit: -1, entry: -1, cost: Infinity };
-  for (const [exit, exitCost] of ends(map, loc)) {
-    for (const [entry, entryCost] of ends(map, target)) {
-      const cost = exitCost + map.dist[exit * map.n + entry]! + entryCost;
-      if (cost < best.cost - 1e-9) best = { exit, entry, cost };
+  const n = map.n;
+  const la = loc.from !== loc.to;
+  const lb = target.from !== target.to;
+  const lenA = la ? edgeLength(map, loc.from, loc.to) : 0;
+  const lenB = lb ? edgeLength(map, target.from, target.to) : 0;
+  r.exit = -1;
+  r.entry = -1;
+  r.cost = Infinity;
+  for (let i = 0; i < (la ? 2 : 1); i++) {
+    const exit = i === 0 ? loc.from : loc.to;
+    const exitCost = la ? (i === 0 ? loc.progress : 1 - loc.progress) * lenA : 0;
+    for (let j = 0; j < (lb ? 2 : 1); j++) {
+      const entry = j === 0 ? target.from : target.to;
+      const entryCost = lb ? (j === 0 ? target.progress : 1 - target.progress) * lenB : 0;
+      const cost = exitCost + map.dist[exit * n + entry]! + entryCost;
+      if (cost < r.cost - 1e-9) {
+        r.cost = cost;
+        r.exit = exit;
+        r.entry = entry;
+      }
     }
   }
-  return best;
+  return r;
 }
 
 /** Shortest graph distance between two locations. */
@@ -204,7 +219,8 @@ export function moveToward(map: GameMap, loc: Loc, target: Loc, maxDist: number)
   for (let guard = 0; guard < 64 && remaining > 1e-9; guard++) {
     if (cur.from === goal.from && cur.to === goal.to && Math.abs(cur.progress - goal.progress) < 1e-9) return cur;
     if (isAtNode(goal) && isAtNode(cur) && cur.from === goal.from) return cur;
-    const route = planRoute(map, cur, goal);
+    const planned = planRoute(map, cur, goal);
+    const route = { exit: planned.exit, entry: planned.entry, cost: planned.cost };
     if (route.cost === Infinity) return cur;
     if (route.exit === -1) {
       // Straight along the shared edge.
