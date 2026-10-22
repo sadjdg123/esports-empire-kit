@@ -687,11 +687,11 @@
       "powerCurve": [
         {
           "toSec": 840,
-          "damage": 1.15
+          "damage": 1.12
         },
         {
           "fromSec": 1440,
-          "damage": 0.98
+          "damage": 1.0
         }
       ],
       "farmGold": 1.0,
@@ -744,7 +744,7 @@
         },
         {
           "fromSec": 1200,
-          "damage": 1.11
+          "damage": 1.08
         }
       ],
       "farmGold": 1.12,
@@ -786,7 +786,7 @@
         }
       ],
       "farmGold": 1.0,
-      "siegeDamage": 1.1
+      "siegeDamage": 1.2
     },
     "SPLIT_PUSH": {
       "name": "分带牵制",
@@ -796,7 +796,7 @@
           "actions": [
             "SPLIT"
           ],
-          "factor": 2.0,
+          "factor": 1.8,
           "fromSec": 720,
           "roles": [
             "TOP"
@@ -806,7 +806,7 @@
           "actions": [
             "DEFEND"
           ],
-          "factor": 1.3,
+          "factor": 1.15,
           "roles": [
             "JUNGLE",
             "MID",
