@@ -27,6 +27,8 @@ export interface TeamState {
   towersDestroyed: number;
   goldDiff: number; // this team's gold minus the enemy's, refreshed each tick
   tempo: number; // tactic power-curve multiplier, refreshed each tick
+  tfTable: Float64Array | null; // cached tactic factors (action x role)
+  tfSig: number; // which rule windows were open when tfTable was built
 }
 
 export interface TeamfightState {
@@ -96,9 +98,11 @@ export interface TickCache {
   power: Float64Array; // heroPower per hero
   attackable: boolean[]; // per structure
   threat: Float64Array; // per structure: enemy pressure around it (-1 = not computed)
-  front: Map<string, Loc>; // `${side}:${lane}` -> lane front
+  front: (Loc | null)[]; // [BLUE TOP, MID, BOT, RED TOP, MID, BOT] -> lane front
   forces: (LocalForces | null)[]; // per hero, heroes within FORCE_RADIUS
   underOwnStructure: boolean[]; // per hero: protected by one of its own structures
+  gankTarget: number[]; // per hero, at tick start
+  actionSince: number[]; // per hero, at tick start
   grouping: Record<Side, number>; // heroes on GROUP at tick start
   contesting: Record<Side, number[]>; // per objective, heroes contesting it at tick start
 }

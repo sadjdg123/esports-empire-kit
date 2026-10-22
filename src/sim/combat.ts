@@ -399,7 +399,12 @@ function queueStructureHit(s: MatchState, st: Structure, hero: number, amount: n
 
 export function applyPending(s: MatchState): void {
   const t = s.t;
-  for (const op of s.pending) {
+  for (const ob of s.objectives) { ob.tickDamage.BLUE = 0; ob.tickDamage.RED = 0; }
+  for (const c of s.camps) { c.tickHit.BLUE = -1; c.tickHit.RED = -1; c.tickHit.dmgBLUE = 0; c.tickHit.dmgRED = 0; }
+  // Apply in fixed phases so that queue order (blue heroes act first) never matters:
+  // shields, then damage, then heals, then crowd control.
+  for (let phase = 0; phase < 4; phase++) for (const op of s.pending) {
+    if ((op.op === 'SHIELD' ? 0 : op.op === 'DAMAGE' ? 1 : op.op === 'HEAL' ? 2 : 3) !== phase) continue;
     if (op.targetKind === 'HERO') {
       const h = s.heroes[op.target]!;
       if (!h.alive) continue;
@@ -474,7 +479,7 @@ export function applyPending(s: MatchState): void {
         ob.hp -= op.amount;
         if (src) {
           ob.attackers.push({ hero: src.idx, t });
-          ob.lastHitSide = src.side;
+          ob.tickDamage[src.side] += op.amount;
         }
         break;
       }
@@ -482,12 +487,29 @@ export function applyPending(s: MatchState): void {
         const camp = s.camps[op.target]!;
         if (!camp.alive) break;
         camp.hp -= op.amount;
-        if (src) camp.lastHitHero = src.idx;
+        if (src) {
+          camp.tickHit[src.side] = src.idx;
+          if (src.side === 'BLUE') camp.tickHit.dmgBLUE += op.amount;
+          else camp.tickHit.dmgRED += op.amount;
+        }
         break;
       }
     }
   }
   s.pending.length = 0;
+  // Credit for the killing blow goes to the side that dealt more damage this tick
+  // (ties broken by the seeded rng), so processing order never favours a side.
+  for (const ob of s.objectives) {
+    const b = ob.tickDamage.BLUE;
+    const r = ob.tickDamage.RED;
+    if (b > 0 || r > 0) ob.lastHitSide = b > r ? 'BLUE' : r > b ? 'RED' : (s.rng.chance(0.5) ? 'BLUE' : 'RED');
+  }
+  for (const c of s.camps) {
+    const h = c.tickHit;
+    if (h.BLUE < 0 && h.RED < 0) continue;
+    const blueWins = h.RED < 0 || (h.BLUE >= 0 && (h.dmgBLUE > h.dmgRED || (h.dmgBLUE === h.dmgRED && s.rng.chance(0.5))));
+    c.lastHitHero = blueWins ? h.BLUE : h.RED;
+  }
 }
 
 // ---------------------------------------------------------------------------

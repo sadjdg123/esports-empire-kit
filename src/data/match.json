@@ -424,7 +424,7 @@
       "range": 180
     },
     "T2": {
-      "hp": 3800,
+      "hp": 3300,
       "armor": 45,
       "attack": 170,
       "creepAttack": 90,
@@ -432,7 +432,7 @@
     }
   },
   "base": {
-    "hp": 5500,
+    "hp": 4500,
     "armor": 50,
     "attack": 180,
     "creepAttack": 90,
@@ -515,41 +515,41 @@
     "recallSec": 6,
     "slowFactor": 0.6,
     "armorConstant": 100,
-    "structureDamage": 0.55
+    "structureDamage": 0.65
   },
   "coefficients": {
     "mechanicsDamage": {
-      "base": 0.85,
-      "per": 0.003
+      "base": 0.9,
+      "per": 0.002
     },
     "skillHit": {
-      "base": 0.6,
-      "per": 0.004
+      "base": 0.65,
+      "per": 0.003
     },
     "farm": {
-      "base": 0.7,
-      "per": 0.006
-    },
-    "masteryEffect": {
       "base": 0.8,
       "per": 0.004
     },
-    "masteryCooldown": 0.002,
+    "masteryEffect": {
+      "base": 0.875,
+      "per": 0.0025
+    },
+    "masteryCooldown": 0.0015,
     "mentalDeficitGold": 2000,
     "mentalPenaltyPer": 0.002,
     "formPer": 0.005,
     "role": {
       "primary": 1.0,
-      "secondary": 0.93,
-      "off": 0.82
+      "secondary": 0.98,
+      "off": 0.95
     },
     "retreatThreshold": {
       "base": 0.16,
       "per": 0.002
     },
     "decisionChance": {
-      "base": 0.4,
-      "per": 0.006
+      "base": 0.3,
+      "per": 0.007
     },
     "decisionNoise": {
       "base": 0.05,
@@ -731,7 +731,7 @@
             "GROUP"
           ],
           "factor": 1.4,
-          "fromSec": 1320
+          "fromSec": 1080
         }
       ],
       "retreatThresholdDelta": 0.08,
@@ -739,12 +739,8 @@
       "splitRoles": [],
       "powerCurve": [
         {
-          "toSec": 600,
-          "damage": 0.97
-        },
-        {
-          "fromSec": 1200,
-          "damage": 1.08
+          "fromSec": 1080,
+          "damage": 1.1
         }
       ],
       "farmGold": 1.12,
@@ -786,7 +782,7 @@
         }
       ],
       "farmGold": 1.0,
-      "siegeDamage": 1.2
+      "siegeDamage": 1.1
     },
     "SPLIT_PUSH": {
       "name": "分带牵制",

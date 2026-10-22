@@ -104,6 +104,7 @@ export interface Objective {
   nextSpawnAt: number;
   attackers: { hero: number; t: number }[];
   lastHitSide: Side | null;
+  tickDamage: Record<Side, number>; // damage taken from each side during the current tick
 }
 
 export interface Camp {
@@ -114,6 +115,7 @@ export interface Camp {
   hp: number;
   nextSpawnAt: number;
   lastHitHero: number;
+  tickHit: { BLUE: number; RED: number; dmgBLUE: number; dmgRED: number }; // per-side hitter and damage this tick
 }
 
 // ---------------------------------------------------------------------------

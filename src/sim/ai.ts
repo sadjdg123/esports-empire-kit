@@ -23,8 +23,22 @@ export interface ActionPlan {
   opportunistic: boolean;
 }
 
+const scratchPlan: ActionPlan = { dest: null, flee: false, channel: false, chase: false, focus: -1, siege: false, dive: false, objective: -1, camp: -1, opportunistic: false };
+
+/** Resets and returns a shared plan object; the engine consumes it before asking for the next one. */
 export function emptyPlan(dest: Loc | null): ActionPlan {
-  return { dest, flee: false, channel: false, chase: false, focus: -1, siege: false, dive: false, objective: -1, camp: -1, opportunistic: false };
+  const p = scratchPlan;
+  p.dest = dest;
+  p.flee = false;
+  p.channel = false;
+  p.chase = false;
+  p.focus = -1;
+  p.siege = false;
+  p.dive = false;
+  p.objective = -1;
+  p.camp = -1;
+  p.opportunistic = false;
+  return p;
 }
 
 export function laneOfRole(role: Role): Lane {
@@ -59,11 +73,12 @@ export function nextEnemyStructure(s: MatchState, side: Side, lane: Lane): Struc
 
 /** Location of the team's most advanced creep wave on a lane, or its outermost standing tower. */
 export function laneFront(s: MatchState, side: Side, lane: Lane): Loc {
-  const key = `${side}:${lane}`;
-  const cached = s.tickCache.t === s.t ? s.tickCache.front.get(key) : undefined;
+  const key = (side === 'BLUE' ? 0 : 3) + (lane === 'TOP' ? 0 : lane === 'MID' ? 1 : 2);
+  const fresh = s.tickCache.t === s.t;
+  const cached = fresh ? s.tickCache.front[key] : null;
   if (cached) return cached;
   const loc = computeLaneFront(s, side, lane);
-  if (s.tickCache.t === s.t) s.tickCache.front.set(key, loc);
+  if (fresh) s.tickCache.front[key] = loc;
   return loc;
 }
 
@@ -122,7 +137,11 @@ export function decideSimple(s: MatchState, h: HeroUnit): void {
 }
 
 export function planSimple(s: MatchState, h: HeroUnit): ActionPlan {
-  if (h.action === 'RETREAT') return { ...emptyPlan(atNode(s.map.bases[h.side])), flee: true };
+  if (h.action === 'RETREAT') {
+    const p = emptyPlan(atNode(s.map.bases[h.side]));
+    p.flee = true;
+    return p;
+  }
   const plan = emptyPlan(laneFront(s, h.side, laneOfRole(h.role)));
   plan.chase = true;
   return plan;
@@ -169,7 +188,28 @@ function base(s: MatchState, action: string, role: Role): number {
 }
 
 function tf(s: MatchState, h: HeroUnit, action: string): number {
-  return tacticFactor(s.cfg, s.teams[h.side].tactic, action, h.role, s.t);
+  return tacticTable(s, h.side)[ACTION_INDEX[action]! * 5 + ROLE_INDEX[h.role]!]!;
+}
+
+const ACTION_LIST = ['FARM_LANE', 'FARM_JUNGLE', 'GANK', 'DEFEND', 'PUSH', 'GROUP', 'CONTEST_OBJECTIVE', 'SPLIT', 'RETREAT', 'RECALL'] as const;
+const ACTION_INDEX: Record<string, number> = Object.fromEntries(ACTION_LIST.map((a, i) => [a, i]));
+const ROLE_INDEX: Record<Role, number> = { TOP: 0, JUNGLE: 1, MID: 2, ADC: 3, SUPPORT: 4 };
+
+/** Tactic factors for every action x role, rebuilt only when a rule's time window opens or closes. */
+function tacticTable(s: MatchState, side: Side): Float64Array {
+  const team = s.teams[side];
+  let sig = 0;
+  for (const r of s.cfg.tactics[team.tactic].rules) {
+    sig = sig * 4 + (r.fromSec !== undefined && s.t >= r.fromSec ? 1 : 0) + (r.toSec !== undefined && s.t >= r.toSec ? 2 : 0);
+  }
+  if (team.tfTable && team.tfSig === sig) return team.tfTable;
+  const table = new Float64Array(ACTION_LIST.length * 5);
+  ACTION_LIST.forEach((a, ai) => {
+    for (const role of ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'] as const) table[ai * 5 + ROLE_INDEX[role]] = tacticFactor(s.cfg, team.tactic, a, role, s.t);
+  });
+  team.tfTable = table;
+  team.tfSig = sig;
+  return table;
 }
 
 function euclidTo(s: MatchState, h: HeroUnit, node: number): number {
@@ -184,10 +224,12 @@ function hpFrac(h: HeroUnit): number {
 function checkGankAwareness(s: MatchState, h: HeroUnit): void {
   const r2 = s.cfg.ai.awarenessRadius ** 2;
   for (const e of s.heroes) {
-    if (!e.alive || e.side === h.side || e.gankTarget !== h.idx) continue;
-    if (h.gankSeen[e.idx] === e.actionSince) continue;
+    // Read the ganker's state from the start of the tick so both sides react equally fast.
+    const since = s.tickCache.actionSince[e.idx]!;
+    if (!e.alive || e.side === h.side || s.tickCache.gankTarget[e.idx] !== h.idx) continue;
+    if (h.gankSeen[e.idx] === since) continue;
     if (dist2(s.hx[h.idx]!, s.hy[h.idx]!, s.hx[e.idx]!, s.hy[e.idx]!) > r2) continue;
-    h.gankSeen[e.idx] = e.actionSince;
+    h.gankSeen[e.idx] = since;
     if (s.rng.chance(h.coef.gankDetect)) h.alertUntil = s.t + 6;
   }
 }
@@ -416,10 +458,16 @@ function engageOk(s: MatchState, h: HeroUnit): boolean {
 export function planUtility(s: MatchState, h: HeroUnit): ActionPlan {
   const team = s.teams[h.side];
   switch (h.action) {
-    case 'RETREAT':
-      return { ...emptyPlan(atNode(s.map.bases[h.side])), flee: true };
-    case 'RECALL':
-      return { ...emptyPlan(null), channel: true };
+    case 'RETREAT': {
+      const p = emptyPlan(atNode(s.map.bases[h.side]));
+      p.flee = true;
+      return p;
+    }
+    case 'RECALL': {
+      const p = emptyPlan(null);
+      p.channel = true;
+      return p;
+    }
     case 'FARM_JUNGLE': {
       let ci = h.actionTarget;
       if (ci < 0 || (!s.camps[ci]!.alive && s.camps.some((c) => c.side === h.side && c.alive))) {

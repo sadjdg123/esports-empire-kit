@@ -69,7 +69,7 @@ export function createMatch(input: MatchInput, data: GameData, opts: MatchOption
     }
     teams[side] = {
       side, tactic: team.lineup.tactic, clubId: team.lineup.clubId, heroIdx, kills: 0, buffs: [],
-      siegeLane: 'MID', groupCallAt: -1, objectivesTaken: 0, towersDestroyed: 0, goldDiff: 0, tempo: 1,
+      siegeLane: 'MID', groupCallAt: -1, objectivesTaken: 0, towersDestroyed: 0, goldDiff: 0, tempo: 1, tfTable: null, tfSig: -1,
     };
   }
 
@@ -85,12 +85,12 @@ export function createMatch(input: MatchInput, data: GameData, opts: MatchOption
   });
   const objectives: Objective[] = cfg.objectives.map((o, i) => ({
     cfgIdx: i, id: o.id, name: o.name, node: map.index.get(o.nodeId)!, alive: false, hp: 0, maxHp: o.hp,
-    nextSpawnAt: o.firstSpawnSec, attackers: [], lastHitSide: null,
+    nextSpawnAt: o.firstSpawnSec, attackers: [], lastHitSide: null, tickDamage: { BLUE: 0, RED: 0 },
   }));
   const camps: Camp[] = [];
   map.nodes.forEach((node, i) => {
     if (node.type === 'JUNGLE' && node.side) {
-      camps.push({ id: `CAMP:${node.id}`, node: i, side: node.side, alive: false, hp: 0, nextSpawnAt: cfg.jungle.firstSpawnSec, lastHitHero: -1 });
+      camps.push({ id: `CAMP:${node.id}`, node: i, side: node.side, alive: false, hp: 0, nextSpawnAt: cfg.jungle.firstSpawnSec, lastHitHero: -1, tickHit: { BLUE: -1, RED: -1, dmgBLUE: 0, dmgRED: 0 } });
     }
   });
 
@@ -105,8 +105,8 @@ export function createMatch(input: MatchInput, data: GameData, opts: MatchOption
     baseDamageMarks: { BLUE: 4, RED: 4 },
     hx: new Float64Array(heroes.length), hy: new Float64Array(heroes.length), hloc: [], cx: [], cy: [],
     tickCache: {
-      t: -1, power: new Float64Array(heroes.length), attackable: [], threat: new Float64Array(structures.length), front: new Map(),
-      forces: [], underOwnStructure: [], grouping: { BLUE: 0, RED: 0 }, contesting: { BLUE: [], RED: [] },
+      t: -1, power: new Float64Array(heroes.length), attackable: [], threat: new Float64Array(structures.length), front: [null, null, null, null, null, null],
+      forces: [], underOwnStructure: [], gankTarget: [], actionSince: [], grouping: { BLUE: 0, RED: 0 }, contesting: { BLUE: [], RED: [] },
     },
     laneTowers: laneTowersOf(structures),
     bases: { BLUE: structures.find((st) => st.kind === 'BASE' && st.side === 'BLUE')!, RED: structures.find((st) => st.kind === 'BASE' && st.side === 'RED')! },
@@ -139,23 +139,23 @@ function cachePositions(s: MatchState): void {
   for (const h of s.heroes) tc.power[h.idx] = heroPower(s, h);
   // Attackable: tier 1 always; tier 2 once that lane's tier 1 fell; base once any tier 2 fell.
   tc.attackable.length = 0;
-  const t1Down: Record<string, boolean> = {};
   const t2Down = { BLUE: false, RED: false };
+  for (const st of s.structures) if (st.kind === 'TOWER' && st.tier === 2 && !st.alive) t2Down[st.side] = true;
   for (const st of s.structures) {
-    if (st.kind !== 'TOWER' || st.alive) continue;
-    if (st.tier === 1) t1Down[`${st.side}:${st.lane}`] = true;
-    else t2Down[st.side] = true;
-  }
-  for (const st of s.structures) {
-    tc.attackable.push(st.alive && (st.kind === 'BASE' ? t2Down[st.side] : st.tier === 1 || t1Down[`${st.side}:${st.lane}`] === true));
+    let ok = st.alive;
+    if (ok && st.kind === 'BASE') ok = t2Down[st.side];
+    else if (ok && st.tier === 2) ok = !s.laneTowers[st.side][st.lane!][0]!.alive;
+    tc.attackable.push(ok);
   }
   tc.threat.fill(-1);
-  tc.front.clear();
+  tc.front.fill(null);
   tc.forces.length = 0;
   tc.grouping.BLUE = 0;
   tc.grouping.RED = 0;
-  tc.contesting.BLUE = s.objectives.map(() => 0);
-  tc.contesting.RED = s.objectives.map(() => 0);
+  tc.contesting.BLUE.length = s.objectives.length;
+  tc.contesting.RED.length = s.objectives.length;
+  tc.contesting.BLUE.fill(0);
+  tc.contesting.RED.fill(0);
   for (const h of s.heroes) {
     if (!h.alive) continue;
     if (h.action === 'GROUP') tc.grouping[h.side]++;
@@ -169,6 +169,12 @@ function cachePositions(s: MatchState): void {
     const y0 = map.ys[l.from]!;
     s.cx[i] = l.from === l.to ? x0 : x0 + (map.xs[l.to]! - x0) * l.progress;
     s.cy[i] = l.from === l.to ? y0 : y0 + (map.ys[l.to]! - y0) * l.progress;
+  }
+  tc.gankTarget.length = 0;
+  tc.actionSince.length = 0;
+  for (const h of s.heroes) {
+    tc.gankTarget.push(h.alive ? h.gankTarget : -1);
+    tc.actionSince.push(h.actionSince);
   }
   tc.underOwnStructure.length = 0;
   for (const h of s.heroes) {
