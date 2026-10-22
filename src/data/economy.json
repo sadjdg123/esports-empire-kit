@@ -1,0 +1,12 @@
+{
+  "startingFunds": 120000,
+  "weeklySponsor": 15000,
+  "prizeWin": 12000,
+  "prizeLoss": 4000,
+  "signingFeeWeeks": 4,
+  "releaseFeeWeeks": 3,
+  "lowFundsWarningWeeks": 3,
+  "minRoster": 5,
+  "maxRoster": 8,
+  "formWeeklyDelta": 2
+}

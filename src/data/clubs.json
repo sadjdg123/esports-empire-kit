@@ -1,0 +1,650 @@
+[
+  {
+    "id": "huiyan",
+    "name": "灰岩电竞",
+    "shortName": "灰岩",
+    "color": "#8a8f98",
+    "style": "STEADY_MACRO",
+    "description": "老牌小俱乐部，打法保守，靠稳定运营混口饭吃。",
+    "players": [
+      {
+        "id": "huiyan_1",
+        "name": "石墩",
+        "age": 19,
+        "primaryRole": "TOP",
+        "secondaryRole": "SUPPORT",
+        "attrs": {
+          "mechanics": 46,
+          "awareness": 44,
+          "teamwork": 47,
+          "mental": 38
+        },
+        "heroMastery": {
+          "panyue": 52,
+          "mingzhong": 47,
+          "tieji": 41
+        },
+        "form": 2,
+        "salaryPerWeek": 750,
+        "signingFee": 3000,
+        "clubId": "huiyan"
+      },
+      {
+        "id": "huiyan_2",
+        "name": "老秦",
+        "age": 21,
+        "primaryRole": "JUNGLE",
+        "attrs": {
+          "mechanics": 52,
+          "awareness": 40,
+          "teamwork": 45,
+          "mental": 34
+        },
+        "heroMastery": {
+          "feiren": 47,
+          "yexiao": 51,
+          "tieji": 38
+        },
+        "form": 1,
+        "salaryPerWeek": 750,
+        "signingFee": 3000,
+        "clubId": "huiyan"
+      },
+      {
+        "id": "huiyan_3",
+        "name": "Pebble",
+        "age": 27,
+        "primaryRole": "MID",
+        "secondaryRole": "JUNGLE",
+        "attrs": {
+          "mechanics": 54,
+          "awareness": 34,
+          "teamwork": 43,
+          "mental": 47
+        },
+        "heroMastery": {
+          "yexiao": 66,
+          "chisun": 54
+        },
+        "form": 1,
+        "salaryPerWeek": 800,
+        "signingFee": 3200,
+        "clubId": "huiyan"
+      },
+      {
+        "id": "huiyan_4",
+        "name": "苔痕",
+        "age": 20,
+        "primaryRole": "ADC",
+        "secondaryRole": "MID",
+        "attrs": {
+          "mechanics": 52,
+          "awareness": 48,
+          "teamwork": 48,
+          "mental": 46
+        },
+        "heroMastery": {
+          "zhufeng": 65,
+          "chisun": 49
+        },
+        "form": -3,
+        "salaryPerWeek": 1000,
+        "signingFee": 4000,
+        "clubId": "huiyan"
+      },
+      {
+        "id": "huiyan_5",
+        "name": "阿禾",
+        "age": 26,
+        "primaryRole": "SUPPORT",
+        "secondaryRole": "TOP",
+        "attrs": {
+          "mechanics": 54,
+          "awareness": 40,
+          "teamwork": 48,
+          "mental": 47
+        },
+        "heroMastery": {
+          "shuangdi": 73,
+          "panyue": 48
+        },
+        "form": -3,
+        "salaryPerWeek": 950,
+        "signingFee": 3800,
+        "clubId": "huiyan"
+      }
+    ]
+  },
+  {
+    "id": "wugang",
+    "name": "雾港电竞",
+    "shortName": "雾港",
+    "color": "#4f7d8c",
+    "style": "SPLIT_PUSH",
+    "description": "港口城市的新军，喜欢派人单带边路牵制对手。",
+    "players": [
+      {
+        "id": "wugang_1",
+        "name": "渡鸦",
+        "age": 26,
+        "primaryRole": "TOP",
+        "secondaryRole": "SUPPORT",
+        "attrs": {
+          "mechanics": 54,
+          "awareness": 48,
+          "teamwork": 47,
+          "mental": 57
+        },
+        "heroMastery": {
+          "feiren": 69,
+          "mingzhong": 56,
+          "panyue": 54,
+          "tieji": 44
+        },
+        "form": 0,
+        "salaryPerWeek": 1200,
+        "signingFee": 4800,
+        "clubId": "wugang"
+      },
+      {
+        "id": "wugang_2",
+        "name": "Fogline",
+        "age": 20,
+        "primaryRole": "JUNGLE",
+        "secondaryRole": "TOP",
+        "attrs": {
+          "mechanics": 45,
+          "awareness": 57,
+          "teamwork": 50,
+          "mental": 44
+        },
+        "heroMastery": {
+          "yexiao": 63,
+          "tieji": 59
+        },
+        "form": -1,
+        "salaryPerWeek": 1050,
+        "signingFee": 4200,
+        "clubId": "wugang"
+      },
+      {
+        "id": "wugang_3",
+        "name": "蓑衣",
+        "age": 25,
+        "primaryRole": "MID",
+        "secondaryRole": "ADC",
+        "attrs": {
+          "mechanics": 52,
+          "awareness": 55,
+          "teamwork": 56,
+          "mental": 58
+        },
+        "heroMastery": {
+          "shuangdi": 68,
+          "chisun": 66,
+          "yexiao": 40
+        },
+        "form": 2,
+        "salaryPerWeek": 1500,
+        "signingFee": 6000,
+        "clubId": "wugang"
+      },
+      {
+        "id": "wugang_4",
+        "name": "南樯",
+        "age": 20,
+        "primaryRole": "ADC",
+        "attrs": {
+          "mechanics": 52,
+          "awareness": 48,
+          "teamwork": 46,
+          "mental": 50
+        },
+        "heroMastery": {
+          "zhufeng": 61,
+          "chisun": 55
+        },
+        "form": 3,
+        "salaryPerWeek": 1050,
+        "signingFee": 4200,
+        "clubId": "wugang"
+      },
+      {
+        "id": "wugang_5",
+        "name": "Brine_3",
+        "age": 17,
+        "primaryRole": "SUPPORT",
+        "secondaryRole": "MID",
+        "attrs": {
+          "mechanics": 42,
+          "awareness": 52,
+          "teamwork": 54,
+          "mental": 51
+        },
+        "heroMastery": {
+          "qingluo": 68,
+          "shuangdi": 59,
+          "panyue": 52,
+          "mingzhong": 38
+        },
+        "form": -1,
+        "salaryPerWeek": 1100,
+        "signingFee": 4400,
+        "clubId": "wugang"
+      },
+      {
+        "id": "wugang_6",
+        "name": "小舟",
+        "age": 18,
+        "primaryRole": "TOP",
+        "secondaryRole": "JUNGLE",
+        "attrs": {
+          "mechanics": 46,
+          "awareness": 49,
+          "teamwork": 51,
+          "mental": 37
+        },
+        "heroMastery": {
+          "tieji": 59,
+          "feiren": 42
+        },
+        "form": -2,
+        "salaryPerWeek": 850,
+        "signingFee": 3400,
+        "clubId": "wugang"
+      }
+    ]
+  },
+  {
+    "id": "chaosheng",
+    "name": "潮声俱乐部",
+    "shortName": "潮声",
+    "color": "#3b6fd6",
+    "style": "RANDOM",
+    "description": "风格多变的中游队伍，每场战术难以预测。",
+    "players": [
+      {
+        "id": "chaosheng_1",
+        "name": "浪里",
+        "age": 17,
+        "primaryRole": "TOP",
+        "secondaryRole": "JUNGLE",
+        "attrs": {
+          "mechanics": 55,
+          "awareness": 68,
+          "teamwork": 64,
+          "mental": 56
+        },
+        "heroMastery": {
+          "tieji": 82,
+          "mingzhong": 74
+        },
+        "form": -3,
+        "salaryPerWeek": 2050,
+        "signingFee": 8200,
+        "clubId": "chaosheng"
+      },
+      {
+        "id": "chaosheng_2",
+        "name": "Undertow",
+        "age": 24,
+        "primaryRole": "JUNGLE",
+        "secondaryRole": "TOP",
+        "attrs": {
+          "mechanics": 63,
+          "awareness": 61,
+          "teamwork": 63,
+          "mental": 57
+        },
+        "heroMastery": {
+          "tieji": 80,
+          "feiren": 70,
+          "yexiao": 63
+        },
+        "form": -1,
+        "salaryPerWeek": 2100,
+        "signingFee": 8400,
+        "clubId": "chaosheng"
+      },
+      {
+        "id": "chaosheng_3",
+        "name": "回声",
+        "age": 27,
+        "primaryRole": "MID",
+        "attrs": {
+          "mechanics": 55,
+          "awareness": 62,
+          "teamwork": 54,
+          "mental": 54
+        },
+        "heroMastery": {
+          "shuangdi": 73,
+          "chisun": 62,
+          "xingzhu": 54
+        },
+        "form": 2,
+        "salaryPerWeek": 1600,
+        "signingFee": 6400,
+        "clubId": "chaosheng"
+      },
+      {
+        "id": "chaosheng_4",
+        "name": "听潮",
+        "age": 20,
+        "primaryRole": "ADC",
+        "secondaryRole": "MID",
+        "attrs": {
+          "mechanics": 59,
+          "awareness": 60,
+          "teamwork": 61,
+          "mental": 64
+        },
+        "heroMastery": {
+          "zhufeng": 78,
+          "chisun": 70
+        },
+        "form": 3,
+        "salaryPerWeek": 2100,
+        "signingFee": 8400,
+        "clubId": "chaosheng"
+      },
+      {
+        "id": "chaosheng_5",
+        "name": "Shoal",
+        "age": 21,
+        "primaryRole": "SUPPORT",
+        "secondaryRole": "TOP",
+        "attrs": {
+          "mechanics": 50,
+          "awareness": 63,
+          "teamwork": 67,
+          "mental": 48
+        },
+        "heroMastery": {
+          "mingzhong": 74,
+          "qingluo": 85,
+          "shuangdi": 48
+        },
+        "form": 2,
+        "salaryPerWeek": 1650,
+        "signingFee": 6600,
+        "clubId": "chaosheng"
+      }
+    ]
+  },
+  {
+    "id": "jinyu",
+    "name": "烬羽电竞",
+    "shortName": "烬羽",
+    "color": "#d9572b",
+    "style": "EARLY_AGGRO",
+    "description": "以凶狠的前期节奏闻名，开局就满地图抓人。",
+    "players": [
+      {
+        "id": "jinyu_1",
+        "name": "余烬",
+        "age": 26,
+        "primaryRole": "TOP",
+        "attrs": {
+          "mechanics": 64,
+          "awareness": 55,
+          "teamwork": 64,
+          "mental": 63
+        },
+        "heroMastery": {
+          "panyue": 73,
+          "tieji": 69
+        },
+        "form": 2,
+        "salaryPerWeek": 2150,
+        "signingFee": 8600,
+        "clubId": "jinyu"
+      },
+      {
+        "id": "jinyu_2",
+        "name": "Cinder_X",
+        "age": 17,
+        "primaryRole": "JUNGLE",
+        "attrs": {
+          "mechanics": 65,
+          "awareness": 77,
+          "teamwork": 64,
+          "mental": 68
+        },
+        "heroMastery": {
+          "yexiao": 89,
+          "feiren": 80,
+          "tieji": 68
+        },
+        "form": 0,
+        "salaryPerWeek": 3050,
+        "signingFee": 12200,
+        "clubId": "jinyu"
+      },
+      {
+        "id": "jinyu_3",
+        "name": "焰尾",
+        "age": 27,
+        "primaryRole": "MID",
+        "secondaryRole": "JUNGLE",
+        "attrs": {
+          "mechanics": 71,
+          "awareness": 64,
+          "teamwork": 63,
+          "mental": 63
+        },
+        "heroMastery": {
+          "yexiao": 76,
+          "xingzhu": 79,
+          "shuangdi": 61
+        },
+        "form": 0,
+        "salaryPerWeek": 2600,
+        "signingFee": 10400,
+        "clubId": "jinyu"
+      },
+      {
+        "id": "jinyu_4",
+        "name": "赤翎",
+        "age": 19,
+        "primaryRole": "ADC",
+        "secondaryRole": "MID",
+        "attrs": {
+          "mechanics": 78,
+          "awareness": 62,
+          "teamwork": 74,
+          "mental": 57
+        },
+        "heroMastery": {
+          "zhufeng": 89,
+          "chisun": 77
+        },
+        "form": -3,
+        "salaryPerWeek": 2950,
+        "signingFee": 11800,
+        "clubId": "jinyu"
+      },
+      {
+        "id": "jinyu_5",
+        "name": "灼灼",
+        "age": 23,
+        "primaryRole": "SUPPORT",
+        "secondaryRole": "MID",
+        "attrs": {
+          "mechanics": 64,
+          "awareness": 65,
+          "teamwork": 69,
+          "mental": 68
+        },
+        "heroMastery": {
+          "shuangdi": 80,
+          "qingluo": 66,
+          "panyue": 57
+        },
+        "form": -1,
+        "salaryPerWeek": 2800,
+        "signingFee": 11200,
+        "clubId": "jinyu"
+      },
+      {
+        "id": "jinyu_6",
+        "name": "Ashfall",
+        "age": 21,
+        "primaryRole": "JUNGLE",
+        "attrs": {
+          "mechanics": 57,
+          "awareness": 67,
+          "teamwork": 64,
+          "mental": 56
+        },
+        "heroMastery": {
+          "yexiao": 83,
+          "feiren": 71,
+          "tieji": 58
+        },
+        "form": 0,
+        "salaryPerWeek": 2100,
+        "signingFee": 8400,
+        "clubId": "jinyu"
+      }
+    ]
+  },
+  {
+    "id": "tianshu",
+    "name": "天枢电竞",
+    "shortName": "天枢",
+    "color": "#c9a227",
+    "style": "TEAMFIGHT_PUSH",
+    "description": "上赛季冠军，团战配合是联赛最强。",
+    "players": [
+      {
+        "id": "tianshu_1",
+        "name": "天璇",
+        "age": 24,
+        "primaryRole": "TOP",
+        "secondaryRole": "SUPPORT",
+        "attrs": {
+          "mechanics": 75,
+          "awareness": 67,
+          "teamwork": 77,
+          "mental": 78
+        },
+        "heroMastery": {
+          "panyue": 98,
+          "mingzhong": 83,
+          "feiren": 60,
+          "tieji": 60
+        },
+        "form": -2,
+        "salaryPerWeek": 4000,
+        "signingFee": 16000,
+        "clubId": "tianshu"
+      },
+      {
+        "id": "tianshu_2",
+        "name": "摇光",
+        "age": 26,
+        "primaryRole": "JUNGLE",
+        "secondaryRole": "MID",
+        "attrs": {
+          "mechanics": 77,
+          "awareness": 70,
+          "teamwork": 69,
+          "mental": 66
+        },
+        "heroMastery": {
+          "tieji": 90,
+          "yexiao": 76,
+          "feiren": 76
+        },
+        "form": 0,
+        "salaryPerWeek": 3350,
+        "signingFee": 13400,
+        "clubId": "tianshu"
+      },
+      {
+        "id": "tianshu_3",
+        "name": "开阳",
+        "age": 17,
+        "primaryRole": "MID",
+        "attrs": {
+          "mechanics": 72,
+          "awareness": 82,
+          "teamwork": 64,
+          "mental": 80
+        },
+        "heroMastery": {
+          "shuangdi": 89,
+          "chisun": 73,
+          "yexiao": 64
+        },
+        "form": -3,
+        "salaryPerWeek": 4050,
+        "signingFee": 16200,
+        "clubId": "tianshu"
+      },
+      {
+        "id": "tianshu_4",
+        "name": "玉衡",
+        "age": 23,
+        "primaryRole": "ADC",
+        "secondaryRole": "MID",
+        "attrs": {
+          "mechanics": 80,
+          "awareness": 69,
+          "teamwork": 72,
+          "mental": 75
+        },
+        "heroMastery": {
+          "zhufeng": 85,
+          "chisun": 72
+        },
+        "form": -2,
+        "salaryPerWeek": 3950,
+        "signingFee": 15800,
+        "clubId": "tianshu"
+      },
+      {
+        "id": "tianshu_5",
+        "name": "天权",
+        "age": 24,
+        "primaryRole": "SUPPORT",
+        "attrs": {
+          "mechanics": 69,
+          "awareness": 80,
+          "teamwork": 66,
+          "mental": 75
+        },
+        "heroMastery": {
+          "mingzhong": 92,
+          "panyue": 73
+        },
+        "form": -2,
+        "salaryPerWeek": 3700,
+        "signingFee": 14800,
+        "clubId": "tianshu"
+      },
+      {
+        "id": "tianshu_6",
+        "name": "Polaris_V",
+        "age": 27,
+        "primaryRole": "MID",
+        "attrs": {
+          "mechanics": 70,
+          "awareness": 68,
+          "teamwork": 64,
+          "mental": 79
+        },
+        "heroMastery": {
+          "chisun": 83,
+          "shuangdi": 72,
+          "yexiao": 69
+        },
+        "form": -1,
+        "salaryPerWeek": 3350,
+        "signingFee": 13400,
+        "clubId": "tianshu"
+      }
+    ]
+  }
+]

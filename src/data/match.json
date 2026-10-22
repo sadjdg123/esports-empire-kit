@@ -1,0 +1,773 @@
+{
+  "time": {
+    "tickSec": 1,
+    "realSecPerTickAt1x": 0.115,
+    "overtimeStartSec": 1800,
+    "overtimeCreepBonusPerMin": 0.05,
+    "suddenDeathSec": 2400,
+    "maxDurationSec": 2700,
+    "goldTimelineIntervalSec": 30
+  },
+  "map": {
+    "nodes": [
+      {
+        "id": "B_BASE",
+        "type": "BASE",
+        "x": 90,
+        "y": 910,
+        "side": "BLUE"
+      },
+      {
+        "id": "B_TOP_T2",
+        "type": "TOWER",
+        "x": 90,
+        "y": 640,
+        "side": "BLUE",
+        "lane": "TOP",
+        "tier": 2
+      },
+      {
+        "id": "B_TOP_T1",
+        "type": "TOWER",
+        "x": 90,
+        "y": 380,
+        "side": "BLUE",
+        "lane": "TOP",
+        "tier": 1
+      },
+      {
+        "id": "B_MID_T2",
+        "type": "TOWER",
+        "x": 260,
+        "y": 740,
+        "side": "BLUE",
+        "lane": "MID",
+        "tier": 2
+      },
+      {
+        "id": "B_MID_T1",
+        "type": "TOWER",
+        "x": 390,
+        "y": 610,
+        "side": "BLUE",
+        "lane": "MID",
+        "tier": 1
+      },
+      {
+        "id": "B_BOT_T2",
+        "type": "TOWER",
+        "x": 360,
+        "y": 910,
+        "side": "BLUE",
+        "lane": "BOT",
+        "tier": 2
+      },
+      {
+        "id": "B_BOT_T1",
+        "type": "TOWER",
+        "x": 620,
+        "y": 910,
+        "side": "BLUE",
+        "lane": "BOT",
+        "tier": 1
+      },
+      {
+        "id": "B_JG_TOP",
+        "type": "JUNGLE",
+        "x": 230,
+        "y": 500,
+        "side": "BLUE"
+      },
+      {
+        "id": "B_JG_BOT",
+        "type": "JUNGLE",
+        "x": 500,
+        "y": 770,
+        "side": "BLUE"
+      },
+      {
+        "id": "B_JG_CORE",
+        "type": "JUNGLE",
+        "x": 210,
+        "y": 720,
+        "side": "BLUE"
+      },
+      {
+        "id": "R_BASE",
+        "type": "BASE",
+        "x": 910,
+        "y": 90,
+        "side": "RED"
+      },
+      {
+        "id": "R_TOP_T2",
+        "type": "TOWER",
+        "x": 640,
+        "y": 90,
+        "side": "RED",
+        "lane": "TOP",
+        "tier": 2
+      },
+      {
+        "id": "R_TOP_T1",
+        "type": "TOWER",
+        "x": 380,
+        "y": 90,
+        "side": "RED",
+        "lane": "TOP",
+        "tier": 1
+      },
+      {
+        "id": "R_MID_T2",
+        "type": "TOWER",
+        "x": 740,
+        "y": 260,
+        "side": "RED",
+        "lane": "MID",
+        "tier": 2
+      },
+      {
+        "id": "R_MID_T1",
+        "type": "TOWER",
+        "x": 610,
+        "y": 390,
+        "side": "RED",
+        "lane": "MID",
+        "tier": 1
+      },
+      {
+        "id": "R_BOT_T2",
+        "type": "TOWER",
+        "x": 910,
+        "y": 360,
+        "side": "RED",
+        "lane": "BOT",
+        "tier": 2
+      },
+      {
+        "id": "R_BOT_T1",
+        "type": "TOWER",
+        "x": 910,
+        "y": 620,
+        "side": "RED",
+        "lane": "BOT",
+        "tier": 1
+      },
+      {
+        "id": "R_JG_TOP",
+        "type": "JUNGLE",
+        "x": 500,
+        "y": 230,
+        "side": "RED"
+      },
+      {
+        "id": "R_JG_BOT",
+        "type": "JUNGLE",
+        "x": 770,
+        "y": 500,
+        "side": "RED"
+      },
+      {
+        "id": "R_JG_CORE",
+        "type": "JUNGLE",
+        "x": 720,
+        "y": 210,
+        "side": "RED"
+      },
+      {
+        "id": "TOP_MID",
+        "type": "LANE",
+        "x": 100,
+        "y": 100,
+        "lane": "TOP"
+      },
+      {
+        "id": "MID_MID",
+        "type": "LANE",
+        "x": 500,
+        "y": 500,
+        "lane": "MID"
+      },
+      {
+        "id": "BOT_MID",
+        "type": "LANE",
+        "x": 900,
+        "y": 900,
+        "lane": "BOT"
+      },
+      {
+        "id": "RIV_TOP",
+        "type": "OBJECTIVE",
+        "x": 300,
+        "y": 300
+      },
+      {
+        "id": "RIV_BOT",
+        "type": "OBJECTIVE",
+        "x": 700,
+        "y": 700
+      }
+    ],
+    "edges": [
+      [
+        "B_BASE",
+        "B_TOP_T2"
+      ],
+      [
+        "B_TOP_T2",
+        "B_TOP_T1"
+      ],
+      [
+        "B_TOP_T1",
+        "TOP_MID"
+      ],
+      [
+        "TOP_MID",
+        "R_TOP_T1"
+      ],
+      [
+        "R_TOP_T1",
+        "R_TOP_T2"
+      ],
+      [
+        "R_TOP_T2",
+        "R_BASE"
+      ],
+      [
+        "B_BASE",
+        "B_MID_T2"
+      ],
+      [
+        "B_MID_T2",
+        "B_MID_T1"
+      ],
+      [
+        "B_MID_T1",
+        "MID_MID"
+      ],
+      [
+        "MID_MID",
+        "R_MID_T1"
+      ],
+      [
+        "R_MID_T1",
+        "R_MID_T2"
+      ],
+      [
+        "R_MID_T2",
+        "R_BASE"
+      ],
+      [
+        "B_BASE",
+        "B_BOT_T2"
+      ],
+      [
+        "B_BOT_T2",
+        "B_BOT_T1"
+      ],
+      [
+        "B_BOT_T1",
+        "BOT_MID"
+      ],
+      [
+        "BOT_MID",
+        "R_BOT_T1"
+      ],
+      [
+        "R_BOT_T1",
+        "R_BOT_T2"
+      ],
+      [
+        "R_BOT_T2",
+        "R_BASE"
+      ],
+      [
+        "B_JG_TOP",
+        "B_TOP_T1"
+      ],
+      [
+        "B_JG_TOP",
+        "B_MID_T1"
+      ],
+      [
+        "B_JG_BOT",
+        "B_BOT_T1"
+      ],
+      [
+        "B_JG_BOT",
+        "B_MID_T1"
+      ],
+      [
+        "B_JG_CORE",
+        "B_JG_TOP"
+      ],
+      [
+        "B_JG_CORE",
+        "B_JG_BOT"
+      ],
+      [
+        "B_JG_CORE",
+        "B_BASE"
+      ],
+      [
+        "R_JG_TOP",
+        "R_TOP_T1"
+      ],
+      [
+        "R_JG_TOP",
+        "R_MID_T1"
+      ],
+      [
+        "R_JG_BOT",
+        "R_BOT_T1"
+      ],
+      [
+        "R_JG_BOT",
+        "R_MID_T1"
+      ],
+      [
+        "R_JG_CORE",
+        "R_JG_TOP"
+      ],
+      [
+        "R_JG_CORE",
+        "R_JG_BOT"
+      ],
+      [
+        "R_JG_CORE",
+        "R_BASE"
+      ],
+      [
+        "RIV_TOP",
+        "B_JG_TOP"
+      ],
+      [
+        "RIV_TOP",
+        "R_JG_TOP"
+      ],
+      [
+        "RIV_TOP",
+        "TOP_MID"
+      ],
+      [
+        "RIV_TOP",
+        "MID_MID"
+      ],
+      [
+        "RIV_BOT",
+        "B_JG_BOT"
+      ],
+      [
+        "RIV_BOT",
+        "R_JG_BOT"
+      ],
+      [
+        "RIV_BOT",
+        "BOT_MID"
+      ],
+      [
+        "RIV_BOT",
+        "MID_MID"
+      ]
+    ],
+    "lanes": {
+      "TOP": [
+        "B_BASE",
+        "B_TOP_T2",
+        "B_TOP_T1",
+        "TOP_MID",
+        "R_TOP_T1",
+        "R_TOP_T2",
+        "R_BASE"
+      ],
+      "MID": [
+        "B_BASE",
+        "B_MID_T2",
+        "B_MID_T1",
+        "MID_MID",
+        "R_MID_T1",
+        "R_MID_T2",
+        "R_BASE"
+      ],
+      "BOT": [
+        "B_BASE",
+        "B_BOT_T2",
+        "B_BOT_T1",
+        "BOT_MID",
+        "R_BOT_T1",
+        "R_BOT_T2",
+        "R_BASE"
+      ]
+    }
+  },
+  "creeps": {
+    "firstSpawnSec": 15,
+    "intervalSec": 30,
+    "hp": 700,
+    "armor": 10,
+    "attack": 28,
+    "structureAttack": 40,
+    "range": 90,
+    "moveSpeed": 40,
+    "hpPerMinute": 12,
+    "attackPerMinute": 0.6,
+    "gold": 90,
+    "xp": 60,
+    "shareRadius": 320
+  },
+  "towers": {
+    "T1": {
+      "hp": 3500,
+      "armor": 40,
+      "attack": 150,
+      "creepAttack": 80,
+      "range": 180
+    },
+    "T2": {
+      "hp": 4500,
+      "armor": 45,
+      "attack": 170,
+      "creepAttack": 90,
+      "range": 180
+    }
+  },
+  "base": {
+    "hp": 6000,
+    "armor": 50,
+    "attack": 180,
+    "creepAttack": 90,
+    "range": 200,
+    "suddenDeathArmor": 0
+  },
+  "objectives": [
+    {
+      "id": "WARDEN",
+      "name": "守望者",
+      "nodeId": "RIV_TOP",
+      "firstSpawnSec": 300,
+      "respawnSec": 240,
+      "hp": 2500,
+      "hpPerMinute": 60,
+      "attack": 45,
+      "range": 150,
+      "goldPerMember": 100,
+      "buff": {
+        "kind": "ATTACK",
+        "value": 0.1,
+        "durationSec": 90
+      }
+    },
+    {
+      "id": "CORE",
+      "name": "晶核",
+      "nodeId": "RIV_BOT",
+      "firstSpawnSec": 300,
+      "respawnSec": 240,
+      "hp": 2500,
+      "hpPerMinute": 60,
+      "attack": 45,
+      "range": 150,
+      "goldPerMember": 100,
+      "buff": {
+        "kind": "SIEGE",
+        "value": 0.3,
+        "durationSec": 90
+      }
+    }
+  ],
+  "jungle": {
+    "campHp": 450,
+    "campGold": 70,
+    "campXp": 55,
+    "respawnSec": 60,
+    "firstSpawnSec": 20
+  },
+  "hero": {
+    "respawnBase": 6,
+    "respawnPerLevel": 2,
+    "maxLevel": 12,
+    "xpPerLevel": [
+      180,
+      240,
+      300,
+      360,
+      420,
+      480,
+      540,
+      600,
+      660,
+      720,
+      780
+    ],
+    "passiveGoldPerSec": 2,
+    "passiveXpPerSec": 2,
+    "goldStep": 300,
+    "goldStepBonus": 0.025,
+    "killGold": 250,
+    "killGoldPerVictimLevel": 10,
+    "assistGold": 150,
+    "killXp": 120,
+    "killXpPerVictimLevel": 20,
+    "assistWindowSec": 10,
+    "towerGoldPerMember": 150,
+    "baseRegenPerSec": 0.08,
+    "idleRegenPerSec": 0.005,
+    "recallSec": 6,
+    "slowFactor": 0.6,
+    "armorConstant": 100
+  },
+  "coefficients": {
+    "mechanicsDamage": {
+      "base": 0.85,
+      "per": 0.003
+    },
+    "skillHit": {
+      "base": 0.6,
+      "per": 0.004
+    },
+    "farm": {
+      "base": 0.7,
+      "per": 0.006
+    },
+    "masteryEffect": {
+      "base": 0.8,
+      "per": 0.004
+    },
+    "masteryCooldown": 0.002,
+    "mentalDeficitGold": 2000,
+    "mentalPenaltyPer": 0.002,
+    "formPer": 0.005,
+    "role": {
+      "primary": 1.0,
+      "secondary": 0.93,
+      "off": 0.82
+    },
+    "retreatThreshold": {
+      "base": 0.16,
+      "per": 0.002
+    },
+    "decisionChance": {
+      "base": 0.4,
+      "per": 0.006
+    },
+    "decisionNoise": {
+      "base": 0.05,
+      "per": 0.004
+    },
+    "gankDetect": {
+      "base": 0.15,
+      "per": 0.008
+    },
+    "teamworkDelay": 0.08,
+    "teamworkFocus": {
+      "base": 0.3,
+      "per": 0.006
+    }
+  },
+  "ai": {
+    "baseUtility": {
+      "FARM_LANE": {
+        "TOP": 1.0,
+        "MID": 1.0,
+        "ADC": 1.0,
+        "SUPPORT": 0.9,
+        "JUNGLE": 0.1
+      },
+      "FARM_JUNGLE": {
+        "JUNGLE": 1.0
+      },
+      "GANK": {
+        "JUNGLE": 0.7,
+        "SUPPORT": 0.35,
+        "MID": 0.3,
+        "TOP": 0.15,
+        "ADC": 0.05
+      },
+      "CONTEST_OBJECTIVE": {
+        "JUNGLE": 0.6,
+        "SUPPORT": 0.5,
+        "MID": 0.45,
+        "TOP": 0.35,
+        "ADC": 0.4
+      },
+      "PUSH": {
+        "TOP": 0.45,
+        "MID": 0.45,
+        "ADC": 0.45,
+        "SUPPORT": 0.3,
+        "JUNGLE": 0.3
+      },
+      "GROUP": {
+        "TOP": 0.5,
+        "MID": 0.55,
+        "ADC": 0.55,
+        "SUPPORT": 0.6,
+        "JUNGLE": 0.55
+      },
+      "DEFEND": {
+        "TOP": 0.6,
+        "MID": 0.6,
+        "ADC": 0.6,
+        "SUPPORT": 0.6,
+        "JUNGLE": 0.6
+      },
+      "SPLIT": {
+        "TOP": 0.35,
+        "ADC": 0.15
+      },
+      "RETREAT": {
+        "TOP": 3.0,
+        "MID": 3.0,
+        "ADC": 3.0,
+        "SUPPORT": 3.0,
+        "JUNGLE": 3.0
+      },
+      "RECALL": {
+        "TOP": 1.2,
+        "MID": 1.2,
+        "ADC": 1.2,
+        "SUPPORT": 1.2,
+        "JUNGLE": 1.2
+      }
+    },
+    "hysteresis": 0.15,
+    "engageRadius": 160,
+    "awarenessRadius": 450,
+    "groupStartSec": 840,
+    "groupRampPerMin": 0.03,
+    "gankMinSec": 90,
+    "recallHpFraction": 0.45,
+    "teamPlanIntervalSec": 5,
+    "teamfightRadius": 450,
+    "teamfightMinPerSide": 3,
+    "teamfightEndQuietSec": 5
+  },
+  "tactics": {
+    "EARLY_AGGRO": {
+      "name": "前期猛攻",
+      "description": "打野频繁抓人，前 12 分钟主动开团、抢资源；拖到后期会变弱。",
+      "rules": [
+        {
+          "actions": [
+            "GANK",
+            "CONTEST_OBJECTIVE"
+          ],
+          "factor": 1.6,
+          "toSec": 720
+        },
+        {
+          "actions": [
+            "FARM_LANE",
+            "FARM_JUNGLE"
+          ],
+          "factor": 0.9,
+          "toSec": 720
+        },
+        {
+          "actions": [
+            "*"
+          ],
+          "factor": 0.85,
+          "fromSec": 1200
+        }
+      ],
+      "retreatThresholdDelta": -0.04,
+      "engageRatio": 0.8,
+      "splitRoles": []
+    },
+    "STEADY_MACRO": {
+      "name": "稳健运营",
+      "description": "优先发育、少冒险、按时控资源；后期更强，前期容易被压。",
+      "rules": [
+        {
+          "actions": [
+            "FARM_LANE",
+            "FARM_JUNGLE"
+          ],
+          "factor": 1.4
+        },
+        {
+          "actions": [
+            "GANK"
+          ],
+          "factor": 0.7
+        },
+        {
+          "actions": [
+            "GROUP"
+          ],
+          "factor": 1.3,
+          "fromSec": 1500
+        }
+      ],
+      "retreatThresholdDelta": 0.08,
+      "engageRatio": 1.15,
+      "splitRoles": []
+    },
+    "TEAMFIGHT_PUSH": {
+      "name": "团战推进",
+      "description": "中期起五人抱团一路推进；克制分带，怕前期被打崩。",
+      "rules": [
+        {
+          "actions": [
+            "GROUP",
+            "PUSH"
+          ],
+          "factor": 1.6,
+          "fromSec": 720
+        },
+        {
+          "actions": [
+            "SPLIT"
+          ],
+          "factor": 0.3
+        }
+      ],
+      "retreatThresholdDelta": 0.0,
+      "engageRatio": 0.95,
+      "splitRoles": []
+    },
+    "SPLIT_PUSH": {
+      "name": "分带牵制",
+      "description": "一人在边路带线拆塔，其余四人防守；克制稳健运营，怕对面抱团强推。",
+      "rules": [
+        {
+          "actions": [
+            "SPLIT"
+          ],
+          "factor": 2.0,
+          "fromSec": 720,
+          "roles": [
+            "TOP"
+          ]
+        },
+        {
+          "actions": [
+            "DEFEND"
+          ],
+          "factor": 1.4,
+          "roles": [
+            "JUNGLE",
+            "MID",
+            "ADC",
+            "SUPPORT"
+          ]
+        },
+        {
+          "actions": [
+            "GROUP"
+          ],
+          "factor": 0.6,
+          "roles": [
+            "TOP"
+          ]
+        }
+      ],
+      "retreatThresholdDelta": 0.0,
+      "engageRatio": 1.0,
+      "splitRoles": [
+        "TOP"
+      ]
+    }
+  }
+}

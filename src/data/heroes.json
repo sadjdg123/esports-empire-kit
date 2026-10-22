@@ -1,0 +1,403 @@
+[
+  {
+    "id": "panyue",
+    "name": "磐岳",
+    "title": "不动的山门",
+    "archetype": "TANK",
+    "preferredRoles": [
+      "TOP",
+      "SUPPORT"
+    ],
+    "base": {
+      "hp": 720,
+      "attack": 40,
+      "armor": 30,
+      "attackRange": 100,
+      "attackInterval": 1.1,
+      "moveSpeed": 38
+    },
+    "perLevel": {
+      "hp": 95,
+      "attack": 3.5,
+      "armor": 3
+    },
+    "skill": {
+      "id": "zhenshanyin",
+      "name": "镇山印",
+      "description": "以自身为中心砸下山印，震晕周围敌人并造成少量伤害。",
+      "cooldown": 14,
+      "range": 0,
+      "target": "ENEMY_AREA",
+      "areaRadius": 130,
+      "effects": [
+        {
+          "type": "STUN",
+          "value": 1.5
+        },
+        {
+          "type": "DAMAGE",
+          "value": 1.2
+        }
+      ]
+    }
+  },
+  {
+    "id": "tieji",
+    "name": "铁棘",
+    "title": "荆甲守卫",
+    "archetype": "TANK",
+    "preferredRoles": [
+      "TOP",
+      "JUNGLE"
+    ],
+    "base": {
+      "hp": 720,
+      "attack": 40,
+      "armor": 30,
+      "attackRange": 100,
+      "attackInterval": 1.1,
+      "moveSpeed": 38
+    },
+    "perLevel": {
+      "hp": 95,
+      "attack": 3.5,
+      "armor": 3
+    },
+    "skill": {
+      "id": "jijiafanzhen",
+      "name": "棘甲反震",
+      "description": "为自己套上一层厚盾，同时减速身边的敌人。",
+      "cooldown": 12,
+      "range": 0,
+      "target": "SELF",
+      "areaRadius": 150,
+      "effects": [
+        {
+          "type": "SHIELD",
+          "value": 5.0
+        },
+        {
+          "type": "SLOW",
+          "value": 2.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "yexiao",
+    "name": "夜枭",
+    "title": "暗夜猎手",
+    "archetype": "ASSASSIN",
+    "preferredRoles": [
+      "JUNGLE",
+      "MID"
+    ],
+    "base": {
+      "hp": 560,
+      "attack": 56,
+      "armor": 18,
+      "attackRange": 100,
+      "attackInterval": 0.9,
+      "moveSpeed": 42
+    },
+    "perLevel": {
+      "hp": 70,
+      "attack": 5.5,
+      "armor": 2
+    },
+    "skill": {
+      "id": "yingxi",
+      "name": "影袭",
+      "description": "闪身扑向远处的敌人，造成一次高额伤害。",
+      "cooldown": 10,
+      "range": 260,
+      "target": "ENEMY_SINGLE",
+      "effects": [
+        {
+          "type": "DASH",
+          "value": 200
+        },
+        {
+          "type": "DAMAGE",
+          "value": 3.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "feiren",
+    "name": "绯刃",
+    "title": "双刀游侠",
+    "archetype": "ASSASSIN",
+    "preferredRoles": [
+      "JUNGLE",
+      "TOP"
+    ],
+    "base": {
+      "hp": 560,
+      "attack": 56,
+      "armor": 18,
+      "attackRange": 100,
+      "attackInterval": 0.9,
+      "moveSpeed": 42
+    },
+    "perLevel": {
+      "hp": 70,
+      "attack": 5.5,
+      "armor": 2
+    },
+    "skill": {
+      "id": "duanzui",
+      "name": "断罪连斩",
+      "description": "对近身敌人连斩数刀，造成伤害并使其减速。",
+      "cooldown": 8,
+      "range": 120,
+      "target": "ENEMY_SINGLE",
+      "effects": [
+        {
+          "type": "DAMAGE",
+          "value": 2.2
+        },
+        {
+          "type": "SLOW",
+          "value": 1.5
+        }
+      ]
+    }
+  },
+  {
+    "id": "xingzhu",
+    "name": "星烛",
+    "title": "观星术士",
+    "archetype": "MAGE",
+    "preferredRoles": [
+      "MID"
+    ],
+    "base": {
+      "hp": 500,
+      "attack": 46,
+      "armor": 14,
+      "attackRange": 260,
+      "attackInterval": 1.1,
+      "moveSpeed": 38
+    },
+    "perLevel": {
+      "hp": 65,
+      "attack": 4.5,
+      "armor": 1.5
+    },
+    "skill": {
+      "id": "zhuixing",
+      "name": "坠星",
+      "description": "召下一颗流星砸向敌群，对范围内所有敌人造成伤害。",
+      "cooldown": 11,
+      "range": 320,
+      "target": "ENEMY_AREA",
+      "areaRadius": 120,
+      "effects": [
+        {
+          "type": "DAMAGE",
+          "value": 2.4
+        }
+      ]
+    }
+  },
+  {
+    "id": "shuangdi",
+    "name": "霜笛",
+    "title": "寒笛乐师",
+    "archetype": "MAGE",
+    "preferredRoles": [
+      "MID",
+      "SUPPORT"
+    ],
+    "base": {
+      "hp": 500,
+      "attack": 46,
+      "armor": 14,
+      "attackRange": 260,
+      "attackInterval": 1.1,
+      "moveSpeed": 38
+    },
+    "perLevel": {
+      "hp": 65,
+      "attack": 4.5,
+      "armor": 1.5
+    },
+    "skill": {
+      "id": "hanchaoqu",
+      "name": "寒潮曲",
+      "description": "吹出一阵寒潮，伤害并大幅减速范围内的敌人。",
+      "cooldown": 10,
+      "range": 300,
+      "target": "ENEMY_AREA",
+      "areaRadius": 130,
+      "effects": [
+        {
+          "type": "DAMAGE",
+          "value": 1.6
+        },
+        {
+          "type": "SLOW",
+          "value": 2.5
+        }
+      ]
+    }
+  },
+  {
+    "id": "zhufeng",
+    "name": "逐风",
+    "title": "长弓射手",
+    "archetype": "MARKSMAN",
+    "preferredRoles": [
+      "ADC"
+    ],
+    "base": {
+      "hp": 520,
+      "attack": 52,
+      "armor": 14,
+      "attackRange": 300,
+      "attackInterval": 0.85,
+      "moveSpeed": 38
+    },
+    "perLevel": {
+      "hp": 65,
+      "attack": 6,
+      "armor": 1.5
+    },
+    "skill": {
+      "id": "chuanyunjian",
+      "name": "穿云箭",
+      "description": "拉满长弓射出一箭，对远处单个敌人造成高额伤害。",
+      "cooldown": 9,
+      "range": 420,
+      "target": "ENEMY_SINGLE",
+      "effects": [
+        {
+          "type": "DAMAGE",
+          "value": 2.6
+        }
+      ]
+    }
+  },
+  {
+    "id": "chisun",
+    "name": "赤隼",
+    "title": "连弩游击",
+    "archetype": "MARKSMAN",
+    "preferredRoles": [
+      "ADC",
+      "MID"
+    ],
+    "base": {
+      "hp": 520,
+      "attack": 52,
+      "armor": 14,
+      "attackRange": 300,
+      "attackInterval": 0.85,
+      "moveSpeed": 38
+    },
+    "perLevel": {
+      "hp": 65,
+      "attack": 6,
+      "armor": 1.5
+    },
+    "skill": {
+      "id": "yingyan",
+      "name": "鹰眼连射",
+      "description": "向单个敌人连射弩箭，造成伤害并使其减速。",
+      "cooldown": 7,
+      "range": 380,
+      "target": "ENEMY_SINGLE",
+      "effects": [
+        {
+          "type": "DAMAGE",
+          "value": 1.8
+        },
+        {
+          "type": "SLOW",
+          "value": 1.5
+        }
+      ]
+    }
+  },
+  {
+    "id": "qingluo",
+    "name": "青萝",
+    "title": "藤语医者",
+    "archetype": "SUPPORT",
+    "preferredRoles": [
+      "SUPPORT"
+    ],
+    "base": {
+      "hp": 600,
+      "attack": 34,
+      "armor": 20,
+      "attackRange": 220,
+      "attackInterval": 1.1,
+      "moveSpeed": 38
+    },
+    "perLevel": {
+      "hp": 80,
+      "attack": 3,
+      "armor": 2
+    },
+    "skill": {
+      "id": "chuntengyu",
+      "name": "春藤愈",
+      "description": "让藤蔓缠绕身边的队友，为范围内所有队友回复生命。",
+      "cooldown": 12,
+      "range": 0,
+      "target": "ALLY_AREA",
+      "areaRadius": 220,
+      "effects": [
+        {
+          "type": "HEAL",
+          "value": 3.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "mingzhong",
+    "name": "鸣钟",
+    "title": "钟楼守夜人",
+    "archetype": "SUPPORT",
+    "preferredRoles": [
+      "SUPPORT",
+      "TOP"
+    ],
+    "base": {
+      "hp": 600,
+      "attack": 34,
+      "armor": 20,
+      "attackRange": 220,
+      "attackInterval": 1.1,
+      "moveSpeed": 38
+    },
+    "perLevel": {
+      "hp": 80,
+      "attack": 3,
+      "armor": 2
+    },
+    "skill": {
+      "id": "chenzhong",
+      "name": "晨钟护佑",
+      "description": "敲响铜钟，为一名受伤队友套上护盾，并震晕自己身边的敌人。",
+      "cooldown": 11,
+      "range": 320,
+      "target": "ALLY_SINGLE",
+      "areaRadius": 140,
+      "effects": [
+        {
+          "type": "SHIELD",
+          "value": 4.0
+        },
+        {
+          "type": "STUN",
+          "value": 1.0
+        }
+      ]
+    }
+  }
+]

@@ -23,6 +23,8 @@
 - **D11** · 2026-10-22 · Claude Code · T00 实际版本（全部锁定精确版本）：Node 22.22.0（要求 ≥20.19，Vite 8 的最低要求）、React 19.3.1、Phaser 4.2.1、Vite 8.3.4、Vitest 5.0.5、TypeScript 6.0.3、ESLint 10.12.0、typescript-eslint 8.71.1、tsx 4.23.15。原因：选当时最新稳定大版本。TypeScript 用 6.0 而非 7.0，因为 typescript-eslint 目前只支持 <6.1。Vitest 用 5.0.5 而非 5.0.3，因为 5.0.3 触发 npm 10 的依赖解析崩溃（`edgesOut` 错误）。
 - **D12** · 2026-10-22 · Claude Code · ESLint 对 `src/core|sim|game|save` 除禁止引用 react/phaser/ui/render 外，还禁止 `window`/`document`/`localStorage` 等浏览器全局对象，以及 `Math.random`、`Date.now`、`new Date()`，从工具层面保证确定性。
 - **D13** · 2026-10-22 · Claude Code · `tsconfig` 额外开启 `noUncheckedIndexedAccess`（数组/对象取值可能为空时强制处理），减少模拟代码中的越界 bug。
+- **D14** · 2026-10-22 · 门哥 · T01–T06 连续做，中途不停，到 GATE-1 再停下汇报。每个任务仍单独提交、单独写汇报（存放在 `docs/reports/Txx.md`）。取代 AGENTS.md 第 3.1 条"每个任务停下等确认"在 P0a 阶段的适用。
+- **D15** · 2026-10-22 · Claude Code · 技能效果数值约定：DAMAGE/SHIELD/HEAL 的 value 是"施法者攻击力的倍数"；STUN/SLOW 是秒数；DASH 是位移距离。己方/自身目标技能附带的 STUN/SLOW/DAMAGE 作用于施法者周围 `areaRadius` 内的敌人。随机数选用 sfc32 + splitmix32 播种。地图坐标采用屏幕坐标（y 向下），红方节点是蓝方节点沿河道线 y=x 的镜像，保证两边地形完全对称。
 
 ## 接口变更申请
 

@@ -1,0 +1,647 @@
+[
+  {
+    "id": "fa_top_1",
+    "name": "北辰",
+    "age": 24,
+    "primaryRole": "TOP",
+    "secondaryRole": "SUPPORT",
+    "attrs": {
+      "mechanics": 50,
+      "awareness": 53,
+      "teamwork": 45,
+      "mental": 40
+    },
+    "heroMastery": {
+      "tieji": 58,
+      "mingzhong": 52,
+      "feiren": 34
+    },
+    "form": -3,
+    "salaryPerWeek": 800,
+    "signingFee": 3200,
+    "clubId": null
+  },
+  {
+    "id": "fa_top_2",
+    "name": "铁锚",
+    "age": 18,
+    "primaryRole": "TOP",
+    "attrs": {
+      "mechanics": 66,
+      "awareness": 66,
+      "teamwork": 61,
+      "mental": 51
+    },
+    "heroMastery": {
+      "panyue": 80,
+      "mingzhong": 70
+    },
+    "form": 0,
+    "salaryPerWeek": 2700,
+    "signingFee": 10800,
+    "clubId": null
+  },
+  {
+    "id": "fa_top_3",
+    "name": "Granite_K",
+    "age": 23,
+    "primaryRole": "TOP",
+    "secondaryRole": "JUNGLE",
+    "attrs": {
+      "mechanics": 42,
+      "awareness": 44,
+      "teamwork": 37,
+      "mental": 51
+    },
+    "heroMastery": {
+      "mingzhong": 62,
+      "feiren": 54,
+      "panyue": 42
+    },
+    "form": -2,
+    "salaryPerWeek": 550,
+    "signingFee": 2200,
+    "clubId": null
+  },
+  {
+    "id": "fa_top_4",
+    "name": "野渡",
+    "age": 21,
+    "primaryRole": "TOP",
+    "attrs": {
+      "mechanics": 75,
+      "awareness": 68,
+      "teamwork": 75,
+      "mental": 71
+    },
+    "heroMastery": {
+      "feiren": 94,
+      "mingzhong": 77,
+      "tieji": 67,
+      "panyue": 58
+    },
+    "form": 3,
+    "salaryPerWeek": 4200,
+    "signingFee": 16800,
+    "clubId": null
+  },
+  {
+    "id": "fa_top_5",
+    "name": "Quill",
+    "age": 25,
+    "primaryRole": "TOP",
+    "secondaryRole": "JUNGLE",
+    "attrs": {
+      "mechanics": 53,
+      "awareness": 60,
+      "teamwork": 59,
+      "mental": 61
+    },
+    "heroMastery": {
+      "mingzhong": 78,
+      "panyue": 64
+    },
+    "form": 3,
+    "salaryPerWeek": 1800,
+    "signingFee": 7200,
+    "clubId": null
+  },
+  {
+    "id": "fa_top_6",
+    "name": "阿蛮",
+    "age": 22,
+    "primaryRole": "TOP",
+    "secondaryRole": "SUPPORT",
+    "attrs": {
+      "mechanics": 70,
+      "awareness": 77,
+      "teamwork": 84,
+      "mental": 75
+    },
+    "heroMastery": {
+      "panyue": 89,
+      "mingzhong": 90,
+      "feiren": 71,
+      "tieji": 68
+    },
+    "form": -2,
+    "salaryPerWeek": 4400,
+    "signingFee": 17600,
+    "clubId": null
+  },
+  {
+    "id": "fa_jungle_1",
+    "name": "夜航",
+    "age": 26,
+    "primaryRole": "JUNGLE",
+    "secondaryRole": "TOP",
+    "attrs": {
+      "mechanics": 40,
+      "awareness": 60,
+      "teamwork": 42,
+      "mental": 35
+    },
+    "heroMastery": {
+      "feiren": 47,
+      "yexiao": 55,
+      "tieji": 36
+    },
+    "form": 0,
+    "salaryPerWeek": 1000,
+    "signingFee": 4000,
+    "clubId": null
+  },
+  {
+    "id": "fa_jungle_2",
+    "name": "Mothwing",
+    "age": 18,
+    "primaryRole": "JUNGLE",
+    "secondaryRole": "MID",
+    "attrs": {
+      "mechanics": 60,
+      "awareness": 59,
+      "teamwork": 60,
+      "mental": 52
+    },
+    "heroMastery": {
+      "tieji": 79,
+      "yexiao": 68,
+      "feiren": 53
+    },
+    "form": 1,
+    "salaryPerWeek": 2000,
+    "signingFee": 8000,
+    "clubId": null
+  },
+  {
+    "id": "fa_jungle_3",
+    "name": "青蚨",
+    "age": 23,
+    "primaryRole": "JUNGLE",
+    "secondaryRole": "TOP",
+    "attrs": {
+      "mechanics": 71,
+      "awareness": 68,
+      "teamwork": 67,
+      "mental": 54
+    },
+    "heroMastery": {
+      "feiren": 66,
+      "tieji": 72,
+      "yexiao": 65
+    },
+    "form": -1,
+    "salaryPerWeek": 2600,
+    "signingFee": 10400,
+    "clubId": null
+  },
+  {
+    "id": "fa_jungle_4",
+    "name": "拾柒",
+    "age": 24,
+    "primaryRole": "JUNGLE",
+    "secondaryRole": "MID",
+    "attrs": {
+      "mechanics": 72,
+      "awareness": 87,
+      "teamwork": 75,
+      "mental": 84
+    },
+    "heroMastery": {
+      "tieji": 98,
+      "yexiao": 88,
+      "feiren": 79
+    },
+    "form": 0,
+    "salaryPerWeek": 3700,
+    "signingFee": 14800,
+    "clubId": null
+  },
+  {
+    "id": "fa_jungle_5",
+    "name": "Dusk_Owl",
+    "age": 19,
+    "primaryRole": "JUNGLE",
+    "secondaryRole": "TOP",
+    "attrs": {
+      "mechanics": 67,
+      "awareness": 70,
+      "teamwork": 70,
+      "mental": 72
+    },
+    "heroMastery": {
+      "feiren": 78,
+      "yexiao": 75,
+      "tieji": 71
+    },
+    "form": 3,
+    "salaryPerWeek": 3250,
+    "signingFee": 13000,
+    "clubId": null
+  },
+  {
+    "id": "fa_jungle_6",
+    "name": "栖迟",
+    "age": 27,
+    "primaryRole": "JUNGLE",
+    "secondaryRole": "MID",
+    "attrs": {
+      "mechanics": 46,
+      "awareness": 51,
+      "teamwork": 47,
+      "mental": 44
+    },
+    "heroMastery": {
+      "tieji": 61,
+      "feiren": 48,
+      "yexiao": 40
+    },
+    "form": 1,
+    "salaryPerWeek": 800,
+    "signingFee": 3200,
+    "clubId": null
+  },
+  {
+    "id": "fa_mid_1",
+    "name": "霁月",
+    "age": 20,
+    "primaryRole": "MID",
+    "attrs": {
+      "mechanics": 62,
+      "awareness": 58,
+      "teamwork": 68,
+      "mental": 66
+    },
+    "heroMastery": {
+      "shuangdi": 66,
+      "xingzhu": 72,
+      "yexiao": 56
+    },
+    "form": -3,
+    "salaryPerWeek": 1800,
+    "signingFee": 7200,
+    "clubId": null
+  },
+  {
+    "id": "fa_mid_2",
+    "name": "Pyrelia",
+    "age": 18,
+    "primaryRole": "MID",
+    "secondaryRole": "JUNGLE",
+    "attrs": {
+      "mechanics": 53,
+      "awareness": 48,
+      "teamwork": 46,
+      "mental": 46
+    },
+    "heroMastery": {
+      "shuangdi": 68,
+      "xingzhu": 49,
+      "chisun": 40
+    },
+    "form": 2,
+    "salaryPerWeek": 1150,
+    "signingFee": 4600,
+    "clubId": null
+  },
+  {
+    "id": "fa_mid_3",
+    "name": "白露",
+    "age": 25,
+    "primaryRole": "MID",
+    "secondaryRole": "ADC",
+    "attrs": {
+      "mechanics": 84,
+      "awareness": 75,
+      "teamwork": 77,
+      "mental": 82
+    },
+    "heroMastery": {
+      "chisun": 98,
+      "shuangdi": 85,
+      "xingzhu": 74
+    },
+    "form": 1,
+    "salaryPerWeek": 4200,
+    "signingFee": 16800,
+    "clubId": null
+  },
+  {
+    "id": "fa_mid_4",
+    "name": "墨鱼仔",
+    "age": 17,
+    "primaryRole": "MID",
+    "attrs": {
+      "mechanics": 65,
+      "awareness": 72,
+      "teamwork": 72,
+      "mental": 80
+    },
+    "heroMastery": {
+      "chisun": 91,
+      "yexiao": 62,
+      "shuangdi": 61
+    },
+    "form": -1,
+    "salaryPerWeek": 3650,
+    "signingFee": 14600,
+    "clubId": null
+  },
+  {
+    "id": "fa_mid_5",
+    "name": "Lumen_9",
+    "age": 21,
+    "primaryRole": "MID",
+    "secondaryRole": "ADC",
+    "attrs": {
+      "mechanics": 44,
+      "awareness": 38,
+      "teamwork": 38,
+      "mental": 42
+    },
+    "heroMastery": {
+      "xingzhu": 50,
+      "yexiao": 44,
+      "chisun": 31
+    },
+    "form": 2,
+    "salaryPerWeek": 850,
+    "signingFee": 3400,
+    "clubId": null
+  },
+  {
+    "id": "fa_mid_6",
+    "name": "长庚",
+    "age": 19,
+    "primaryRole": "MID",
+    "secondaryRole": "JUNGLE",
+    "attrs": {
+      "mechanics": 59,
+      "awareness": 48,
+      "teamwork": 61,
+      "mental": 54
+    },
+    "heroMastery": {
+      "shuangdi": 69,
+      "chisun": 57,
+      "xingzhu": 51
+    },
+    "form": -3,
+    "salaryPerWeek": 1500,
+    "signingFee": 6000,
+    "clubId": null
+  },
+  {
+    "id": "fa_adc_1",
+    "name": "逐光",
+    "age": 25,
+    "primaryRole": "ADC",
+    "secondaryRole": "MID",
+    "attrs": {
+      "mechanics": 77,
+      "awareness": 68,
+      "teamwork": 68,
+      "mental": 67
+    },
+    "heroMastery": {
+      "chisun": 81,
+      "zhufeng": 91
+    },
+    "form": -1,
+    "salaryPerWeek": 3300,
+    "signingFee": 13200,
+    "clubId": null
+  },
+  {
+    "id": "fa_adc_2",
+    "name": "Kestrel_V",
+    "age": 20,
+    "primaryRole": "ADC",
+    "secondaryRole": "MID",
+    "attrs": {
+      "mechanics": 49,
+      "awareness": 55,
+      "teamwork": 62,
+      "mental": 55
+    },
+    "heroMastery": {
+      "chisun": 82,
+      "zhufeng": 60
+    },
+    "form": -3,
+    "salaryPerWeek": 1300,
+    "signingFee": 5200,
+    "clubId": null
+  },
+  {
+    "id": "fa_adc_3",
+    "name": "晚舟",
+    "age": 19,
+    "primaryRole": "ADC",
+    "attrs": {
+      "mechanics": 65,
+      "awareness": 56,
+      "teamwork": 58,
+      "mental": 65
+    },
+    "heroMastery": {
+      "chisun": 78,
+      "zhufeng": 62
+    },
+    "form": 1,
+    "salaryPerWeek": 2700,
+    "signingFee": 10800,
+    "clubId": null
+  },
+  {
+    "id": "fa_adc_4",
+    "name": "小满",
+    "age": 17,
+    "primaryRole": "ADC",
+    "secondaryRole": "MID",
+    "attrs": {
+      "mechanics": 52,
+      "awareness": 53,
+      "teamwork": 41,
+      "mental": 55
+    },
+    "heroMastery": {
+      "chisun": 75,
+      "zhufeng": 64
+    },
+    "form": 0,
+    "salaryPerWeek": 1300,
+    "signingFee": 5200,
+    "clubId": null
+  },
+  {
+    "id": "fa_adc_5",
+    "name": "Arrowroot",
+    "age": 18,
+    "primaryRole": "ADC",
+    "secondaryRole": "MID",
+    "attrs": {
+      "mechanics": 37,
+      "awareness": 41,
+      "teamwork": 40,
+      "mental": 41
+    },
+    "heroMastery": {
+      "chisun": 60,
+      "zhufeng": 45
+    },
+    "form": -3,
+    "salaryPerWeek": 500,
+    "signingFee": 2000,
+    "clubId": null
+  },
+  {
+    "id": "fa_adc_6",
+    "name": "惊蛰",
+    "age": 17,
+    "primaryRole": "ADC",
+    "secondaryRole": "MID",
+    "attrs": {
+      "mechanics": 78,
+      "awareness": 82,
+      "teamwork": 74,
+      "mental": 74
+    },
+    "heroMastery": {
+      "chisun": 89,
+      "zhufeng": 81
+    },
+    "form": 2,
+    "salaryPerWeek": 4500,
+    "signingFee": 18000,
+    "clubId": null
+  },
+  {
+    "id": "fa_support_1",
+    "name": "不语",
+    "age": 22,
+    "primaryRole": "SUPPORT",
+    "attrs": {
+      "mechanics": 81,
+      "awareness": 74,
+      "teamwork": 64,
+      "mental": 68
+    },
+    "heroMastery": {
+      "panyue": 89,
+      "qingluo": 80,
+      "mingzhong": 70,
+      "shuangdi": 56
+    },
+    "form": 0,
+    "salaryPerWeek": 3050,
+    "signingFee": 12200,
+    "clubId": null
+  },
+  {
+    "id": "fa_support_2",
+    "name": "阿槐",
+    "age": 25,
+    "primaryRole": "SUPPORT",
+    "secondaryRole": "MID",
+    "attrs": {
+      "mechanics": 45,
+      "awareness": 40,
+      "teamwork": 43,
+      "mental": 41
+    },
+    "heroMastery": {
+      "mingzhong": 52,
+      "shuangdi": 43,
+      "qingluo": 40
+    },
+    "form": 1,
+    "salaryPerWeek": 550,
+    "signingFee": 2200,
+    "clubId": null
+  },
+  {
+    "id": "fa_support_3",
+    "name": "Lanternfish",
+    "age": 19,
+    "primaryRole": "SUPPORT",
+    "secondaryRole": "MID",
+    "attrs": {
+      "mechanics": 81,
+      "awareness": 81,
+      "teamwork": 84,
+      "mental": 74
+    },
+    "heroMastery": {
+      "panyue": 91,
+      "mingzhong": 76
+    },
+    "form": -2,
+    "salaryPerWeek": 5050,
+    "signingFee": 20200,
+    "clubId": null
+  },
+  {
+    "id": "fa_support_4",
+    "name": "春山",
+    "age": 25,
+    "primaryRole": "SUPPORT",
+    "attrs": {
+      "mechanics": 43,
+      "awareness": 44,
+      "teamwork": 63,
+      "mental": 51
+    },
+    "heroMastery": {
+      "mingzhong": 65,
+      "shuangdi": 56,
+      "panyue": 40
+    },
+    "form": 2,
+    "salaryPerWeek": 1300,
+    "signingFee": 5200,
+    "clubId": null
+  },
+  {
+    "id": "fa_support_5",
+    "name": "Murmur_2",
+    "age": 21,
+    "primaryRole": "SUPPORT",
+    "attrs": {
+      "mechanics": 54,
+      "awareness": 51,
+      "teamwork": 56,
+      "mental": 59
+    },
+    "heroMastery": {
+      "panyue": 74,
+      "qingluo": 66
+    },
+    "form": 0,
+    "salaryPerWeek": 1900,
+    "signingFee": 7600,
+    "clubId": null
+  },
+  {
+    "id": "fa_support_6",
+    "name": "寄余",
+    "age": 27,
+    "primaryRole": "SUPPORT",
+    "attrs": {
+      "mechanics": 54,
+      "awareness": 58,
+      "teamwork": 66,
+      "mental": 79
+    },
+    "heroMastery": {
+      "qingluo": 81,
+      "mingzhong": 60,
+      "panyue": 60,
+      "shuangdi": 48
+    },
+    "form": -3,
+    "salaryPerWeek": 2500,
+    "signingFee": 10000,
+    "clubId": null
+  }
+]
