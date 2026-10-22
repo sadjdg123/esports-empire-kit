@@ -266,6 +266,12 @@ export interface TacticConfig {
   retreatThresholdDelta: number;
   engageRatio: number; // fight if local power ratio >= this
   splitRoles: Role[];
+  /** Team damage multipliers by time window: the tactic's tempo (early vs late power). */
+  powerCurve: { fromSec?: number; toSec?: number; damage: number }[];
+  /** Multiplier on creep and jungle gold (farming focus). */
+  farmGold: number;
+  /** Multiplier on hero damage against towers and bases (siege focus). */
+  siegeDamage: number;
 }
 
 export interface MatchConfig {
@@ -319,6 +325,7 @@ export interface MatchConfig {
     recallSec: number;
     slowFactor: number;
     armorConstant: number; // damage taken = raw * C / (C + armor)
+    structureDamage: number; // heroes deal this fraction of their damage to towers and bases
   };
   coefficients: {
     mechanicsDamage: CoefLinear;

@@ -298,7 +298,7 @@ function checkMatch(c: Checker, raw: unknown, heroIds: Set<string>): void {
   const hero = checkNumbers(c, o.hero, `${p}.hero`, [
     'respawnBase', 'respawnPerLevel', 'maxLevel', 'passiveGoldPerSec', 'passiveXpPerSec', 'goldStep', 'goldStepBonus',
     'killGold', 'killGoldPerVictimLevel', 'assistGold', 'killXp', 'killXpPerVictimLevel', 'assistWindowSec', 'towerGoldPerMember',
-    'baseRegenPerSec', 'idleRegenPerSec', 'recallSec', 'slowFactor', 'armorConstant',
+    'baseRegenPerSec', 'idleRegenPerSec', 'recallSec', 'slowFactor', 'armorConstant', 'structureDamage',
   ]);
   if (hero) {
     const xp = c.arr(hero.xpPerLevel, `${p}.hero.xpPerLevel`, 1);
@@ -332,6 +332,16 @@ function checkMatch(c: Checker, raw: unknown, heroIds: Set<string>): void {
       c.num(to, 'retreatThresholdDelta', tp, -1, 1);
       c.num(to, 'engageRatio', tp, 0.1, 10);
       c.arr(to.splitRoles, `${tp}.splitRoles`);
+      c.num(to, 'farmGold', tp, 0.1, 5);
+      c.num(to, 'siegeDamage', tp, 0.1, 5);
+      const curve = c.arr(to.powerCurve, `${tp}.powerCurve`) ?? [];
+      curve.forEach((w, i) => {
+        const wo = c.obj(w, `${tp}.powerCurve[${i}]`);
+        if (!wo) return;
+        c.num(wo, 'damage', `${tp}.powerCurve[${i}]`, 0.1, 5);
+        c.optNum(wo, 'fromSec', `${tp}.powerCurve[${i}]`, 0);
+        c.optNum(wo, 'toSec', `${tp}.powerCurve[${i}]`, 0);
+      });
       const rules = c.arr(to.rules, `${tp}.rules`) ?? [];
       rules.forEach((r, i) => {
         const ro = c.obj(r, `${tp}.rules[${i}]`);

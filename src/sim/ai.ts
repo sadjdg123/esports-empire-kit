@@ -3,7 +3,7 @@
 
 import type { Lane, Role, Side } from '../core/types';
 import { atNode, type Loc } from './map';
-import { dist2, nodeXY } from './combat';
+import { dist2 } from './combat';
 import { emit } from './events';
 import { FORCE_RADIUS, type LocalForces, type MatchState, type TeamState } from './state';
 import { actionReason, tacticFactor } from './tactics';
@@ -85,8 +85,8 @@ function fallbackNode(s: MatchState, side: Side, lane: Lane): number {
 }
 
 export function atOwnBase(s: MatchState, h: HeroUnit): boolean {
-  const [bx, by] = nodeXY(s, s.map.bases[h.side]);
-  return dist2(bx, by, s.hx[h.idx]!, s.hy[h.idx]!) <= 60 * 60;
+  const b = s.map.bases[h.side];
+  return dist2(s.map.xs[b]!, s.map.ys[b]!, s.hx[h.idx]!, s.hy[h.idx]!) <= 60 * 60;
 }
 
 export function structureLoc(st: Structure): Loc {
@@ -98,7 +98,8 @@ function structureThreat(s: MatchState, si: number, side: Side): number {
   const cached = tc.threat[si]!;
   if (cached >= 0) return cached;
   const st = s.structures[si]!;
-  const [sx, sy] = nodeXY(s, st.node);
+  const sx = s.map.xs[st.node]!;
+  const sy = s.map.ys[st.node]!;
   const r2 = (st.range + 150) ** 2;
   let threat = 0;
   for (const e of s.heroes) if (e.alive && e.side !== side && dist2(sx, sy, s.hx[e.idx]!, s.hy[e.idx]!) <= r2) threat += 1;
@@ -196,7 +197,11 @@ function actionValid(s: MatchState, h: HeroUnit): boolean {
     case 'IDLE': return false;
     case 'GANK': {
       const t = s.heroes[h.actionTarget];
-      return !!t && t.alive && s.t - h.actionSince < 40 && euclidTo(s, t, s.map.bases[t.side]) > 250;
+      if (!t || !t.alive || s.t - h.actionSince >= 30 || euclidTo(s, t, s.map.bases[t.side]) <= 250) return false;
+      // Abort when the target escaped under its tower healthy, or we walked into a bad fight.
+      if (s.tickCache.underOwnStructure[t.idx] && hpFrac(t) > 0.35) return false;
+      const f = forcesAround(s, h);
+      return f.enemy === 0 || f.ally / f.enemy >= 0.75;
     }
     case 'CONTEST_OBJECTIVE': {
       const ob = s.objectives[h.actionTarget];
@@ -214,7 +219,7 @@ interface Choice {
   u: number;
 }
 
-function scoreActions(s: MatchState, h: HeroUnit): Choice[] {
+function scoreActions(s: MatchState, h: HeroUnit): Choice | null {
   const cfg = s.cfg;
   const t = s.t;
   const team = s.teams[h.side];
@@ -222,8 +227,16 @@ function scoreActions(s: MatchState, h: HeroUnit): Choice[] {
   const hpF = hpFrac(h);
   const near = forcesAround(s, h);
   const ratio = near.enemy === 0 ? 9 : near.ally / near.enemy;
-  const out: Choice[] = [];
-  const add = (action: string, target: number, u: number) => { if (u > 0) out.push({ action, target, u }); };
+  const best: Choice = { action: '', target: -1, u: -Infinity };
+  const noise = h.coef.decisionNoise;
+  const hyst = cfg.ai.hysteresis;
+  // Noise (lower awareness = noisier judgement) and commitment to the current action.
+  const add = (action: string, target: number, u: number): void => {
+    if (u <= 0) return;
+    let v = u + (s.rng.next() * 2 - 1) * noise;
+    if (action === h.action && (target === h.actionTarget || action === 'GROUP')) v += hyst;
+    if (v > best.u) { best.action = action; best.target = target; best.u = v; }
+  };
 
   // RETREAT
   const thr = h.coef.retreatThreshold + tac.retreatThresholdDelta;
@@ -261,7 +274,10 @@ function scoreActions(s: MatchState, h: HeroUnit): Choice[] {
       if (eBase < 300) continue;
       const d = Math.sqrt(dist2(s.hx[h.idx]!, s.hy[h.idx]!, s.hx[e.idx]!, s.hy[e.idx]!));
       let score = 0.35 * (1 - hpFrac(e)) + 0.35 * Math.max(0, 1 - d / 1400) + (eBase > 700 ? 0.3 : 0);
-      if (s.tickCache.underOwnStructure[e.idx]) score *= 0.5;
+      if (s.tickCache.underOwnStructure[e.idx]) score *= 0.4;
+      // Prefer isolated targets: count the target's teammates around it.
+      const guards = forcesAround(s, e).allies.length;
+      score *= guards === 0 ? 1.2 : guards === 1 ? 0.8 : 0.4;
       if (score > bestScore) { bestScore = score; best = e.idx; }
     }
     if (best >= 0) {
@@ -314,7 +330,8 @@ function scoreActions(s: MatchState, h: HeroUnit): Choice[] {
       const threat = structureThreat(s, si, h.side);
       if (threat <= 0) return;
       const d = euclidTo(s, h, st.node);
-      add('DEFEND', si, df * tf(s, h, 'DEFEND') * Math.min(1.6, 0.4 + 0.35 * threat) * Math.max(0.2, 1 - d / 2200));
+      const importance = st.kind === 'BASE' ? 1.8 : st.tier === 2 ? 1.3 : 1;
+      add('DEFEND', si, df * tf(s, h, 'DEFEND') * importance * Math.min(1.8, 0.4 + 0.35 * threat) * Math.max(0.35, 1 - d / 3000));
     });
   }
 
@@ -327,12 +344,7 @@ function scoreActions(s: MatchState, h: HeroUnit): Choice[] {
     add('SPLIT', LANE_LIST.indexOf(lane), u);
   }
 
-  // Noise (lower awareness = noisier judgement) and commitment to the current action.
-  for (const c of out) {
-    c.u += (s.rng.next() * 2 - 1) * h.coef.decisionNoise;
-    if (c.action === h.action && (c.target === h.actionTarget || c.action === 'GROUP')) c.u += cfg.ai.hysteresis;
-  }
-  return out;
+  return best.action ? best : null;
 }
 
 function pickCamp(s: MatchState, h: HeroUnit): number {
@@ -372,10 +384,8 @@ export function decideUtility(s: MatchState, h: HeroUnit): void {
     if (forcesAround(s, h).enemies.length === 0) return;
   }
   if (valid && !s.rng.chance(h.coef.decisionChance)) return;
-  const choices = scoreActions(s, h);
-  if (choices.length === 0) return;
-  let best = choices[0]!;
-  for (const c of choices) if (c.u > best.u) best = c;
+  const best = scoreActions(s, h);
+  if (!best) return;
   const prev = h.action;
   setAction(s, h, best.action, best.target);
   const team = s.teams[h.side];

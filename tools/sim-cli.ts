@@ -1,6 +1,6 @@
 // Simulation command line.
 //   npm run sim -- --one --seed 42 [--blue jinyu --red tianshu]   one match, zh-CN report
-//   npm run sim -- --n 1000                                         balance report (T06)
+//   npm run sim -- --n 1000 [--threads 4] [--only G4,G5] [--no-write]  balance report (GDD 16.1)
 import { loadGameData } from '../src/core/config';
 import type { Tactic } from '../src/core/types';
 import { runMatch } from '../src/sim';
@@ -55,5 +55,15 @@ function one(): void {
   console.log(`\n时长 ${formatTime(result.durationSec)} · 事件 ${result.events.length} 条 · checksum ${result.checksum}`);
 }
 
+async function balance(): Promise<void> {
+  const { runBalance } = await import('./balance/run');
+  const only = arg('only')?.split(',') as Parameters<typeof runBalance>[0]['only'];
+  const threads = arg('threads') ? Number(arg('threads')) : undefined;
+  const res = await runBalance({ n: Number(arg('n') ?? 1000), threads, only, write: !process.argv.includes('--no-write') && !only });
+  console.log(res.markdown);
+  if (res.path) console.log(`\n报告已写入 ${res.path}`);
+  process.exitCode = res.passed ? 0 : 1;
+}
+
 if (process.argv.includes('--one')) one();
-else console.log('Balance report arrives in T06. Try: npm run sim -- --one --seed 42');
+else void balance();

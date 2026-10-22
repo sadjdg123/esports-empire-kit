@@ -49,7 +49,8 @@ export function buffValue(s: MatchState, side: Side, kind: 'ATTACK' | 'SIEGE'): 
 }
 
 export function heroDamageMult(s: MatchState, h: HeroUnit): number {
-  let m = h.coef.damage * (1 + buffValue(s, h.side, 'ATTACK'));
+  const team = s.teams[h.side];
+  let m = h.coef.damage * (1 + buffValue(s, h.side, 'ATTACK')) * team.tempo;
   if (s.teams[h.side].goldDiff < -s.cfg.coefficients.mentalDeficitGold) m *= h.coef.mentalPenalty;
   return m;
 }
@@ -79,9 +80,8 @@ export function structureAttackable(s: MatchState, st: Structure): boolean {
 }
 
 export function inStructureRange(s: MatchState, st: Structure, x: number, y: number, extra = 0): boolean {
-  const [sx, sy] = nodeXY(s, st.node);
   const r = st.range + extra;
-  return dist2(sx, sy, x, y) <= r * r;
+  return dist2(s.map.xs[st.node]!, s.map.ys[st.node]!, x, y) <= r * r;
 }
 
 /** True when (x, y) is covered by a living enemy structure of `side`'s opponent. */
@@ -102,7 +102,9 @@ function queue(s: MatchState, op: PendingOp): void {
 export function queueHeroAttack(s: MatchState, h: HeroUnit, target: TargetRef): void {
   const dt = s.cfg.time.tickSec;
   let amount = h.attack * (dt / h.hero.base.attackInterval) * heroDamageMult(s, h);
-  if (target.kind === 'STRUCTURE') amount *= 1 + buffValue(s, h.side, 'SIEGE');
+  if (target.kind === 'STRUCTURE') {
+    amount *= s.cfg.hero.structureDamage * s.cfg.tactics[s.teams[h.side].tactic].siegeDamage * (1 + buffValue(s, h.side, 'SIEGE'));
+  }
   queue(s, { op: 'DAMAGE', targetKind: target.kind, target: target.idx, amount, sourceHero: h.idx, sourceSide: h.side, skill: false });
   const toId = target.kind === 'HERO' ? s.heroes[target.idx]!.id
     : target.kind === 'CREEP' ? s.creeps[target.idx]!.id
@@ -306,9 +308,8 @@ export function creepAndStructurePhase(s: MatchState): void {
     for (let si = 0; si < s.structures.length; si++) {
       const st = s.structures[si]!;
       if (st.side === c.side || !st.alive) continue;
-      const [sx, sy] = nodeXY(s, st.node);
-      if (dist2(x, y, sx, sy) <= sr * sr) {
-        if (structureAttackable(s, st)) {
+      if (dist2(x, y, s.map.xs[st.node]!, s.map.ys[st.node]!) <= sr * sr) {
+        if (s.tickCache.attackable[si]) {
           queue(s, { op: 'DAMAGE', targetKind: 'STRUCTURE', target: si, amount: c.structureAttack * dt, sourceHero: -1, sourceSide: c.side, skill: false });
         }
         c.engaged = true;
@@ -333,7 +334,8 @@ export function creepAndStructurePhase(s: MatchState): void {
   const late = s.t >= s.cfg.time.suddenDeathSec;
   s.structures.forEach((st) => {
     if (!st.alive) return;
-    const [sx, sy] = nodeXY(s, st.node);
+    const sx = s.map.xs[st.node]!;
+    const sy = s.map.ys[st.node]!;
     const r2 = st.range * st.range;
     const dmgMult = late ? 0.5 : 1;
     // 1. hero that attacked an allied hero inside range
@@ -418,6 +420,10 @@ export function applyPending(s: MatchState): void {
             src.heroDamage += op.amount;
             src.lastHeroDamageAt = t;
             h.damagers.push({ hero: op.sourceHero, t });
+            if (h.damagers.length > 40) {
+              const keepAfter = t - s.cfg.hero.assistWindowSec;
+              h.damagers = h.damagers.filter((d) => d.t >= keepAfter);
+            }
             // Structures defend heroes being attacked inside their range.
             for (const st of s.structures) {
               if (st.alive && st.side === h.side && inStructureRange(s, st, s.hx[h.idx]!, s.hy[h.idx]!)) {
@@ -582,7 +588,7 @@ export function resolveDeaths(s: MatchState): void {
     const weights = near.map((h) => (h.role === 'SUPPORT' ? 0.3 : 1));
     const wsum = weights.reduce((a, b) => a + b, 0);
     near.forEach((h, i) => {
-      grantGold(cfg, h, cfg.creeps.gold * h.coef.farm * (weights[i]! / wsum));
+      grantGold(cfg, h, cfg.creeps.gold * h.coef.farm * cfg.tactics[s.teams[h.side].tactic].farmGold * (weights[i]! / wsum));
       grantXp(cfg, h, Math.min(cfg.creeps.xp, (cfg.creeps.xp * 1.3) / near.length));
     });
   });
@@ -673,7 +679,7 @@ export function resolveDeaths(s: MatchState): void {
     if (hi < 0) continue;
     const h = s.heroes[hi]!;
     if (!h.alive) continue;
-    grantGold(cfg, h, cfg.jungle.campGold * h.coef.farm);
+    grantGold(cfg, h, cfg.jungle.campGold * h.coef.farm * cfg.tactics[s.teams[h.side].tactic].farmGold);
     grantXp(cfg, h, cfg.jungle.campXp);
   }
 }

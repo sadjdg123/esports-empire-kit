@@ -26,3 +26,14 @@ export function tacticFactor(cfg: MatchConfig, tactic: Tactic, action: string, r
 export function actionReason(cfg: MatchConfig, tactic: Tactic, action: string, role: Role, t: number): string {
   return tacticFactor(cfg, tactic, action, role, t) > 1.001 ? `tactic:${tactic}` : `role:${role}`;
 }
+
+/** Team damage multiplier from the tactic's power curve at time t. */
+export function tempoFactor(cfg: MatchConfig, tactic: Tactic, t: number): number {
+  let f = 1;
+  for (const w of cfg.tactics[tactic].powerCurve) {
+    if (w.fromSec !== undefined && t < w.fromSec) continue;
+    if (w.toSec !== undefined && t >= w.toSec) continue;
+    f *= w.damage;
+  }
+  return f;
+}

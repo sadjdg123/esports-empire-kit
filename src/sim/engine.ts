@@ -8,10 +8,11 @@ import {
 import { decideSimple, decideUtility, onGankUtility, planSimple, planUtility, teamPlanUtility, type ActionPlan } from './ai';
 import {
   applyPending, creepAndStructurePhase, dist2, heroDist, heroPower, nodeXY, queueHeroAttack, resolveDeaths, respawnHeroes,
-  structureAttackable, tryCastSkill, STRUCTURE_RADIUS, type TargetRef,
+  tryCastSkill, STRUCTURE_RADIUS, type TargetRef,
 } from './combat';
 import { emit } from './events';
 import { atNode, buildMap, coordOf, type GameMap } from './map';
+import { tempoFactor } from './tactics';
 import { enemyOf, type BrainKind, type MatchState, type TeamState } from './state';
 import { createHero, grantGold, grantXp, moveHero, moveWave, heroMoveSpeed, spawnWave, type Camp, type HeroUnit, type Objective, type Structure } from './units';
 
@@ -68,7 +69,7 @@ export function createMatch(input: MatchInput, data: GameData, opts: MatchOption
     }
     teams[side] = {
       side, tactic: team.lineup.tactic, clubId: team.lineup.clubId, heroIdx, kills: 0, buffs: [],
-      siegeLane: 'MID', groupCallAt: -1, objectivesTaken: 0, towersDestroyed: 0, goldDiff: 0,
+      siegeLane: 'MID', groupCallAt: -1, objectivesTaken: 0, towersDestroyed: 0, goldDiff: 0, tempo: 1,
     };
   }
 
@@ -136,8 +137,18 @@ function cachePositions(s: MatchState): void {
   const tc = s.tickCache;
   tc.t = s.t;
   for (const h of s.heroes) tc.power[h.idx] = heroPower(s, h);
+  // Attackable: tier 1 always; tier 2 once that lane's tier 1 fell; base once any tier 2 fell.
   tc.attackable.length = 0;
-  for (const st of s.structures) tc.attackable.push(structureAttackable(s, st));
+  const t1Down: Record<string, boolean> = {};
+  const t2Down = { BLUE: false, RED: false };
+  for (const st of s.structures) {
+    if (st.kind !== 'TOWER' || st.alive) continue;
+    if (st.tier === 1) t1Down[`${st.side}:${st.lane}`] = true;
+    else t2Down[st.side] = true;
+  }
+  for (const st of s.structures) {
+    tc.attackable.push(st.alive && (st.kind === 'BASE' ? t2Down[st.side] : st.tier === 1 || t1Down[`${st.side}:${st.lane}`] === true));
+  }
   tc.threat.fill(-1);
   tc.front.clear();
   tc.forces.length = 0;
@@ -259,6 +270,11 @@ export function worthTrading(s: MatchState, h: HeroUnit, e: number): boolean {
   if (theirs < 0.4 || eh.stunnedUntil > s.t) return true;
   const mine = (h.hp + h.shield) / h.maxHp;
   if (theirs + 0.2 < mine) return true;
+  // Join in when a nearby teammate is already fighting this enemy (e.g. a gank).
+  for (const d of eh.damagers) {
+    if (s.t - d.t > 2 || d.hero === h.idx || s.heroes[d.hero]!.side !== h.side) continue;
+    if (dist2(s.hx[d.hero]!, s.hy[d.hero]!, s.hx[h.idx]!, s.hy[h.idx]!) <= 500 * 500) return true;
+  }
   // Hit back at someone who is hitting us, unless we are losing the trade.
   const hitMe = h.damagers.some((d) => d.hero === e && s.t - d.t <= 2);
   return hitMe && mine >= theirs - 0.1;
@@ -286,8 +302,7 @@ function chooseTarget(s: MatchState, h: HeroUnit, plan: ActionPlan): TargetRef |
   // 3. objective
   if (plan.objective >= 0) {
     const ob = s.objectives[plan.objective]!;
-    const [ox, oy] = nodeXY(s, ob.node);
-    if (ob.alive && dist2(x, y, ox, oy) <= (range + STRUCTURE_RADIUS) ** 2) return { kind: 'OBJECTIVE', idx: plan.objective };
+    if (ob.alive && dist2(x, y, s.map.xs[ob.node]!, s.map.ys[ob.node]!) <= (range + STRUCTURE_RADIUS) ** 2) return { kind: 'OBJECTIVE', idx: plan.objective };
   }
   // 4. enemy creeps
   let best = -1;
@@ -302,23 +317,22 @@ function chooseTarget(s: MatchState, h: HeroUnit, plan: ActionPlan): TargetRef |
   // 5. jungle camp
   if (plan.camp >= 0) {
     const camp = s.camps[plan.camp]!;
-    const [cx, cy] = nodeXY(s, camp.node);
-    if (camp.alive && dist2(x, y, cx, cy) <= (range + STRUCTURE_RADIUS) ** 2) return { kind: 'CAMP', idx: plan.camp };
+    if (camp.alive && dist2(x, y, s.map.xs[camp.node]!, s.map.ys[camp.node]!) <= (range + STRUCTURE_RADIUS) ** 2) return { kind: 'CAMP', idx: plan.camp };
   }
   // 6. structures
   const sr = range + STRUCTURE_RADIUS;
   for (let si = 0; si < s.structures.length; si++) {
     const st = s.structures[si]!;
     if (!st.alive || st.side === h.side) continue;
-    const [sx, sy] = nodeXY(s, st.node);
-    if (dist2(x, y, sx, sy) > sr * sr || !s.tickCache.attackable[si]) continue;
+    if (dist2(x, y, s.map.xs[st.node]!, s.map.ys[st.node]!) > sr * sr || !s.tickCache.attackable[si]) continue;
     if (plan.siege || creepCovered(s, h.side, st)) return { kind: 'STRUCTURE', idx: si };
   }
   return null;
 }
 
 function creepCovered(s: MatchState, side: Side, st: Structure): boolean {
-  const [sx, sy] = nodeXY(s, st.node);
+  const sx = s.map.xs[st.node]!;
+  const sy = s.map.ys[st.node]!;
   const r2 = (st.range + 20) ** 2;
   return s.creeps.some((c, ci) => c.alive && c.side === side && dist2(sx, sy, s.cx[ci]!, s.cy[ci]!) <= r2);
 }
@@ -392,8 +406,8 @@ function passivePhase(s: MatchState): void {
     if (!h.alive) continue;
     grantGold(cfg, h, cfg.hero.passiveGoldPerSec * dt);
     grantXp(cfg, h, cfg.hero.passiveXpPerSec * dt);
-    const [bx, by] = nodeXY(s, s.map.bases[h.side]);
-    if (dist2(bx, by, s.hx[h.idx]!, s.hy[h.idx]!) <= 120 * 120) h.hp = Math.min(h.maxHp, h.hp + cfg.hero.baseRegenPerSec * h.maxHp * dt);
+    const b = s.map.bases[h.side];
+    if (dist2(s.map.xs[b]!, s.map.ys[b]!, s.hx[h.idx]!, s.hy[h.idx]!) <= 120 * 120) h.hp = Math.min(h.maxHp, h.hp + cfg.hero.baseRegenPerSec * h.maxHp * dt);
     else if (s.t - h.lastDamagedAt > 5) h.hp = Math.min(h.maxHp, h.hp + cfg.hero.idleRegenPerSec * h.maxHp * dt);
   }
 }
@@ -505,6 +519,7 @@ export function step(s: MatchState): void {
   s.attacks = [];
   s.skillCasts = [];
   spawnPhase(s);
+  for (const side of SIDES) s.teams[side].tempo = tempoFactor(s.cfg, s.teams[side].tactic, s.t);
   cachePositions(s);
   const gb = teamGold(s, 'BLUE');
   const gr = teamGold(s, 'RED');
@@ -523,7 +538,7 @@ export function step(s: MatchState): void {
   passivePhase(s);
   teamfightPhase(s);
   clockPhase(s);
-  s.creeps = s.creeps.filter((c) => c.alive);
+  if (s.creeps.some((c) => !c.alive)) s.creeps = s.creeps.filter((c) => c.alive);
   if (s.over) {
     if (s.teamfight) endTeamfight(s);
     emit(s, { t: s.t, type: 'MATCH_END', side: s.winner!, actors: [], detail: { reason: s.endReason }, reason: s.endReason === 'timeout' ? 'timeout' : undefined });

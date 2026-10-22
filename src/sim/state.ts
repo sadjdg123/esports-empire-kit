@@ -26,6 +26,7 @@ export interface TeamState {
   objectivesTaken: number;
   towersDestroyed: number;
   goldDiff: number; // this team's gold minus the enemy's, refreshed each tick
+  tempo: number; // tactic power-curve multiplier, refreshed each tick
 }
 
 export interface TeamfightState {

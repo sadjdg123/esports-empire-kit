@@ -417,14 +417,14 @@
   },
   "towers": {
     "T1": {
-      "hp": 2600,
+      "hp": 3000,
       "armor": 40,
       "attack": 150,
       "creepAttack": 80,
       "range": 180
     },
     "T2": {
-      "hp": 3200,
+      "hp": 3800,
       "armor": 45,
       "attack": 170,
       "creepAttack": 90,
@@ -432,7 +432,7 @@
     }
   },
   "base": {
-    "hp": 4500,
+    "hp": 5500,
     "armor": 50,
     "attack": 180,
     "creepAttack": 90,
@@ -514,7 +514,8 @@
     "idleRegenPerSec": 0.005,
     "recallSec": 6,
     "slowFactor": 0.6,
-    "armorConstant": 100
+    "armorConstant": 100,
+    "structureDamage": 0.55
   },
   "coefficients": {
     "mechanicsDamage": {
@@ -648,39 +649,57 @@
   "tactics": {
     "EARLY_AGGRO": {
       "name": "前期猛攻",
-      "description": "打野频繁抓人，前 12 分钟主动开团、抢资源；拖到后期会变弱。",
+      "description": "打野频繁抓人，前 12 分钟主动开团、抢资源，节奏最快；拖到后期会变弱。",
       "rules": [
         {
           "actions": [
-            "GANK",
-            "CONTEST_OBJECTIVE"
+            "GANK"
           ],
-          "factor": 1.6,
+          "factor": 1.8,
           "toSec": 720
         },
         {
           "actions": [
-            "FARM_LANE",
-            "FARM_JUNGLE"
+            "CONTEST_OBJECTIVE"
           ],
-          "factor": 0.9,
+          "factor": 1.2,
           "toSec": 720
+        },
+        {
+          "actions": [
+            "GROUP"
+          ],
+          "factor": 1.4,
+          "fromSec": 480,
+          "toSec": 1320
         },
         {
           "actions": [
             "*"
           ],
-          "factor": 0.85,
-          "fromSec": 1200
+          "factor": 0.9,
+          "fromSec": 1320
         }
       ],
-      "retreatThresholdDelta": -0.04,
-      "engageRatio": 0.8,
-      "splitRoles": []
+      "retreatThresholdDelta": 0.0,
+      "engageRatio": 0.9,
+      "splitRoles": [],
+      "powerCurve": [
+        {
+          "toSec": 840,
+          "damage": 1.12
+        },
+        {
+          "fromSec": 1440,
+          "damage": 0.95
+        }
+      ],
+      "farmGold": 1.0,
+      "siegeDamage": 1.0
     },
     "STEADY_MACRO": {
       "name": "稳健运营",
-      "description": "优先发育、少冒险、按时控资源；后期更强，前期容易被压。",
+      "description": "优先发育、少冒险、按时控资源、认真守塔；后期更强，前期容易被压。",
       "rules": [
         {
           "actions": [
@@ -693,19 +712,43 @@
           "actions": [
             "GANK"
           ],
-          "factor": 0.7
+          "factor": 0.6
+        },
+        {
+          "actions": [
+            "CONTEST_OBJECTIVE"
+          ],
+          "factor": 1.2
+        },
+        {
+          "actions": [
+            "DEFEND"
+          ],
+          "factor": 1.4
         },
         {
           "actions": [
             "GROUP"
           ],
-          "factor": 1.3,
-          "fromSec": 1500
+          "factor": 1.4,
+          "fromSec": 1320
         }
       ],
       "retreatThresholdDelta": 0.08,
       "engageRatio": 1.15,
-      "splitRoles": []
+      "splitRoles": [],
+      "powerCurve": [
+        {
+          "toSec": 600,
+          "damage": 0.97
+        },
+        {
+          "fromSec": 1200,
+          "damage": 1.08
+        }
+      ],
+      "farmGold": 1.12,
+      "siegeDamage": 1.0
     },
     "TEAMFIGHT_PUSH": {
       "name": "团战推进",
@@ -713,11 +756,18 @@
       "rules": [
         {
           "actions": [
+            "GANK"
+          ],
+          "factor": 0.8,
+          "toSec": 720
+        },
+        {
+          "actions": [
             "GROUP",
             "PUSH"
           ],
-          "factor": 1.6,
-          "fromSec": 720
+          "factor": 1.5,
+          "fromSec": 780
         },
         {
           "actions": [
@@ -728,7 +778,15 @@
       ],
       "retreatThresholdDelta": 0.0,
       "engageRatio": 0.95,
-      "splitRoles": []
+      "splitRoles": [],
+      "powerCurve": [
+        {
+          "toSec": 720,
+          "damage": 0.97
+        }
+      ],
+      "farmGold": 1.0,
+      "siegeDamage": 1.2
     },
     "SPLIT_PUSH": {
       "name": "分带牵制",
@@ -738,7 +796,7 @@
           "actions": [
             "SPLIT"
           ],
-          "factor": 2.0,
+          "factor": 1.8,
           "fromSec": 720,
           "roles": [
             "TOP"
@@ -748,7 +806,7 @@
           "actions": [
             "DEFEND"
           ],
-          "factor": 1.4,
+          "factor": 1.3,
           "roles": [
             "JUNGLE",
             "MID",
@@ -770,7 +828,10 @@
       "engageRatio": 1.0,
       "splitRoles": [
         "TOP"
-      ]
+      ],
+      "powerCurve": [],
+      "farmGold": 1.0,
+      "siegeDamage": 1.0
     }
   }
 }
