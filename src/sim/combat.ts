@@ -125,6 +125,20 @@ function inRange(s: MatchState, a: number, b: number, r: number): boolean {
   return dist2(s.hx[a]!, s.hy[a]!, s.hx[b]!, s.hy[b]!) <= r * r;
 }
 
+function diveIsSafe(s: MatchState, h: HeroUnit, target: number): boolean {
+  const t = s.heroes[target]!;
+  if ((t.hp + t.shield) / t.maxHp < 0.4) return true;
+  const r2 = 500 * 500;
+  let mates = 0;
+  let foes = 0;
+  for (const o of s.heroes) {
+    if (!o.alive || dist2(s.hx[target]!, s.hy[target]!, s.hx[o.idx]!, s.hy[o.idx]!) > r2) continue;
+    if (o.side === h.side) mates++;
+    else foes++;
+  }
+  return mates >= foes && !s.tickCache.underOwnStructure[target];
+}
+
 function lowestHp(s: MatchState, list: number[]): number {
   let best = -1;
   let bestF = Infinity;
@@ -195,6 +209,9 @@ export function tryCastSkill(s: MatchState, h: HeroUnit, ctx: SkillContext, pref
       break;
     }
   }
+
+  // Gap-closers only commit when the target is nearly dead or the dive is not outnumbered.
+  if (primary >= 0 && sk.effects.some((e) => e.type === 'DASH') && !diveIsSafe(s, h, primary)) return false;
 
   h.skillReadyAt = s.t + sk.cooldown * h.coef.cooldownMult;
   const offensive = sk.target === 'ENEMY_SINGLE' || sk.target === 'ENEMY_AREA';

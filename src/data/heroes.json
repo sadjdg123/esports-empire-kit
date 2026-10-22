@@ -5,19 +5,18 @@
     "title": "不动的山门",
     "archetype": "TANK",
     "preferredRoles": [
-      "TOP",
-      "SUPPORT"
+      "TOP"
     ],
     "base": {
-      "hp": 720,
-      "attack": 40,
+      "hp": 820,
+      "attack": 44,
       "armor": 30,
       "attackRange": 100,
       "attackInterval": 1.1,
       "moveSpeed": 38
     },
     "perLevel": {
-      "hp": 95,
+      "hp": 105,
       "attack": 3.5,
       "armor": 3
     },
@@ -25,10 +24,10 @@
       "id": "zhenshanyin",
       "name": "镇山印",
       "description": "以自身为中心砸下山印，震晕周围敌人并造成少量伤害。",
-      "cooldown": 14,
+      "cooldown": 12,
       "range": 0,
       "target": "ENEMY_AREA",
-      "areaRadius": 130,
+      "areaRadius": 150,
       "effects": [
         {
           "type": "STUN",
@@ -36,7 +35,7 @@
         },
         {
           "type": "DAMAGE",
-          "value": 1.2
+          "value": 2.8
         }
       ]
     }
@@ -47,11 +46,10 @@
     "title": "荆甲守卫",
     "archetype": "TANK",
     "preferredRoles": [
-      "TOP",
-      "JUNGLE"
+      "TOP"
     ],
     "base": {
-      "hp": 720,
+      "hp": 800,
       "attack": 40,
       "armor": 30,
       "attackRange": 100,
@@ -74,7 +72,7 @@
       "effects": [
         {
           "type": "SHIELD",
-          "value": 5.0
+          "value": 8.0
         },
         {
           "type": "SLOW",
@@ -89,27 +87,26 @@
     "title": "暗夜猎手",
     "archetype": "ASSASSIN",
     "preferredRoles": [
-      "JUNGLE",
-      "MID"
+      "JUNGLE"
     ],
     "base": {
-      "hp": 560,
-      "attack": 56,
-      "armor": 18,
+      "hp": 720,
+      "attack": 64,
+      "armor": 26,
       "attackRange": 100,
       "attackInterval": 0.9,
-      "moveSpeed": 42
+      "moveSpeed": 46
     },
     "perLevel": {
-      "hp": 70,
-      "attack": 5.5,
+      "hp": 85,
+      "attack": 6,
       "armor": 2
     },
     "skill": {
       "id": "yingxi",
       "name": "影袭",
       "description": "闪身扑向远处的敌人，造成一次高额伤害。",
-      "cooldown": 10,
+      "cooldown": 9,
       "range": 260,
       "target": "ENEMY_SINGLE",
       "effects": [
@@ -119,7 +116,7 @@
         },
         {
           "type": "DAMAGE",
-          "value": 3.0
+          "value": 3.9
         }
       ]
     }
@@ -134,16 +131,16 @@
       "TOP"
     ],
     "base": {
-      "hp": 560,
-      "attack": 56,
-      "armor": 18,
+      "hp": 720,
+      "attack": 64,
+      "armor": 26,
       "attackRange": 100,
       "attackInterval": 0.9,
-      "moveSpeed": 42
+      "moveSpeed": 46
     },
     "perLevel": {
-      "hp": 70,
-      "attack": 5.5,
+      "hp": 85,
+      "attack": 6,
       "armor": 2
     },
     "skill": {
@@ -177,7 +174,7 @@
       "hp": 500,
       "attack": 46,
       "armor": 14,
-      "attackRange": 260,
+      "attackRange": 250,
       "attackInterval": 1.1,
       "moveSpeed": 38
     },
@@ -191,13 +188,13 @@
       "name": "坠星",
       "description": "召下一颗流星砸向敌群，对范围内所有敌人造成伤害。",
       "cooldown": 11,
-      "range": 320,
+      "range": 300,
       "target": "ENEMY_AREA",
       "areaRadius": 120,
       "effects": [
         {
           "type": "DAMAGE",
-          "value": 2.4
+          "value": 2.1
         }
       ]
     }
@@ -215,7 +212,7 @@
       "hp": 500,
       "attack": 46,
       "armor": 14,
-      "attackRange": 260,
+      "attackRange": 250,
       "attackInterval": 1.1,
       "moveSpeed": 38
     },
@@ -229,17 +226,17 @@
       "name": "寒潮曲",
       "description": "吹出一阵寒潮，伤害并大幅减速范围内的敌人。",
       "cooldown": 10,
-      "range": 300,
+      "range": 290,
       "target": "ENEMY_AREA",
       "areaRadius": 130,
       "effects": [
         {
           "type": "DAMAGE",
-          "value": 1.6
+          "value": 1.4
         },
         {
           "type": "SLOW",
-          "value": 2.5
+          "value": 2.0
         }
       ]
     }
@@ -256,7 +253,7 @@
       "hp": 520,
       "attack": 52,
       "armor": 14,
-      "attackRange": 300,
+      "attackRange": 260,
       "attackInterval": 0.85,
       "moveSpeed": 38
     },
@@ -270,12 +267,12 @@
       "name": "穿云箭",
       "description": "拉满长弓射出一箭，对远处单个敌人造成高额伤害。",
       "cooldown": 9,
-      "range": 420,
+      "range": 340,
       "target": "ENEMY_SINGLE",
       "effects": [
         {
           "type": "DAMAGE",
-          "value": 2.6
+          "value": 2.3
         }
       ]
     }
@@ -286,14 +283,13 @@
     "title": "连弩游击",
     "archetype": "MARKSMAN",
     "preferredRoles": [
-      "ADC",
-      "MID"
+      "ADC"
     ],
     "base": {
       "hp": 520,
-      "attack": 52,
+      "attack": 54,
       "armor": 14,
-      "attackRange": 300,
+      "attackRange": 260,
       "attackInterval": 0.85,
       "moveSpeed": 38
     },
@@ -306,17 +302,17 @@
       "id": "yingyan",
       "name": "鹰眼连射",
       "description": "向单个敌人连射弩箭，造成伤害并使其减速。",
-      "cooldown": 7,
-      "range": 380,
+      "cooldown": 8,
+      "range": 320,
       "target": "ENEMY_SINGLE",
       "effects": [
         {
           "type": "DAMAGE",
-          "value": 1.8
+          "value": 1.6
         },
         {
           "type": "SLOW",
-          "value": 1.5
+          "value": 1.0
         }
       ]
     }
@@ -364,8 +360,7 @@
     "title": "钟楼守夜人",
     "archetype": "SUPPORT",
     "preferredRoles": [
-      "SUPPORT",
-      "TOP"
+      "SUPPORT"
     ],
     "base": {
       "hp": 600,
@@ -391,7 +386,7 @@
       "effects": [
         {
           "type": "SHIELD",
-          "value": 4.0
+          "value": 5.5
         },
         {
           "type": "STUN",

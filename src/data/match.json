@@ -687,7 +687,7 @@
       "powerCurve": [
         {
           "toSec": 840,
-          "damage": 1.12
+          "damage": 1.08
         },
         {
           "fromSec": 1440,
@@ -743,7 +743,7 @@
           "damage": 1.1
         }
       ],
-      "farmGold": 1.12,
+      "farmGold": 1.18,
       "siegeDamage": 1.0
     },
     "TEAMFIGHT_PUSH": {
@@ -827,7 +827,7 @@
       ],
       "powerCurve": [],
       "farmGold": 1.0,
-      "siegeDamage": 1.0
+      "siegeDamage": 1.25
     }
   }
 }

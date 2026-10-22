@@ -22,6 +22,7 @@ function overall(p: Player): number {
 export function autoLineup(data: GameData, clubId: string, roster: readonly Player[], tactic: Tactic): TeamLineup {
   const used = new Set<string>();
   const usedHero = new Set<string>();
+  const usedArch = new Set<string>();
   const picks = ROLES.map((role) => {
     // A natural fit always beats raw ability.
     const score = (p: Player) => overall(p) + (p.primaryRole === role ? 200 : p.secondaryRole === role ? 100 : 0);
@@ -29,9 +30,13 @@ export function autoLineup(data: GameData, clubId: string, roster: readonly Play
     const player = candidates[0];
     if (!player) throw new Error(`autoLineup: not enough players for ${clubId}`);
     used.add(player.id);
-    const heroes = data.heroes.map((h) => h.id).filter((id) => !usedHero.has(id));
-    const heroId = heroes.sort((a, b) => masteryOf(player, b) - masteryOf(player, a) || a.localeCompare(b))[0]!;
+    // Best mastery, but avoid stacking the same archetype (e.g. two tanks) when a decent alternative exists.
+    const heroes = data.heroes.filter((h) => !usedHero.has(h.id));
+    const heroScore = (h: (typeof heroes)[number]) => masteryOf(player, h.id) - (usedArch.has(h.archetype) ? 25 : 0) + (h.preferredRoles.includes(role) ? 10 : 0);
+    const hero = heroes.sort((a, b) => heroScore(b) - heroScore(a) || a.id.localeCompare(b.id))[0]!;
+    const heroId = hero.id;
     usedHero.add(heroId);
+    usedArch.add(hero.archetype);
     return { role, playerId: player.id, heroId };
   });
   return { clubId, picks, tactic };

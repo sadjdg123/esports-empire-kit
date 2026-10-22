@@ -21,7 +21,7 @@
         },
         "heroMastery": {
           "panyue": 52,
-          "mingzhong": 47,
+          "feiren": 47,
           "tieji": 41
         },
         "form": 2,
@@ -41,9 +41,8 @@
           "mental": 34
         },
         "heroMastery": {
-          "feiren": 47,
           "yexiao": 51,
-          "tieji": 38
+          "feiren": 47
         },
         "form": 1,
         "salaryPerWeek": 750,
@@ -63,8 +62,8 @@
           "mental": 47
         },
         "heroMastery": {
-          "yexiao": 66,
-          "chisun": 54
+          "xingzhu": 66,
+          "shuangdi": 54
         },
         "form": 1,
         "salaryPerWeek": 800,
@@ -106,7 +105,7 @@
         },
         "heroMastery": {
           "shuangdi": 73,
-          "panyue": 48
+          "qingluo": 48
         },
         "form": -3,
         "salaryPerWeek": 950,
@@ -137,7 +136,6 @@
         },
         "heroMastery": {
           "feiren": 69,
-          "mingzhong": 56,
           "panyue": 54,
           "tieji": 44
         },
@@ -160,7 +158,7 @@
         },
         "heroMastery": {
           "yexiao": 63,
-          "tieji": 59
+          "feiren": 59
         },
         "form": -1,
         "salaryPerWeek": 1050,
@@ -181,8 +179,7 @@
         },
         "heroMastery": {
           "shuangdi": 68,
-          "chisun": 66,
-          "yexiao": 40
+          "xingzhu": 66
         },
         "form": 2,
         "salaryPerWeek": 1500,
@@ -224,7 +221,6 @@
         "heroMastery": {
           "qingluo": 68,
           "shuangdi": 59,
-          "panyue": 52,
           "mingzhong": 38
         },
         "form": -1,
@@ -277,7 +273,7 @@
         },
         "heroMastery": {
           "tieji": 82,
-          "mingzhong": 74
+          "panyue": 74
         },
         "form": -3,
         "salaryPerWeek": 2050,
@@ -297,7 +293,6 @@
           "mental": 57
         },
         "heroMastery": {
-          "tieji": 80,
           "feiren": 70,
           "yexiao": 63
         },
@@ -319,7 +314,6 @@
         },
         "heroMastery": {
           "shuangdi": 73,
-          "chisun": 62,
           "xingzhu": 54
         },
         "form": 2,
@@ -361,8 +355,8 @@
           "mental": 48
         },
         "heroMastery": {
-          "mingzhong": 74,
           "qingluo": 85,
+          "mingzhong": 74,
           "shuangdi": 48
         },
         "form": 2,
@@ -413,8 +407,7 @@
         },
         "heroMastery": {
           "yexiao": 89,
-          "feiren": 80,
-          "tieji": 68
+          "feiren": 80
         },
         "form": 0,
         "salaryPerWeek": 3050,
@@ -434,7 +427,6 @@
           "mental": 63
         },
         "heroMastery": {
-          "yexiao": 76,
           "xingzhu": 79,
           "shuangdi": 61
         },
@@ -479,7 +471,7 @@
         "heroMastery": {
           "shuangdi": 80,
           "qingluo": 66,
-          "panyue": 57
+          "mingzhong": 57
         },
         "form": -1,
         "salaryPerWeek": 2800,
@@ -499,8 +491,7 @@
         },
         "heroMastery": {
           "yexiao": 83,
-          "feiren": 71,
-          "tieji": 58
+          "feiren": 71
         },
         "form": 0,
         "salaryPerWeek": 2100,
@@ -531,7 +522,6 @@
         },
         "heroMastery": {
           "panyue": 98,
-          "mingzhong": 83,
           "feiren": 60,
           "tieji": 60
         },
@@ -553,7 +543,6 @@
           "mental": 66
         },
         "heroMastery": {
-          "tieji": 90,
           "yexiao": 76,
           "feiren": 76
         },
@@ -575,8 +564,7 @@
         },
         "heroMastery": {
           "shuangdi": 89,
-          "chisun": 73,
-          "yexiao": 64
+          "xingzhu": 73
         },
         "form": -3,
         "salaryPerWeek": 4050,
@@ -617,7 +605,7 @@
         },
         "heroMastery": {
           "mingzhong": 92,
-          "panyue": 73
+          "shuangdi": 73
         },
         "form": -2,
         "salaryPerWeek": 3700,
@@ -636,9 +624,8 @@
           "mental": 79
         },
         "heroMastery": {
-          "chisun": 83,
-          "shuangdi": 72,
-          "yexiao": 69
+          "xingzhu": 83,
+          "shuangdi": 72
         },
         "form": -1,
         "salaryPerWeek": 3350,

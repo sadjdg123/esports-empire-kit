@@ -13,7 +13,7 @@
     },
     "heroMastery": {
       "tieji": 58,
-      "mingzhong": 52,
+      "panyue": 52,
       "feiren": 34
     },
     "form": -3,
@@ -34,7 +34,7 @@
     },
     "heroMastery": {
       "panyue": 80,
-      "mingzhong": 70
+      "tieji": 70
     },
     "form": 0,
     "salaryPerWeek": 2700,
@@ -54,7 +54,7 @@
       "mental": 51
     },
     "heroMastery": {
-      "mingzhong": 62,
+      "tieji": 62,
       "feiren": 54,
       "panyue": 42
     },
@@ -76,7 +76,6 @@
     },
     "heroMastery": {
       "feiren": 94,
-      "mingzhong": 77,
       "tieji": 67,
       "panyue": 58
     },
@@ -98,7 +97,7 @@
       "mental": 61
     },
     "heroMastery": {
-      "mingzhong": 78,
+      "tieji": 78,
       "panyue": 64
     },
     "form": 3,
@@ -120,7 +119,6 @@
     },
     "heroMastery": {
       "panyue": 89,
-      "mingzhong": 90,
       "feiren": 71,
       "tieji": 68
     },
@@ -142,9 +140,8 @@
       "mental": 35
     },
     "heroMastery": {
-      "feiren": 47,
       "yexiao": 55,
-      "tieji": 36
+      "feiren": 47
     },
     "form": 0,
     "salaryPerWeek": 1000,
@@ -164,7 +161,6 @@
       "mental": 52
     },
     "heroMastery": {
-      "tieji": 79,
       "yexiao": 68,
       "feiren": 53
     },
@@ -187,7 +183,6 @@
     },
     "heroMastery": {
       "feiren": 66,
-      "tieji": 72,
       "yexiao": 65
     },
     "form": -1,
@@ -208,7 +203,6 @@
       "mental": 84
     },
     "heroMastery": {
-      "tieji": 98,
       "yexiao": 88,
       "feiren": 79
     },
@@ -231,8 +225,7 @@
     },
     "heroMastery": {
       "feiren": 78,
-      "yexiao": 75,
-      "tieji": 71
+      "yexiao": 75
     },
     "form": 3,
     "salaryPerWeek": 3250,
@@ -252,7 +245,6 @@
       "mental": 44
     },
     "heroMastery": {
-      "tieji": 61,
       "feiren": 48,
       "yexiao": 40
     },
@@ -273,9 +265,8 @@
       "mental": 66
     },
     "heroMastery": {
-      "shuangdi": 66,
       "xingzhu": 72,
-      "yexiao": 56
+      "shuangdi": 66
     },
     "form": -3,
     "salaryPerWeek": 1800,
@@ -296,8 +287,7 @@
     },
     "heroMastery": {
       "shuangdi": 68,
-      "xingzhu": 49,
-      "chisun": 40
+      "xingzhu": 49
     },
     "form": 2,
     "salaryPerWeek": 1150,
@@ -317,7 +307,6 @@
       "mental": 82
     },
     "heroMastery": {
-      "chisun": 98,
       "shuangdi": 85,
       "xingzhu": 74
     },
@@ -338,8 +327,7 @@
       "mental": 80
     },
     "heroMastery": {
-      "chisun": 91,
-      "yexiao": 62,
+      "xingzhu": 91,
       "shuangdi": 61
     },
     "form": -1,
@@ -361,8 +349,7 @@
     },
     "heroMastery": {
       "xingzhu": 50,
-      "yexiao": 44,
-      "chisun": 31
+      "shuangdi": 44
     },
     "form": 2,
     "salaryPerWeek": 850,
@@ -383,7 +370,6 @@
     },
     "heroMastery": {
       "shuangdi": 69,
-      "chisun": 57,
       "xingzhu": 51
     },
     "form": -3,
@@ -404,8 +390,8 @@
       "mental": 67
     },
     "heroMastery": {
-      "chisun": 81,
-      "zhufeng": 91
+      "zhufeng": 91,
+      "chisun": 81
     },
     "form": -1,
     "salaryPerWeek": 3300,
@@ -528,7 +514,6 @@
       "mental": 68
     },
     "heroMastery": {
-      "panyue": 89,
       "qingluo": 80,
       "mingzhong": 70,
       "shuangdi": 56
@@ -573,7 +558,7 @@
       "mental": 74
     },
     "heroMastery": {
-      "panyue": 91,
+      "shuangdi": 91,
       "mingzhong": 76
     },
     "form": -2,
@@ -595,7 +580,7 @@
     "heroMastery": {
       "mingzhong": 65,
       "shuangdi": 56,
-      "panyue": 40
+      "qingluo": 40
     },
     "form": 2,
     "salaryPerWeek": 1300,
@@ -614,7 +599,7 @@
       "mental": 59
     },
     "heroMastery": {
-      "panyue": 74,
+      "shuangdi": 74,
       "qingluo": 66
     },
     "form": 0,
@@ -636,7 +621,6 @@
     "heroMastery": {
       "qingluo": 81,
       "mingzhong": 60,
-      "panyue": 60,
       "shuangdi": 48
     },
     "form": -3,

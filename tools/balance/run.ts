@@ -6,6 +6,9 @@ import { loadGameData } from '../../src/core/config';
 import { TACTICS, type Tactic } from '../../src/core/types';
 import { runMatch } from '../../src/sim';
 import { TACTIC_PAIRS, buildCase, type ScenarioId } from './scenarios';
+import type { MatchRecord } from './worker';
+
+interface Job { scenario: ScenarioId; from: number; to: number; repeat: boolean }
 
 const TACTIC_NAME: Record<Tactic, string> = { EARLY_AGGRO: '前期猛攻', STEADY_MACRO: '稳健运营', TEAMFIGHT_PUSH: '团战推进', SPLIT_PUSH: '分带牵制' };
 
@@ -57,7 +60,8 @@ export async function runBalance(opts: BalanceOptions): Promise<{ passed: boolea
   const res = g2Jobs.length > 0 ? await runJobs(g2Jobs, threads) : new Map<ScenarioId, MatchRecord[]>();
   const g9Wall = g2Jobs.length > 0 ? (performance.now() - tg) / 1000 : 0;
   const t0 = performance.now();
-  for (const [k, v] of await runJobs(jobs.filter((j) => j.scenario !== 'G2'), threads)) res.set(k, v);
+  const rest = jobs.filter((j) => j.scenario !== 'G2');
+  if (rest.length > 0) for (const [k, v] of await runJobs(rest, threads)) res.set(k, v);
   const wallSec = (performance.now() - t0) / 1000 + g9Wall;
   if (process.stdout.isTTY) process.stdout.write('\n');
   for (const list of res.values()) list.sort((a, b) => a.i - b.i);
@@ -181,7 +185,7 @@ export async function runBalance(opts: BalanceOptions): Promise<{ passed: boolea
   }
   md.push('## 跑完耗时', '', `批量部分实际用时 ${wallSec.toFixed(1)} 秒（${threads} 线程并行）。`, '');
   if (singlePer1000 > 0) {
-    md.push(`G9 = 1000 场 G2 比赛用模拟工具实际跑完的时间（工具默认用满全部 CPU 核心）。单线程数字另外连跑 50 场换算，仅供参考。测量机器：${cpus()[0]?.model ?? '未知'}，${threads} 线程。`, '');
+    md.push(`G9 = G2 的比赛用模拟工具实际跑完的时间，换算成 1000 场（工具默认用满全部 CPU 核心，见决策 D16）。单线程数字另外连跑 50 场换算，仅供参考。测量机器：${cpus()[0]?.model ?? '未知'}，${threads} 线程。`, '');
   }
   const markdown = md.join('\n');
   let path: string | null = null;

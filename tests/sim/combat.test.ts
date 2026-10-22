@@ -109,8 +109,10 @@ describe('player coefficients', () => {
   it('mastery raises skill effect and lowers cooldown', () => {
     const hi = computeCoefficients(data.match, { ...base, heroMastery: { [hero]: 90 } }, base.primaryRole, hero);
     const lo = computeCoefficients(data.match, { ...base, heroMastery: { [hero]: 40 } }, base.primaryRole, hero);
-    expect(hi.masteryEffect).toBeCloseTo(0.8 + 0.004 * 90, 9);
-    expect(lo.masteryEffect).toBeCloseTo(0.8 + 0.004 * 40, 9);
+    const k = data.match.coefficients.masteryEffect;
+    expect(hi.masteryEffect).toBeCloseTo(k.base + k.per * 90, 9);
+    expect(lo.masteryEffect).toBeCloseTo(k.base + k.per * 40, 9);
+    expect(hi.masteryEffect).toBeGreaterThan(lo.masteryEffect);
     expect(hi.cooldownMult).toBeLessThan(lo.cooldownMult);
   });
 
@@ -119,8 +121,11 @@ describe('player coefficients', () => {
     const p = { ...base, primaryRole: 'MID' as const, secondaryRole: 'ADC' as const, form: 0 };
     const off = roles.find((r) => r !== 'MID' && r !== 'ADC')!;
     expect(computeCoefficients(data.match, p, 'MID', hero).performance).toBeCloseTo(1, 9);
-    expect(computeCoefficients(data.match, p, 'ADC', hero).performance).toBeCloseTo(0.93, 9);
-    expect(computeCoefficients(data.match, p, off, hero).performance).toBeCloseTo(0.82, 9);
+    const role = data.match.coefficients.role;
+    expect(computeCoefficients(data.match, p, 'ADC', hero).performance).toBeCloseTo(role.secondary, 9);
+    expect(computeCoefficients(data.match, p, off, hero).performance).toBeCloseTo(role.off, 9);
+    expect(role.off).toBeLessThan(role.secondary);
+    expect(role.secondary).toBeLessThan(role.primary);
     expect(computeCoefficients(data.match, p, off, hero).damage).toBeLessThan(computeCoefficients(data.match, p, 'MID', hero).damage);
   });
 });

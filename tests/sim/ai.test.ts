@@ -23,13 +23,28 @@ function tacticMatches(n: number, ta: Tactic, tb: Tactic, seed0: number, tweak?:
 
 describe('tactic modifiers', () => {
   it('apply the configured factors by time window and role', () => {
-    const cfg = data.match;
+    const cfg = structuredClone(data.match);
+    cfg.tactics.EARLY_AGGRO.rules = [
+      { actions: ['GANK'], factor: 1.6, toSec: 720 },
+      { actions: ['*'], factor: 0.85, fromSec: 1200 },
+    ];
+    cfg.tactics.SPLIT_PUSH.rules = [{ actions: ['SPLIT'], factor: 2, fromSec: 720, roles: ['TOP'] }];
     expect(tacticFactor(cfg, 'EARLY_AGGRO', 'GANK', 'JUNGLE', 300)).toBeCloseTo(1.6, 9);
     expect(tacticFactor(cfg, 'EARLY_AGGRO', 'GANK', 'JUNGLE', 900)).toBe(1);
-    expect(tacticFactor(cfg, 'EARLY_AGGRO', 'PUSH', 'MID', 1300)).toBeCloseTo(0.85, 9);
+    expect(tacticFactor(cfg, 'EARLY_AGGRO', 'PUSH', 'MID', 1300)).toBeCloseTo(0.85, 9); // '*' = aggressive actions
+    expect(tacticFactor(cfg, 'EARLY_AGGRO', 'FARM_LANE', 'MID', 1300)).toBe(1);
     expect(tacticFactor(cfg, 'SPLIT_PUSH', 'SPLIT', 'TOP', 800)).toBeCloseTo(2.0, 9);
+    expect(tacticFactor(cfg, 'SPLIT_PUSH', 'SPLIT', 'TOP', 600)).toBe(1);
     expect(tacticFactor(cfg, 'SPLIT_PUSH', 'SPLIT', 'MID', 800)).toBe(1);
-    expect(tacticFactor(cfg, 'TEAMFIGHT_PUSH', 'GROUP', 'ADC', 800)).toBeCloseTo(1.6, 9);
+  });
+
+  it('power curves scale team damage by time window', async () => {
+    const { tempoFactor } = await import('../../src/sim/tactics');
+    const cfg = structuredClone(data.match);
+    cfg.tactics.EARLY_AGGRO.powerCurve = [{ toSec: 900, damage: 1.1 }, { fromSec: 1400, damage: 0.9 }];
+    expect(tempoFactor(cfg, 'EARLY_AGGRO', 100)).toBeCloseTo(1.1, 9);
+    expect(tempoFactor(cfg, 'EARLY_AGGRO', 1000)).toBe(1);
+    expect(tempoFactor(cfg, 'EARLY_AGGRO', 1500)).toBeCloseTo(0.9, 9);
   });
 });
 
