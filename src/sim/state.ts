@@ -29,6 +29,7 @@ export interface TeamState {
   tempo: number; // tactic power-curve multiplier, refreshed each tick
   tfTable: Float64Array | null; // cached tactic factors (action x role)
   tfSig: number; // which rule windows were open when tfTable was built
+  tfCheckedAt: number; // tick when tfSig was last verified (the table cannot change within a tick)
 }
 
 export interface TeamfightState {

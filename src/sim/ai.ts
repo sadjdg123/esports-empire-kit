@@ -118,7 +118,10 @@ function structureThreat(s: MatchState, si: number, side: Side): number {
   const r2 = (st.range + 150) ** 2;
   let threat = 0;
   for (const e of s.heroes) if (e.alive && e.side !== side && dist2(sx, sy, s.hx[e.idx]!, s.hy[e.idx]!) <= r2) threat += 1;
-  s.creeps.forEach((c, ci) => { if (c.alive && c.side !== side && dist2(sx, sy, s.cx[ci]!, s.cy[ci]!) <= r2) threat += 0.35; });
+  for (let ci = 0; ci < s.creeps.length; ci++) {
+    const c = s.creeps[ci]!;
+    if (c.alive && c.side !== side && dist2(sx, sy, s.cx[ci]!, s.cy[ci]!) <= r2) threat += 0.35;
+  }
   tc.threat[si] = threat;
   return threat;
 }
@@ -218,6 +221,8 @@ const ROLE_INDEX: Record<Role, number> = { TOP: 0, JUNGLE: 1, MID: 2, ADC: 3, SU
 /** Tactic factors for every action x role, rebuilt only when a rule's time window opens or closes. */
 function tacticTable(s: MatchState, side: Side): Float64Array {
   const team = s.teams[side];
+  if (team.tfTable && team.tfCheckedAt === s.t) return team.tfTable;
+  team.tfCheckedAt = s.t;
   let sig = 0;
   for (const r of s.cfg.tactics[team.tactic].rules) {
     sig = sig * 4 + (r.fromSec !== undefined && s.t >= r.fromSec ? 1 : 0) + (r.toSec !== undefined && s.t >= r.toSec ? 2 : 0);
@@ -352,13 +357,14 @@ function scoreActions(s: MatchState, h: HeroUnit): Choice | null {
   // CONTEST_OBJECTIVE
   const co = base(s, 'CONTEST_OBJECTIVE', h.role);
   if (co > 0) {
-    s.objectives.forEach((ob, oi) => {
+    for (let oi = 0; oi < s.objectives.length; oi++) {
+      const ob = s.objectives[oi]!;
       const wait = ob.alive ? 0 : ob.nextSpawnAt - t;
-      if (wait > 20) return;
+      if (wait > 20) continue;
       const d = euclidTo(s, h, ob.node);
       const mates = s.tickCache.contesting[h.side][oi]! - (h.action === 'CONTEST_OBJECTIVE' && h.actionTarget === oi ? 1 : 0);
       add('CONTEST_OBJECTIVE', oi, co * tf(s, h, 'CONTEST_OBJECTIVE') * (0.7 + 0.3 * Math.max(0, 1 - d / 1500)) + 0.2 * mates);
-    });
+    }
   }
 
   // PUSH
@@ -367,8 +373,13 @@ function scoreActions(s: MatchState, h: HeroUnit): Choice | null {
     const lane = h.role === 'JUNGLE' ? team.siegeLane : laneOfRole(h.role);
     const target = nextEnemyStructure(s, h.side, lane);
     if (target) {
-      const covered = s.creeps.some((c, ci) => c.alive && c.side === h.side && c.lane === lane
-        && dist2(s.cx[ci]!, s.cy[ci]!, s.map.xs[target.node]!, s.map.ys[target.node]!) <= 350 * 350);
+      const tx = s.map.xs[target.node]!;
+      const ty = s.map.ys[target.node]!;
+      let covered = false;
+      for (let ci = 0; ci < s.creeps.length && !covered; ci++) {
+        const c = s.creeps[ci]!;
+        covered = c.alive && c.side === h.side && c.lane === lane && dist2(s.cx[ci]!, s.cy[ci]!, tx, ty) <= 350 * 350;
+      }
       const lead = Math.max(-0.3, Math.min(0.5, team.goldDiff / 6000));
       add('PUSH', LANE_LIST.indexOf(lane), pu * tf(s, h, 'PUSH') * (covered ? 1 + lead : 0.3));
     }
@@ -387,14 +398,15 @@ function scoreActions(s: MatchState, h: HeroUnit): Choice | null {
   // DEFEND
   const df = base(s, 'DEFEND', h.role);
   if (df > 0) {
-    s.structures.forEach((st, si) => {
-      if (!st.alive || st.side !== h.side || !s.tickCache.attackable[si]) return;
+    for (let si = 0; si < s.structures.length; si++) {
+      const st = s.structures[si]!;
+      if (!st.alive || st.side !== h.side || !s.tickCache.attackable[si]) continue;
       const threat = structureThreat(s, si, h.side);
-      if (threat <= 0) return;
+      if (threat <= 0) continue;
       const d = euclidTo(s, h, st.node);
       const importance = st.kind === 'BASE' ? 1.8 : st.tier === 2 ? 1.3 : 1;
       add('DEFEND', si, df * tf(s, h, 'DEFEND') * importance * Math.min(1.8, 0.4 + 0.35 * threat) * Math.max(0.35, 1 - d / 3000));
-    });
+    }
   }
 
   // SPLIT

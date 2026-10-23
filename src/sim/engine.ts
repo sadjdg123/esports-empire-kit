@@ -69,7 +69,7 @@ export function createMatch(input: MatchInput, data: GameData, opts: MatchOption
     }
     teams[side] = {
       side, tactic: team.lineup.tactic, clubId: team.lineup.clubId, heroIdx, kills: 0, buffs: [],
-      siegeLane: 'MID', groupCallAt: -1, objectivesTaken: 0, towersDestroyed: 0, goldDiff: 0, tempo: 1, tfTable: null, tfSig: -1,
+      siegeLane: 'MID', groupCallAt: -1, objectivesTaken: 0, towersDestroyed: 0, goldDiff: 0, tempo: 1, tfTable: null, tfSig: -1, tfCheckedAt: -1,
     };
   }
 
@@ -314,11 +314,12 @@ function chooseTarget(s: MatchState, h: HeroUnit, plan: ActionPlan): TargetRef |
   let best = -1;
   let bestD = Infinity;
   const r2 = range * range;
-  s.creeps.forEach((c, ci) => {
-    if (!c.alive || c.side === h.side) return;
+  for (let ci = 0; ci < s.creeps.length; ci++) {
+    const c = s.creeps[ci]!;
+    if (!c.alive || c.side === h.side) continue;
     const d = dist2(x, y, s.cx[ci]!, s.cy[ci]!);
     if (d <= r2 && d < bestD) { bestD = d; best = ci; }
-  });
+  }
   if (best >= 0) return { kind: 'CREEP', idx: best };
   // 5. jungle camp
   if (plan.camp >= 0) {
@@ -340,7 +341,11 @@ function creepCovered(s: MatchState, side: Side, st: Structure): boolean {
   const sx = s.map.xs[st.node]!;
   const sy = s.map.ys[st.node]!;
   const r2 = (st.range + 20) ** 2;
-  return s.creeps.some((c, ci) => c.alive && c.side === side && dist2(sx, sy, s.cx[ci]!, s.cy[ci]!) <= r2);
+  for (let ci = 0; ci < s.creeps.length; ci++) {
+    const c = s.creeps[ci]!;
+    if (c.alive && c.side === side && dist2(sx, sy, s.cx[ci]!, s.cy[ci]!) <= r2) return true;
+  }
+  return false;
 }
 
 function chaseTarget(s: MatchState, h: HeroUnit, plan: ActionPlan): number {

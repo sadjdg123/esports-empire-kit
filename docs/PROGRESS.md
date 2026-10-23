@@ -4,7 +4,7 @@
 > 多 Agent 模式下，每个 Agent 只改自己负责的行。
 
 **当前阶段**：P1（任务书：docs/06_P1_TASKS.md）
-**当前任务**：T20（T12–T20 连续做，到 GATE-3 停）
+**当前任务**：GATE-3（等门哥试玩一个完整赛季）
 **最近更新**：2026-10-22
 
 | 任务 | 名称 | 负责 | 状态 | 完成日期 | 备注 |
@@ -38,5 +38,5 @@
 | T17 | AI 俱乐部运营 | Claude Code | ✅ 完成 | 2026-10-23 | 汇报：docs/reports/T17.md；门哥确认保留新秀规则、接受 20 赛季结果（D37） |
 | T18 | 界面升级 | Claude Code | ✅ 完成 | 2026-10-23 | 汇报：docs/reports/T18.md；截图 docs/reports/t18/ |
 | T19 | 斜视角俱乐部场景（最简） | Claude Code | ✅ 完成 | 2026-10-23 | 汇报：docs/reports/T19.md；截图 docs/reports/t19/ |
-| T20 | P1 整合与多赛季验收 | | ⬜ 未开始 | | |
-| GATE-3 | P1 关卡（门哥玩完一个赛季） | 门哥 | ⬜ | | |
+| T20 | P1 整合与多赛季验收 | Claude Code | ✅ 完成 | 2026-10-23 | 汇报：docs/reports/T20.md；20 赛季报告 docs/reports/seasons-20261023.md |
+| GATE-3 | P1 关卡（门哥玩完一个赛季） | 门哥 | 👀 等门哥试玩 | | 总结：docs/reports/GATE-3.md；试玩指南 docs/PLAYTEST.md |

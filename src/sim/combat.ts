@@ -301,27 +301,31 @@ export function creepAndStructurePhase(s: MatchState): void {
   const dt = s.cfg.time.tickSec;
   const cr = s.cfg.creeps;
   // Creep waves
-  s.creeps.forEach((c, ci) => {
+  const creeps = s.creeps;
+  for (let ci = 0; ci < creeps.length; ci++) {
+    const c = creeps[ci]!;
     c.engaged = false;
-    if (!c.alive) return;
+    if (!c.alive) continue;
     const x = s.cx[ci]!;
     const y = s.cy[ci]!;
     const r2 = cr.range * cr.range;
     // 1. enemy creeps
     let best = -1;
     let bestD = Infinity;
-    s.creeps.forEach((o, oi) => {
-      if (!o.alive || o.side === c.side) return;
+    for (let oi = 0; oi < creeps.length; oi++) {
+      const o = creeps[oi]!;
+      if (!o.alive || o.side === c.side) continue;
       const d = dist2(x, y, s.cx[oi]!, s.cy[oi]!);
       if (d <= r2 && d < bestD) { bestD = d; best = oi; }
-    });
+    }
     if (best >= 0) {
       queue(s, { op: 'DAMAGE', targetKind: 'CREEP', target: best, amount: c.attack * dt, sourceHero: -1, sourceSide: c.side, skill: false });
       c.engaged = true;
-      return;
+      continue;
     }
     // 2. attackable enemy structures
     const sr = cr.range + STRUCTURE_RADIUS;
+    let blocked = false;
     for (let si = 0; si < s.structures.length; si++) {
       const st = s.structures[si]!;
       if (st.side === c.side || !st.alive) continue;
@@ -330,9 +334,11 @@ export function creepAndStructurePhase(s: MatchState): void {
           queue(s, { op: 'DAMAGE', targetKind: 'STRUCTURE', target: si, amount: c.structureAttack * dt, sourceHero: -1, sourceSide: c.side, skill: false });
         }
         c.engaged = true;
-        return; // blocked by a structure either way
+        blocked = true; // blocked by a structure either way
+        break;
       }
     }
+    if (blocked) continue;
     // 3. enemy heroes
     let hb = -1;
     bestD = Infinity;
@@ -345,7 +351,7 @@ export function creepAndStructurePhase(s: MatchState): void {
       queue(s, { op: 'DAMAGE', targetKind: 'HERO', target: hb, amount: c.attack * 0.6 * dt, sourceHero: -1, sourceSide: c.side, skill: false });
       c.engaged = true;
     }
-  });
+  }
 
   // Structures
   const late = s.t >= s.cfg.time.suddenDeathSec;
@@ -366,11 +372,12 @@ export function creepAndStructurePhase(s: MatchState): void {
     // 2. nearest enemy creep
     let best = -1;
     let bestD = Infinity;
-    s.creeps.forEach((c, ci) => {
-      if (!c.alive || c.side === st.side) return;
+    for (let ci = 0; ci < creeps.length; ci++) {
+      const c = creeps[ci]!;
+      if (!c.alive || c.side === st.side) continue;
       const d = dist2(sx, sy, s.cx[ci]!, s.cy[ci]!);
       if (d <= r2 && d < bestD) { bestD = d; best = ci; }
-    });
+    }
     if (best >= 0) {
       queue(s, { op: 'DAMAGE', targetKind: 'CREEP', target: best, amount: st.creepAttack * dmgMult * dt, sourceHero: -1, sourceSide: st.side, skill: false });
       s.attacks.push({ from: st.id, to: s.creeps[best]!.id, kind: 'BASIC' });

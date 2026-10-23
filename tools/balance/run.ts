@@ -12,27 +12,32 @@ interface Job { scenario: ScenarioId; from: number; to: number; repeat: boolean 
 
 const TACTIC_NAME: Record<Tactic, string> = { EARLY_AGGRO: '前期猛攻', STEADY_MACRO: '稳健运营', TEAMFIGHT_PUSH: '团战推进', SPLIT_PUSH: '分带牵制' };
 
+/** Runs the jobs on a pool of warm workers (one per thread), feeding each the next job when it finishes. */
 function runJobs(jobs: Job[], threads: number): Promise<Map<ScenarioId, MatchRecord[]>> {
   const results = new Map<ScenarioId, MatchRecord[]>();
   let next = 0;
   let done = 0;
   return new Promise((resolve, reject) => {
-    const launch = () => {
-      if (next >= jobs.length) return;
+    const workers: Worker[] = [];
+    const feed = (w: Worker) => {
+      if (next >= jobs.length) { void w.terminate(); return; }
       const job = jobs[next++]!;
-      const w = new Worker(new URL('./worker-boot.mjs', import.meta.url), { workerData: job });
       w.once('message', (recs: MatchRecord[]) => {
         const list = results.get(job.scenario) ?? [];
         list.push(...recs);
         results.set(job.scenario, list);
         done++;
         if (process.stdout.isTTY) process.stdout.write(`\r  进度 ${done}/${jobs.length}`);
-        if (done === jobs.length) resolve(results);
-        else launch();
+        if (done === jobs.length) { for (const x of workers) void x.terminate(); resolve(results); } else feed(w);
       });
-      w.once('error', reject);
+      w.postMessage(job);
     };
-    for (let i = 0; i < Math.min(threads, jobs.length); i++) launch();
+    for (let i = 0; i < Math.min(threads, jobs.length); i++) {
+      const w = new Worker(new URL('./worker-boot.mjs', import.meta.url), { workerData: { pool: true } });
+      w.once('error', reject);
+      workers.push(w);
+      feed(w);
+    }
   });
 }
 

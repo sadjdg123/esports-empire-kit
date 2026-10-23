@@ -14,7 +14,7 @@ export interface LeagueRecord {
   champions: string[]; // club short names, per season
   minAiRoster: number;
   aiFundsRatio: { min: number; max: number }; // funds / starting funds, worst over all clubs and seasons
-  talent: { season: number; marketSize: number; leagueAvg: number; starterAvg: number; best: number; avgAge: number }[];
+  talent: { season: number; marketSize: number; leagueAvg: number; starterAvg: number; best: number; avgAge: number; p10: number; p50: number; p90: number; totalMoney: number; avgSalary: number }[];
   playerFunds: number[];
 }
 
@@ -46,7 +46,6 @@ function goldAt(tl: { t: number; diff: number }[], t: number): number {
 
 const { scenario, from, to, repeat, mode } = workerData as { scenario: ScenarioId; from: number; to: number; repeat: boolean; mode?: 'economy' | 'league'; strategy?: string; seasons?: number };
 const data = loadGameData();
-const out: MatchRecord[] = [];
 if (mode === 'league') {
   const rows: LeagueRecord[] = [];
   for (let seed = from; seed < to; seed++) {
@@ -72,7 +71,14 @@ if (mode === 'league') {
       const all = Object.values(s.players);
       const starters = [s.club, ...s.aiClubs].flatMap((c) => rosterOf(s, c.id).map(playerOverall).sort((a, b) => b - a).slice(0, 5));
       const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
-      rec.talent.push({ season: h.season, marketSize: s.market.length, leagueAvg: mean(all.map(playerOverall)), starterAvg: mean(starters), best: Math.max(...all.map(playerOverall)), avgAge: mean(all.map((p) => p.age)) });
+      const rostered = [s.club, ...s.aiClubs].flatMap((c) => rosterOf(s, c.id));
+      const ovr = rostered.map(playerOverall).sort((a, b) => a - b);
+      const q = (f: number) => ovr[Math.min(ovr.length - 1, Math.floor(f * ovr.length))]!;
+      rec.talent.push({
+        season: h.season, marketSize: s.market.length, leagueAvg: mean(all.map(playerOverall)), starterAvg: mean(starters), best: Math.max(...all.map(playerOverall)),
+        avgAge: mean(all.map((p) => p.age)), p10: q(0.1), p50: q(0.5), p90: q(0.9),
+        totalMoney: s.funds + s.aiClubs.reduce((a, c) => a + c.funds, 0), avgSalary: mean(rostered.map((p) => p.salaryPerWeek)),
+      });
       rec.playerFunds.push(s.funds);
       advanceDay(s, data);
     }
@@ -105,40 +111,51 @@ if (mode === 'league') {
     rows.push({ seed, seasons });
   }
   parentPort!.postMessage(rows);
+} else if (workerData.pool) {
+  // Pool mode: one warm worker plays many slices (no restart, no re-compiling between slices).
+  parentPort!.on('message', (job: MatchJob) => parentPort!.postMessage(runSlice(job)));
 } else {
-for (let i = from; i < to; i++) {
-  const c = buildCase(data, scenario, i);
-  const t0 = performance.now();
-  const r = runMatch(c.input, data);
-  const ms = performance.now() - t0;
-  let reportOk = true;
-  let reportError: string | undefined;
-  try {
-    const rep = buildReport(r, c.input, data);
-    if (rep.keyReasons.length !== 3) throw new Error(`expected 3 reasons, got ${rep.keyReasons.length}`);
-    for (const k of rep.keyReasons) {
-      if (k.eventRefs.length === 0) throw new Error(`reason without events: ${k.text}`);
-      for (const ref of k.eventRefs) if (!r.events[ref]) throw new Error(`bad event ref ${ref}`);
-    }
-  } catch (e) {
-    reportOk = false;
-    reportError = String(e);
-  }
-  const rec: MatchRecord = {
-    i, focusWon: r.winner === c.focus, winner: r.winner, durationSec: r.durationSec,
-    timeout: r.events.some((e) => e.reason === 'timeout'), ms, checksum: r.checksum, reportOk, reportError, tags: c.tags,
-    picks: [...c.input.blue.lineup.picks.map((p) => ({ heroId: p.heroId, won: r.winner === 'BLUE' })), ...c.input.red.lineup.picks.map((p) => ({ heroId: p.heroId, won: r.winner === 'RED' }))],
-    kills: r.events.filter((e) => e.type === 'KILL').length,
-    gold12: goldAt(r.goldDiffTimeline, 720) * (c.focus === 'BLUE' ? 1 : -1),
-    gold20: goldAt(r.goldDiffTimeline, 1200) * (c.focus === 'BLUE' ? 1 : -1),
-  };
-  if (repeat) {
-    rec.eventsHash = hashString(JSON.stringify(r.events)).toString(16);
-    const again = runMatch(structuredClone(buildCase(data, scenario, i).input), data);
-    rec.repeatChecksum = again.checksum;
-    rec.repeatEventsHash = hashString(JSON.stringify(again.events)).toString(16);
-  }
-  out.push(rec);
+  parentPort!.postMessage(runSlice({ scenario, from, to, repeat }));
 }
-parentPort!.postMessage(out);
+
+interface MatchJob { scenario: ScenarioId; from: number; to: number; repeat: boolean }
+
+/** Plays one slice of a scenario. */
+function runSlice({ scenario, from, to, repeat }: MatchJob): MatchRecord[] {
+  const out: MatchRecord[] = [];
+  for (let i = from; i < to; i++) {
+    const c = buildCase(data, scenario, i);
+    const t0 = performance.now();
+    const r = runMatch(c.input, data);
+    const ms = performance.now() - t0;
+    let reportOk = true;
+    let reportError: string | undefined;
+    try {
+      const rep = buildReport(r, c.input, data);
+      if (rep.keyReasons.length !== 3) throw new Error(`expected 3 reasons, got ${rep.keyReasons.length}`);
+      for (const k of rep.keyReasons) {
+        if (k.eventRefs.length === 0) throw new Error(`reason without events: ${k.text}`);
+        for (const ref of k.eventRefs) if (!r.events[ref]) throw new Error(`bad event ref ${ref}`);
+      }
+    } catch (e) {
+      reportOk = false;
+      reportError = String(e);
+    }
+    const rec: MatchRecord = {
+      i, focusWon: r.winner === c.focus, winner: r.winner, durationSec: r.durationSec,
+      timeout: r.events.some((e) => e.reason === 'timeout'), ms, checksum: r.checksum, reportOk, reportError, tags: c.tags,
+      picks: [...c.input.blue.lineup.picks.map((p) => ({ heroId: p.heroId, won: r.winner === 'BLUE' })), ...c.input.red.lineup.picks.map((p) => ({ heroId: p.heroId, won: r.winner === 'RED' }))],
+      kills: r.events.filter((e) => e.type === 'KILL').length,
+      gold12: goldAt(r.goldDiffTimeline, 720) * (c.focus === 'BLUE' ? 1 : -1),
+      gold20: goldAt(r.goldDiffTimeline, 1200) * (c.focus === 'BLUE' ? 1 : -1),
+    };
+    if (repeat) {
+      rec.eventsHash = hashString(JSON.stringify(r.events)).toString(16);
+      const again = runMatch(structuredClone(buildCase(data, scenario, i).input), data);
+      rec.repeatChecksum = again.checksum;
+      rec.repeatEventsHash = hashString(JSON.stringify(again.events)).toString(16);
+    }
+    out.push(rec);
+  }
+  return out;
 }

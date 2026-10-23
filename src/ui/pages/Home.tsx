@@ -48,7 +48,7 @@ export function HomePage({ game, data, go, act, flash, toNextMatch, showPlayer, 
             <p className="big-text">常规赛排名：第 <b>{myRank}</b> 名（{myRow.wins} 胜 {myRow.losses} 负）</p>
             {record && <p>季后赛：{record.playerPlayoff === 'CHAMPION' ? '🏆 总冠军！' : record.playerPlayoff === 'FINAL' ? '亚军' : record.playerPlayoff === 'SEMI' ? '半决赛止步' : '没有进入季后赛'}
               {record.champion && record.champion !== PLAYER_CLUB_ID ? `（冠军：${clubById(game, record.champion).name}）` : ''}</p>}
-            <p>资金从 {money(game.startingFunds)} 变为 <b>{money(game.funds)}</b>。</p>
+            <p>本赛季资金从 {money(game.history.length >= 2 ? game.history[game.history.length - 2]!.fundsEnd : game.startingFunds)} 变为 <b>{money(game.funds)}</b>。</p>
             <button className="primary big" onClick={newSeason}>进入第 {game.calendar.season + 1} 赛季 ▶</button>
           </>
         ) : (

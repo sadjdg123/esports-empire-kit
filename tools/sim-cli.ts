@@ -142,6 +142,30 @@ async function league(): Promise<void> {
   console.log(`  人才（第 1 → 第 ${seasons} 赛季平均）：首发均值 ${m(first.map((t) => t.starterAvg))} → ${m(last.map((t) => t.starterAvg))} · 全联盟均值 ${m(first.map((t) => t.leagueAvg))} → ${m(last.map((t) => t.leagueAvg))} · 最强选手 ${m(first.map((t) => t.best))} → ${m(last.map((t) => t.best))} · 平均年龄 ${m(first.map((t) => t.avgAge))} → ${m(last.map((t) => t.avgAge))} · 自由市场 ${m(first.map((t) => t.marketSize))} → ${m(last.map((t) => t.marketSize))} 人`);
   console.log(`  标准：AI 始终 ≥5 人；AI 资金在起始的 −1 倍到 5 倍之间；至少 3 家不同冠军；没有一家拿走超过 60% 的冠军 → ${ok ? '✅ 全部通过' : '❌ 有未通过'}`);
   process.exitCode = ok ? 0 : 1;
+  if (process.argv.includes('--write')) {
+    const { writeFileSync } = await import('node:fs');
+    const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const path = `docs/reports/seasons-${day}.md`;
+    const md: string[] = [`# ${seasons} 赛季长期运行报告 ${day}`, '', `> 命令：\`npm run sim -- --league --seasons ${seasons} --seeds ${seeds} --write\` · ${rows.length} 局，每局从新开档连续打 ${seasons} 个赛季，玩家俱乐部用"普通经营"自动策略`, ''];
+    md.push('## 每局结果', '', '| 局 | 冠军分布 | AI 最少人数 | AI 资金 / 起始（最低～最高） | 结论 |', '|---|---|---|---|---|');
+    for (const r of rows) {
+      const count = new Map<string, number>();
+      for (const c of r.champions) count.set(c, (count.get(c) ?? 0) + 1);
+      const top = Math.max(...count.values());
+      const pass = r.minAiRoster >= 5 && r.aiFundsRatio.min > -1 && r.aiFundsRatio.max < 5 && count.size >= 3 && top / r.champions.length <= 0.6;
+      md.push(`| ${r.seed + 1} | ${[...count].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join('、')} | ${r.minAiRoster} | ${r.aiFundsRatio.min.toFixed(2)}～${r.aiFundsRatio.max.toFixed(2)} | ${pass ? '✅' : '⚠️'} |`);
+    }
+    md.push('', '## 逐赛季平均（所有局取平均）', '', '| 赛季 | 首发平均能力 | 在队选手能力 10% / 50% / 90% | 最强选手 | 平均年龄 | 自由市场人数 | 在队平均周薪 | 全联盟资金总量 | 玩家资金 |', '|---|---|---|---|---|---|---|---|---|');
+    for (let k = 0; k < seasons; k++) {
+      const t = rows.map((r) => r.talent[k]!);
+      const a = (f: (x: (typeof t)[number]) => number) => t.reduce((s2, x) => s2 + f(x), 0) / t.length;
+      const pf = rows.reduce((s2, r) => s2 + r.playerFunds[k]!, 0) / rows.length;
+      md.push(`| ${k + 1} | ${a((x) => x.starterAvg).toFixed(1)} | ${a((x) => x.p10).toFixed(0)} / ${a((x) => x.p50).toFixed(0)} / ${a((x) => x.p90).toFixed(0)} | ${a((x) => x.best).toFixed(0)} | ${a((x) => x.avgAge).toFixed(1)} | ${a((x) => x.marketSize).toFixed(0)} | ${a((x) => x.avgSalary).toFixed(0)} | ${(a((x) => x.totalMoney) / 1000).toFixed(0)}k | ${(pf / 1000).toFixed(0)}k |`);
+    }
+    md.push('', '标准（T17/T20）：AI 始终 ≥5 人；AI 资金在起始的 −1 到 5 倍之间；至少 3 家不同冠军；没有一家拿走超过 60% 的冠军。人才和通胀看逐赛季表：能力分布、年龄、市场人数、周薪和资金总量不应一路单向失控。', '');
+    writeFileSync(path, md.join('\n'));
+    console.log(`  报告已写入 ${path}`);
+  }
 }
 
 if (process.argv.includes('--one')) one();
