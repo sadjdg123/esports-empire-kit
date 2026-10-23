@@ -62,6 +62,11 @@
   "moraleFormPer": 0.08,
   "formPull": 0.5,
   "autoRestFatigue": 40,
+  "growthTypes": {
+    "EARLY": { "weight": 25, "ageShift": -2 },
+    "NORMAL": { "weight": 50, "ageShift": 0 },
+    "LATE": { "weight": 25, "ageShift": 2 }
+  },
   "aiFocusRotation": [
     "MECHANICS",
     "AWARENESS",

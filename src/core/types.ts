@@ -43,8 +43,26 @@ export interface Player {
   contractUntil?: number; // last season (1-based) of the current contract; absent for free agents
   stats?: CareerStats;
   ovrHistory?: number[]; // weekly overall while on the player's club (latest last, capped), for the player card
-  // Reserved for P2+:
-  traits?: string[];
+  // P2 (T21; filled with defaults when missing):
+  traits?: string[]; // personality trait ids (traits.json), 0-2 per player
+  growthType?: GrowthType; // when a career peaks
+  career?: CareerSeason[]; // one entry per finished season on a club
+  retired?: boolean;
+}
+
+/** When a career peaks: early, normal or late bloomer (growth.json growthTypes). */
+export type GrowthType = 'EARLY' | 'NORMAL' | 'LATE';
+export const GROWTH_TYPES: readonly GrowthType[] = ['EARLY', 'NORMAL', 'LATE'];
+
+/** One finished season of a player's career. */
+export interface CareerSeason {
+  season: number;
+  clubId: ClubId;
+  clubName: string;
+  played: number;
+  wins: number;
+  champion: boolean;
+  ovr: number; // overall at the end of the season, one decimal
 }
 
 export interface CareerStats {
@@ -486,6 +504,46 @@ export interface GrowthConfig {
   aiFocusRotation: TrainingFocus[];
   /** The player's automatic training rests the week the squad's average fatigue reaches this. */
   autoRestFatigue: number;
+  /** Share of players of each growth type and how far its age curve is shifted (years; T23). */
+  growthTypes: Record<GrowthType, { weight: number; ageShift: number }>;
+}
+
+/** A club room that can be upgraded (P2, T22). */
+export type FacilityId = 'TRAINING' | 'LOUNGE' | 'OFFICE' | 'ANALYSIS' | 'STREAM';
+export const FACILITY_IDS: readonly FacilityId[] = ['TRAINING', 'LOUNGE', 'OFFICE', 'ANALYSIS', 'STREAM'];
+
+export interface FacilityLevel {
+  cost: number; // to reach this level from the one below (level 1 is free)
+  upkeep: number; // per week while at this level
+  value: number; // the room's effect at this level (meaning per room, see facilities.json)
+  sponsorReputation?: number; // OFFICE: reputation the sponsor tiers ask for less
+}
+
+export interface FacilityDef {
+  id: FacilityId;
+  name: string;
+  effect: string; // what `value` changes, for people reading the data
+  levels: FacilityLevel[]; // index 0 = level 1
+}
+
+export interface FacilitiesConfig {
+  rooms: FacilityDef[];
+  aiSpareShare: number; // AI clubs spend up to this share of their spare money on upgrades in the off-season
+}
+
+/** A personality trait (P2, T24). Effects are small: match performance at most ±5% each (D50). */
+export interface TraitDef {
+  id: string;
+  name: string;
+  description: string;
+  weight: number; // how common it is
+  excludes?: string[]; // traits that cannot come together with this one
+  effects: Record<string, number>;
+}
+
+export interface TraitsConfig {
+  countWeights: number[]; // chance of 0, 1, 2 ... traits
+  traits: TraitDef[];
 }
 
 /** How an AI club of one management style runs its business (T17). */
@@ -529,5 +587,7 @@ export interface GameData {
   season: SeasonConfig;
   growth: GrowthConfig;
   ai: AiConfig;
+  facilities: FacilitiesConfig;
+  traits: TraitsConfig;
   heroById: Record<HeroId, HeroDef>;
 }

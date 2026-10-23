@@ -9,7 +9,7 @@ import { runMatch } from '../sim';
 import { buildReport } from '../sim/report';
 import { autoLineup } from '../sim/scenario';
 import {
-  buildSchedule, clubById, readinessIssues, rosterOf, seasonOver, standings, type Result,
+  buildSchedule, clubById, playerOverall, readinessIssues, rosterOf, seasonOver, standings, type Result,
 } from './game';
 import {
   PLAYER_CLUB_ID, type Fixture, type FixtureResult, type GameState, type InboxMessage,
@@ -162,8 +162,26 @@ function finishSeason(state: GameState, data: GameData): void {
     fundsEnd: state.funds,
   });
   if (state.history.length > data.season.maxSeasonsHistory) state.history = state.history.slice(-data.season.maxSeasonsHistory);
+  recordCareers(state, champion);
   postMessage(state, 'SEASON', `第 ${state.calendar.season} 赛季结束`,
     `${champion ? `冠军：${clubById(state, champion).name}。` : ''}你的常规赛排名第 ${rank}${champion === PLAYER_CLUB_ID ? '，并拿下了总冠军！' : '。'}继续前进就会进入新赛季的休赛期。`);
+}
+
+/** Adds this season to the career of everyone on a club (games and wins this season, title, overall). */
+function recordCareers(state: GameState, champion: ClubId | null): void {
+  for (const club of [state.club, ...state.aiClubs]) {
+    for (const id of [...club.roster].sort()) {
+      const p = state.players[id]!;
+      const career = (p.career ??= []);
+      const before = career.reduce((a, c) => ({ played: a.played + c.played, wins: a.wins + c.wins }), { played: 0, wins: 0 });
+      const st = p.stats ?? { played: 0, wins: 0 };
+      career.push({
+        season: state.calendar.season, clubId: club.id, clubName: club.name,
+        played: Math.max(0, st.played - before.played), wins: Math.max(0, st.wins - before.wins),
+        champion: club.id === champion, ovr: Math.round(playerOverall(p) * 10) / 10,
+      });
+    }
+  }
 }
 
 /** Starts the next season: new schedule, clean table, everyone one year older. */

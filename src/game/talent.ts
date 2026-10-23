@@ -5,7 +5,7 @@
 import { rngFromState, type Rng } from '../core/rng';
 import { ROLES, type GameData, type Player, type Role } from '../core/types';
 import { fairSalary } from './contracts';
-import { playerOverall, withP1Defaults } from './game';
+import { playerOverall, withP1Defaults, withP2Defaults } from './game';
 import type { GameState } from './state';
 
 function uniqueName(state: GameState, data: GameData, rng: Rng): string {
@@ -48,7 +48,7 @@ function youngPlayer(state: GameState, data: GameData, rng: Rng, role: Role, ind
   p.potential = Math.max(Math.round(playerOverall(p)) + 5, rng.int(t.potentialMin, t.potentialMax));
   p.salaryPerWeek = fairSalary(data, p);
   p.signingFee = p.salaryPerWeek * data.economy.signingFeeWeeks;
-  return withP1Defaults(p);
+  return withP2Defaults(withP1Defaults(p), data);
 }
 
 /** New season: old unsigned free agents leave; a fresh class of young players enters the market. */

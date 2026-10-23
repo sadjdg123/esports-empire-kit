@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../../src/core/config';
-import { advanceWeek, newGame, signValueSquad, type GameState } from '../../src/game';
+import { advanceDay, advanceWeek, commitMatchDay, newGame, signValueSquad, type GameState } from '../../src/game';
 import { readFileSync } from 'node:fs';
 import {
   MIGRATIONS, MemoryStorage, SAVE_VERSION, backupKey, deserialize, exportFileName, importSave, loadGame, migrate, saveGame, serialize,
@@ -187,7 +187,51 @@ describe('P0 (v1) saves', () => {
     while (g.week < g.totalRounds) expect(advanceWeek(g, data).ok).toBe(true);
     expect(g.results).toHaveLength(30); // 10 rounds x 3 matches
     expect(g.funds).not.toBe(fundsBefore);
-    // and saves again as v2
+    // and saves again in the current version
     expect(deserialize(serialize(g, meta)).ok).toBe(true);
   }, 60_000);
+});
+
+describe('P1 (v2) save -> v3 (T21)', () => {
+  const v2 = readFileSync(new URL('./fixtures/p1-save-v2.json', import.meta.url), 'utf8');
+
+  it('gives every player the personality a new game would, an empty career, rooms at level 1', () => {
+    const r = deserialize(v2);
+    if (!r.ok) throw new Error(r.error);
+    const g = r.save.game as GameState;
+    expect(r.save.version).toBe(3);
+    expect(g.calendar.season).toBe(2);
+    const fresh = newGame('对照', '#123456', 1, data);
+    for (const [id, p] of Object.entries(g.players)) {
+      expect(Array.isArray(p.traits), id).toBe(true);
+      expect(['EARLY', 'NORMAL', 'LATE']).toContain(p.growthType);
+      expect(p.career).toEqual([]);
+      const same = fresh.players[id];
+      if (same) { expect(p.traits).toEqual(same.traits); expect(p.growthType).toBe(same.growthType); }
+    }
+    for (const c of [g.club, ...g.aiClubs]) expect(Object.values(c.facilities)).toEqual([1, 1, 1, 1, 1]);
+    expect(g.chemistry).toEqual({});
+    expect(g.hallOfFame).toEqual([]);
+    expect(g.awards).toEqual([]);
+  });
+
+  it('plays on to the end of the season, records careers, and saves again', () => {
+    const r = deserialize(v2);
+    if (!r.ok) throw new Error(r.error);
+    const g = r.save.game as GameState;
+    for (let i = 0; i < 400 && g.calendar.phase !== 'FINISHED'; i++) {
+      if (advanceDay(g, data).pause === 'MATCH_DAY') expect(commitMatchDay(g, data).ok).toBe(true);
+    }
+    expect(g.calendar.phase).toBe('FINISHED');
+    for (const id of g.club.roster) expect(g.players[id]!.career!.at(-1)).toMatchObject({ season: 2, clubId: g.club.id });
+    expect(deserialize(serialize(g, meta)).ok).toBe(true);
+  }, 60_000);
+
+  it('refuses a v3 save whose facilities are broken', () => {
+    const s = game();
+    const bad = JSON.parse(serialize(s, meta)) as SaveFile<GameState>;
+    bad.game.club.facilities.TRAINING = 7;
+    const r = deserialize(JSON.stringify(bad));
+    expect(r.ok).toBe(false);
+  });
 });

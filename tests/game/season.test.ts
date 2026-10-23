@@ -98,6 +98,27 @@ describe('a full season', () => {
     expect(s.ledger.filter((e) => e.kind === 'SALARY')).toHaveLength(weeks);
   }, 60_000);
 
+  it('writes a career line for everyone on a club when the season ends (T21)', () => {
+    const s = ready(21);
+    playSeason(s);
+    const champion = s.history.at(-1)!.champion;
+    let lines = 0;
+    for (const club of [s.club, ...s.aiClubs]) {
+      for (const id of club.roster) {
+        const p = s.players[id]!;
+        expect(p.career).toHaveLength(1);
+        const c = p.career![0]!;
+        expect(c).toMatchObject({ season: 1, clubId: club.id, clubName: club.name, champion: club.id === champion });
+        expect(c.played).toBe(p.stats!.played);
+        expect(c.wins).toBe(p.stats!.wins);
+        lines++;
+      }
+    }
+    expect(lines).toBeGreaterThanOrEqual(30);
+    // Free agents have no career line for a season they did not play.
+    for (const id of s.market) expect(s.players[id]!.career ?? []).toEqual([]);
+  }, 60_000);
+
   it('three seasons in a row: new schedule each season, players age, history keeps every season', () => {
     const s = ready(6);
     const ages = Object.fromEntries(Object.values(s.players).map((p) => [p.id, p.age]));

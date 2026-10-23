@@ -1,7 +1,11 @@
 // Versioned save files. Pure logic: storage is injected through StorageAdapter,
 // and the timestamp comes from the caller (logic layers never read the clock).
 
-export const SAVE_VERSION = 2;
+import { loadGameData } from '../core/config';
+import { personalityFor } from '../core/personality';
+import { FACILITY_IDS } from '../core/types';
+
+export const SAVE_VERSION = 3;
 
 /**
  * What the save layer needs to know about the game state. The full type lives
@@ -80,8 +84,31 @@ function migrateV1toV2(save: Obj): Obj {
   return save;
 }
 
+/**
+ * P1 (v2) -> P2 (v3): personality and growth type for every player (the same as a new game
+ * would give them), empty careers, every room at level 1, no chemistry yet, empty hall of fame.
+ */
+function migrateV2toV3(save: Obj): Obj {
+  const g = save.game as Obj;
+  const data = loadGameData();
+  const players = (g.players as Record<string, Obj> | undefined) ?? {};
+  for (const id of Object.keys(players).sort()) {
+    const p = players[id]!;
+    const pers = personalityFor(id, data.traits, data.growth);
+    p.traits ??= pers.traits;
+    p.growthType ??= pers.growthType;
+    p.career ??= [];
+  }
+  const rooms = () => Object.fromEntries(FACILITY_IDS.map((r) => [r, 1]));
+  for (const c of [g.club as Obj | undefined, ...((g.aiClubs as Obj[] | undefined) ?? [])]) if (c) c.facilities ??= rooms();
+  g.chemistry ??= {};
+  g.hallOfFame ??= [];
+  g.awards ??= [];
+  return save;
+}
+
 /** Registered upgrades, keyed by the version they upgrade from. */
-export const MIGRATIONS: Record<number, Migration> = { 1: migrateV1toV2 };
+export const MIGRATIONS: Record<number, Migration> = { 1: migrateV1toV2, 2: migrateV2toV3 };
 
 export class SaveError extends Error {}
 
@@ -132,6 +159,13 @@ export function checkSave(save: SaveFile): string | null {
   g.negotiations ??= [];
   g.sponsor ??= null;
   for (const k of ['inbox', 'history', 'playoffs', 'offers', 'negotiations']) if (!Array.isArray(g[k])) return `游戏数据缺少 ${k}`;
+  // P2 (v3)
+  for (const c of [club, ...(g.aiClubs as Record<string, unknown>[])]) {
+    const f = c.facilities as Record<string, unknown> | undefined;
+    if (!f || FACILITY_IDS.some((r) => !isNum(f[r]) || (f[r] as number) < 1 || (f[r] as number) > 3)) return `俱乐部 ${String(c.name)} 的设施数据损坏`;
+  }
+  if (typeof g.chemistry !== 'object' || g.chemistry === null || Array.isArray(g.chemistry)) return '游戏数据缺少 chemistry';
+  for (const k of ['hallOfFame', 'awards']) if (!Array.isArray(g[k])) return `游戏数据缺少 ${k}`;
   return null;
 }
 

@@ -1,7 +1,7 @@
 // Management game state (P0): one player club, 5 AI clubs, a 10-round league.
 // Everything here is plain JSON so it can be saved as-is.
 
-import type { ClubId, ClubStyle, ManagementStyle, Player, PlayerId, Side, Tactic, TeamLineup, TrainingFocus } from '../core/types';
+import type { ClubId, ClubStyle, FacilityId, ManagementStyle, Player, PlayerId, Side, Tactic, TeamLineup, TrainingFocus } from '../core/types';
 
 /** The player's training choice: a fixed focus, or AUTO (rest when tired, otherwise rotate). */
 export type TrainingPlan = TrainingFocus | 'AUTO';
@@ -18,6 +18,7 @@ export interface ClubState {
   reputation: number; // 0-100
   management: ManagementStyle | 'PLAYER';
   funds: number; // AI clubs only; the player's money is GameState.funds
+  facilities: Record<FacilityId, number>; // room levels, 1-3 (P2)
 }
 
 export type SeasonPhase = 'PRESEASON' | 'REGULAR' | 'PLAYOFFS' | 'FINISHED';
@@ -163,4 +164,34 @@ export interface GameState {
   offers: TransferOffer[];
   negotiations: Negotiation[];
   sponsor: SponsorContract | null;
+  // P2
+  chemistry: Record<string, number>; // pairKey(a, b) -> 0-100, how well two players play together
+  hallOfFame: HallOfFameEntry[];
+  awards: SeasonAward[];
+}
+
+/** A retired player worth remembering (T27). */
+export interface HallOfFameEntry {
+  playerId: PlayerId;
+  name: string;
+  retiredSeason: number;
+  seasons: number;
+  titles: number;
+  played: number;
+  peakOvr: number;
+  mainClub: string; // the club the player played most seasons for
+}
+
+/** The best player of a season (T27). */
+export interface SeasonAward {
+  season: number;
+  mvpId: PlayerId;
+  mvpName: string;
+  clubId: ClubId;
+  clubName: string;
+}
+
+/** Key of the chemistry between two players (order does not matter). */
+export function pairKey(a: PlayerId, b: PlayerId): string {
+  return a < b ? `${a}|${b}` : `${b}|${a}`;
 }

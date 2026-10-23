@@ -3,8 +3,9 @@
 // the previous state (e.g. React) should structuredClone it first.
 
 import { validateLineup } from '../core/config';
+import { personalityFor } from '../core/personality';
 import { createRng, hashString, type Rng } from '../core/rng';
-import type { ClubId, GameData, Player, PlayerId, Tactic, TeamLineup } from '../core/types';
+import { FACILITY_IDS, type ClubId, type FacilityId, type GameData, type Player, type PlayerId, type Tactic, type TeamLineup } from '../core/types';
 import { autoLineup } from '../sim/scenario';
 import { PLAYER_CLUB_ID, type ClubState, type Fixture, type GameState, type LedgerEntry } from './state';
 
@@ -51,16 +52,16 @@ export function newGame(name: string, color: string, seed: number, data: GameDat
   const players: Record<PlayerId, Player> = {};
   for (const p of data.players) players[p.id] = structuredClone(p);
   const aiClubs: ClubState[] = data.clubs.map((c) => {
-    for (const p of c.players) players[p.id] = withP1Defaults(structuredClone(p));
+    for (const p of c.players) players[p.id] = withP2Defaults(withP1Defaults(structuredClone(p)), data);
     return {
       id: c.id, name: c.name, shortName: c.shortName, color: c.color, style: c.style, roster: c.players.map((p) => p.id),
-      reputation: c.reputation, management: c.management, funds: c.funds,
+      reputation: c.reputation, management: c.management, funds: c.funds, facilities: startingFacilities(),
     };
   });
-  for (const p of data.players) players[p.id] = withP1Defaults(players[p.id]!);
+  for (const p of data.players) players[p.id] = withP2Defaults(withP1Defaults(players[p.id]!), data);
   const club: ClubState = {
     id: PLAYER_CLUB_ID, name: name.trim() || '我的俱乐部', shortName: (name.trim() || '我的').slice(0, 2), color, style: 'PLAYER', roster: [],
-    reputation: data.season.startReputation, management: 'PLAYER', funds: 0,
+    reputation: data.season.startReputation, management: 'PLAYER', funds: 0, facilities: startingFacilities(),
   };
   const schedule = buildSchedule([PLAYER_CLUB_ID, ...aiClubs.map((c) => c.id)], seed, rng);
   return {
@@ -88,7 +89,26 @@ export function newGame(name: string, color: string, seed: number, data: GameDat
     offers: [],
     negotiations: [],
     sponsor: null,
+    chemistry: {},
+    hallOfFame: [],
+    awards: [],
   };
+}
+
+/** Every room at level 1. */
+export function startingFacilities(): Record<FacilityId, number> {
+  return Object.fromEntries(FACILITY_IDS.map((id) => [id, 1])) as Record<FacilityId, number>;
+}
+
+/** Fills the P2 player fields (personality, growth type, career) that older data or saves may lack. */
+export function withP2Defaults(p: Player, data: GameData): Player {
+  if (!p.traits || !p.growthType) {
+    const pers = personalityFor(p.id, data.traits, data.growth);
+    p.traits ??= pers.traits;
+    p.growthType ??= pers.growthType;
+  }
+  p.career ??= [];
+  return p;
 }
 
 /** Fills the P1 player fields that older data or saves may lack. */

@@ -9,9 +9,12 @@ import matchJson from '../data/match.json';
 import seasonJson from '../data/season.json';
 import growthJson from '../data/growth.json';
 import aiJson from '../data/ai.json';
+import facilitiesJson from '../data/facilities.json';
+import traitsJson from '../data/traits.json';
 import {
-  ARCHETYPES, LANES, MANAGEMENT_STYLES, ROLES, TACTICS, TRAINING_FOCI,
-  type AiConfig, type ClubDef, type EconomyConfig, type GameData, type GrowthConfig, type HeroDef, type MatchConfig,
+  ARCHETYPES, FACILITY_IDS, GROWTH_TYPES, LANES, MANAGEMENT_STYLES, ROLES, TACTICS, TRAINING_FOCI,
+  type AiConfig, type ClubDef, type EconomyConfig, type FacilitiesConfig, type GameData, type GrowthConfig, type HeroDef, type MatchConfig,
+  type TraitsConfig,
   type Player, type Role, type SeasonConfig, type TeamLineup, type TrainingFocus,
 } from './types';
 
@@ -24,6 +27,8 @@ export interface RawGameData {
   season: unknown;
   growth: unknown;
   ai: unknown;
+  facilities: unknown;
+  traits: unknown;
 }
 
 export class DataValidationError extends Error {
@@ -431,9 +436,16 @@ function checkGrowth(c: Checker, raw: unknown): void {
   const o = checkNumbers(c, raw, p, [
     'weeklyGrowthBase', 'offFocusShare', 'masteryFocusHeroes', 'masteryFocusGain', 'masteryPerMatch', 'matchExperience', 'potentialSoftCap',
     'fatiguePerMatch', 'fatiguePerTrainingWeek', 'fatigueRestRecovery', 'fatigueDailyRecovery', 'moraleNeutral', 'moraleDailyDrift', 'moraleFormPer',
-    'formPull',
+    'formPull', 'autoRestFatigue',
   ]);
   if (!o) return;
+  const types = c.obj(o.growthTypes, `${p}.growthTypes`);
+  if (types) {
+    for (const gt of GROWTH_TYPES) {
+      const t = c.obj(types[gt], `${p}.growthTypes.${gt}`);
+      if (t) { c.num(t, 'weight', `${p}.growthTypes.${gt}`, 0); c.num(t, 'ageShift', `${p}.growthTypes.${gt}`, -6, 6); }
+    }
+  }
   for (const k of ['moraleWin', 'moraleLoss', 'moraleBench']) c.num(o, k, p, -100, 100);
   const focus = c.obj(o.trainingFocus, `${p}.trainingFocus`);
   if (focus) for (const f of TRAINING_FOCI) if (!focus[f]) c.fail(`${p}.trainingFocus`, `missing focus ${f}`);
@@ -468,6 +480,67 @@ function checkAi(c: Checker, raw: unknown): void {
   }
 }
 
+function checkFacilities(c: Checker, raw: unknown): void {
+  const p = 'facilities.json';
+  const o = checkNumbers(c, raw, p, ['aiSpareShare']);
+  if (!o) return;
+  const rooms = c.arr(o.rooms, `${p}.rooms`, FACILITY_IDS.length) ?? [];
+  const seen = new Set<string>();
+  rooms.forEach((r, i) => {
+    const rp = `${p}.rooms[${i}]`;
+    const ro = c.obj(r, rp);
+    if (!ro) return;
+    if (!FACILITY_IDS.includes(ro.id as never)) c.fail(`${rp}.id`, `unknown room ${String(ro.id)}`);
+    if (seen.has(ro.id as string)) c.fail(`${rp}.id`, 'duplicate room');
+    seen.add(ro.id as string);
+    if (typeof ro.name !== 'string' || !ro.name) c.fail(`${rp}.name`, 'expected a name');
+    const levels = c.arr(ro.levels, `${rp}.levels`, 2) ?? [];
+    levels.forEach((l, k) => {
+      const lo = c.obj(l, `${rp}.levels[${k}]`);
+      if (!lo) return;
+      c.num(lo, 'cost', `${rp}.levels[${k}]`, 0);
+      c.num(lo, 'upkeep', `${rp}.levels[${k}]`, 0);
+      c.num(lo, 'value', `${rp}.levels[${k}]`, -10, 10);
+      c.optNum(lo, 'sponsorReputation', `${rp}.levels[${k}]`, 0, 100);
+      if (k === 0 && (lo.cost !== 0 || lo.upkeep !== 0)) c.fail(`${rp}.levels[0]`, 'level 1 must be free');
+    });
+  });
+  for (const id of FACILITY_IDS) if (!seen.has(id)) c.fail(`${p}.rooms`, `missing room ${id}`);
+}
+
+/** Effects a trait may have, and the most each may change match performance by (D50: ±5%). */
+const TRAIT_EFFECT_LIMIT: Record<string, number> = {
+  behindPerformance: 0.05, mechanicsPerformance: 0.05, teamworkPerformance: 0.05, trainingGrowth: 0.5, teamMoraleDrift: 2, salaryAsk: 0.5,
+};
+
+function checkTraits(c: Checker, raw: unknown): void {
+  const p = 'traits.json';
+  const o = c.obj(raw, p);
+  if (!o) return;
+  const counts = c.arr(o.countWeights, `${p}.countWeights`, 1) ?? [];
+  if (counts.some((w) => typeof w !== 'number' || w < 0)) c.fail(`${p}.countWeights`, 'must be numbers >= 0');
+  const list = c.arr(o.traits, `${p}.traits`, 2) ?? [];
+  const ids = new Set(list.map((t) => (t as Obj | null)?.id).filter((x): x is string => typeof x === 'string'));
+  if (ids.size !== list.length) c.fail(`${p}.traits`, 'trait ids must be unique strings');
+  if (counts.length - 1 > list.length) c.fail(`${p}.countWeights`, 'more traits per player than traits exist');
+  list.forEach((t, i) => {
+    const tp = `${p}.traits[${i}]`;
+    const to = c.obj(t, tp);
+    if (!to) return;
+    for (const k of ['name', 'description']) if (typeof to[k] !== 'string' || !to[k]) c.fail(`${tp}.${k}`, 'expected text');
+    c.num(to, 'weight', tp, 0);
+    for (const x of (to.excludes as unknown[] | undefined) ?? []) if (!ids.has(x as string)) c.fail(`${tp}.excludes`, `unknown trait ${String(x)}`);
+    const eff = c.obj(to.effects, `${tp}.effects`);
+    if (eff) {
+      for (const [k, v] of Object.entries(eff)) {
+        const limit = TRAIT_EFFECT_LIMIT[k];
+        if (limit === undefined) c.fail(`${tp}.effects.${k}`, 'unknown effect');
+        else if (typeof v !== 'number' || Math.abs(v) > limit) c.fail(`${tp}.effects.${k}`, `must be a number within ±${limit}`);
+      }
+    }
+  });
+}
+
 /** Validates raw JSON values; returns a list of human-readable issues (empty = valid). */
 export function validateRawData(raw: RawGameData): string[] {
   const c = new Checker();
@@ -481,6 +554,8 @@ export function validateRawData(raw: RawGameData): string[] {
   checkSeason(c, raw.season);
   checkGrowth(c, raw.growth);
   checkAi(c, raw.ai);
+  checkFacilities(c, raw.facilities);
+  checkTraits(c, raw.traits);
   return c.issues;
 }
 
@@ -500,13 +575,18 @@ export function loadGameData(raw: RawGameData = defaultRawData()): GameData {
     season: raw.season as SeasonConfig,
     growth: raw.growth as GrowthConfig,
     ai: raw.ai as AiConfig,
+    facilities: raw.facilities as FacilitiesConfig,
+    traits: raw.traits as TraitsConfig,
     heroById,
   };
 }
 
 /** Fresh deep copy of the bundled JSON, safe to mutate (e.g. in tests). */
 export function defaultRawData(): RawGameData {
-  return structuredClone({ heroes: heroesJson, players: playersJson, clubs: clubsJson, economy: economyJson, match: matchJson, season: seasonJson, growth: growthJson, ai: aiJson });
+  return structuredClone({
+    heroes: heroesJson, players: playersJson, clubs: clubsJson, economy: economyJson, match: matchJson, season: seasonJson, growth: growthJson, ai: aiJson,
+    facilities: facilitiesJson, traits: traitsJson,
+  });
 }
 
 /** Checks a lineup against the provided roster. Returns issues (empty = valid). */
