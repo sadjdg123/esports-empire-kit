@@ -32,7 +32,7 @@
 |---|---|---|---|---|---|
 | T12 | 状态模型扩展与存档 v2 | Claude Code | ✅ 完成 | 2026-10-23 | 汇报：docs/reports/T12.md |
 | T13 | 日历与正式赛季 | Claude Code | ✅ 完成 | 2026-10-23 | 汇报：docs/reports/T13.md |
-| T14 | 训练与成长、状态 | Claude Code | ✅ 完成 | 2026-10-23 | 汇报：docs/reports/T14.md；G9 因机器变慢未达标，T20 处理（D33） |
+| T14 | 训练与成长、状态 | Claude Code | ✅ 完成 | 2026-10-23 | 汇报：docs/reports/T14.md；G9 因机器变慢未达标，T20 已解决：30 秒（D33、D40） |
 | T15 | 合同与转会 | Claude Code | ✅ 完成 | 2026-10-23 | 汇报：docs/reports/T15.md |
 | T16 | 完整财务 | Claude Code | ✅ 完成 | 2026-10-23 | 汇报：docs/reports/T16.md |
 | T17 | AI 俱乐部运营 | Claude Code | ✅ 完成 | 2026-10-23 | 汇报：docs/reports/T17.md；门哥确认保留新秀规则、接受 20 赛季结果（D37） |
