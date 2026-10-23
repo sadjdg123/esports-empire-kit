@@ -35,6 +35,11 @@ export function growthRoom(potential: number | undefined, overall: number): stri
   return room >= 15 ? '很大' : room >= 8 ? '较大' : room >= 3 ? '一般' : '接近上限';
 }
 
+/** A word for the starting five's chemistry (T25). */
+export function chemistryLabel(v: number): string {
+  return v >= 85 ? '心有灵犀' : v >= 60 ? '配合默契' : v >= 30 ? '磨合中' : '还很生疏';
+}
+
 /** Growth types in the player card (T23). */
 export const GROWTH_NAME: Record<GrowthType, string> = {
   EARLY: '早熟（巅峰早）', NORMAL: '正常', LATE: '大器晚成（巅峰晚）',

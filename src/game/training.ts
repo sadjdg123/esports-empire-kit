@@ -8,6 +8,7 @@ import { clubById, playerOverall, weekOfSeason } from './game';
 import { PLAYER_CLUB_ID, type GameState } from './state';
 import { facilityValue } from './facilities';
 import { traitEffect } from '../core/personality';
+import { chemistryFromTraining } from './chemistry';
 
 const ATTRS: readonly (keyof PlayerAttributes)[] = ['mechanics', 'awareness', 'teamwork', 'mental'];
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -111,6 +112,7 @@ export function applyTrainingWeek(state: GameState, data: GameData): void {
       const p = state.players[id]!;
       trainPlayer(p, focus, g, playerTrainingBoost(data, p, boost));
     }
+    chemistryFromTraining(state, data, club, focus);
   }
   // Free agents do not train, but still age.
   for (const id of [...state.market].sort()) {

@@ -76,6 +76,11 @@
     "typeBonus": { "EARLY": 0.1, "NORMAL": 0, "LATE": -0.1 },
     "noticeWeeks": 4
   },
+  "chemistry": {
+    "perMatch": 2,
+    "perTeamworkWeek": 2,
+    "decayApart": 25
+  },
   "aiFocusRotation": [
     "MECHANICS",
     "AWARENESS",

@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { validateLineup } from '../../core/config';
 import { DEFAULT_MASTERY, ROLES, TACTICS, type Pick, type Role, type Tactic, type TeamLineup } from '../../core/types';
-import { PLAYER_CLUB_ID, recommendLineup, rosterOf, setLineup } from '../../game';
+import { PLAYER_CLUB_ID, chemistryWith, groupChemistry, recommendLineup, rosterOf, setLineup } from '../../game';
 import type { PageProps } from '../App';
 import { HeroSprite } from '../components/HeroSprite';
 import { Fatigue, Form, Ovr } from '../components/PlayerBits';
-import { ARCHETYPE_NAME, ROLE_NAME } from '../labels';
+import { ARCHETYPE_NAME, ROLE_NAME, chemistryLabel } from '../labels';
 
 export function LineupPage({ game, data, act, go, flash }: PageProps) {
   const roster = rosterOf(game);
@@ -60,6 +60,17 @@ export function LineupPage({ game, data, act, go, flash }: PageProps) {
           <h2>首发阵容</h2>
           <button onClick={recommend}>一键推荐</button>
         </div>
+        {lineup.picks.length >= 2 && (() => {
+          const chem = Math.round(groupChemistry(game, lineup.picks.map((p) => p.playerId)));
+          const k = data.match.coefficients.chemistry;
+          return (
+            <div className="chemistry">
+              <div className="row between"><b>首发默契 {chem} / 100 · {chemistryLabel(chem)}</b></div>
+              <div className="bar"><i style={{ width: `${chem}%` }} /></div>
+              <p className="dim small-text">一起首发打比赛、练"配合"会涨，换进来的新人和队友从 0 开始。满默契时操作 +{Math.round(k.mechanics * 100)}%、配合 +{Math.round(k.teamwork * 100)}%。</p>
+            </div>
+          );
+        })()}
         <div className="role-cards">
           {ROLES.map((role) => {
             const pick = draft.picks[role];
@@ -78,6 +89,7 @@ export function LineupPage({ game, data, act, go, flash }: PageProps) {
                   ))}
                 </select>
                 {player && <div className="dim"><Ovr p={player} /> <Form p={player} /> <Fatigue p={player} /></div>}
+                {player && lineup.picks.length >= 2 && <div className="dim small-text">和其他首发默契 {Math.round(chemistryWith(game, player.id, lineup.picks.map((p) => p.playerId)))}</div>}
                 {player && (player.fatigue ?? 0) >= 50 && <div className="hint">比较累：疲劳超过 50 后发挥下降</div>}
                 {fit === 'secondary' && <div className="hint">副位置：发挥略打折</div>}
                 {fit === 'off' && <div className="hint bad">不擅长这个位置：发挥明显下降</div>}

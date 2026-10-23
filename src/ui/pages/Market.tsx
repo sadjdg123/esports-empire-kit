@@ -46,7 +46,7 @@ export function MarketPage({ game, data, act, go, flash, ask, showPlayer }: Page
             </select>
           </div>
         </div>
-        <p className="dim">签约费 = {data.economy.signingFeeWeeks} 周工资，签下后每周发工资。合同签到第 N 个赛季结束（含本赛季），到期前可以续约。点名字看详情。</p>
+        <p className="dim">签约费 = {data.economy.signingFeeWeeks} 周工资，签下后每周发工资。合同签到第 N 个赛季结束（含本赛季），到期前可以续约。新人和队友的默契从 0 开始。点名字看详情。</p>
         <table className="table">
           <thead><tr><th>选手</th><th>位置</th><th>能力</th><th className="hide-sm" title="操作 / 意识 / 配合 / 心态">操作/意识/配合/心态</th><th className="hide-sm">擅长英雄（熟练度）</th><th>周薪</th><th className="hide-sm">签约费</th><th /></tr></thead>
           <tbody>

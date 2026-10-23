@@ -14,7 +14,7 @@ import { emit } from './events';
 import { atNode, buildMap, coordOf, type GameMap } from './map';
 import { tempoFactor } from './tactics';
 import { enemyOf, type BrainKind, type MatchState, type TeamState } from './state';
-import { createHero, traitModsOf, grantGold, grantXp, moveHero, moveWave, heroMoveSpeed, spawnWave, type Camp, type HeroUnit, type Objective, type Structure } from './units';
+import { createHero, playerModsOf, grantGold, grantXp, moveHero, moveWave, heroMoveSpeed, spawnWave, type Camp, type HeroUnit, type Objective, type Structure } from './units';
 
 export type { MatchState } from './state';
 
@@ -64,7 +64,7 @@ export function createMatch(input: MatchInput, data: GameData, opts: MatchOption
       const hero = data.heroById[pick.heroId];
       if (!hero) throw new Error(`createMatch: unknown hero ${pick.heroId}`);
       const idx = heroes.length;
-      heroes.push(createHero(cfg, idx, side, role, player, hero, map.bases[side], traitModsOf(data.traits, player)));
+      heroes.push(createHero(cfg, idx, side, role, player, hero, map.bases[side], playerModsOf(data.traits, cfg, player, team.chemistry)));
       heroIdx.push(idx);
     }
     teams[side] = {

@@ -210,6 +210,15 @@ export interface TraitMods {
 }
 export const NO_TRAIT_MODS: TraitMods = { mechanics: 0, teamwork: 0, behind: 0 };
 
+/** A player's personality plus the starting five's chemistry (0-100, T25). */
+export function playerModsOf(traits: TraitsConfig, cfg: MatchConfig, player: Player, chemistry = 0): TraitMods {
+  const t = traitModsOf(traits, player);
+  if (!chemistry) return t;
+  const share = Math.max(0, Math.min(100, chemistry)) / 100;
+  const k = cfg.coefficients.chemistry;
+  return { mechanics: t.mechanics + k.mechanics * share, teamwork: t.teamwork + k.teamwork * share, behind: t.behind };
+}
+
 export function traitModsOf(traits: TraitsConfig, player: Player): TraitMods {
   if (!player.traits?.length) return NO_TRAIT_MODS;
   return {

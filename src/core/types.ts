@@ -127,8 +127,8 @@ export interface TeamLineup {
 
 export interface MatchInput {
   seed: number;
-  blue: { lineup: TeamLineup; players: Player[] };
-  red: { lineup: TeamLineup; players: Player[] };
+  blue: { lineup: TeamLineup; players: Player[]; chemistry?: number };
+  red: { lineup: TeamLineup; players: Player[]; chemistry?: number };
 }
 
 export type MatchEventType =
@@ -432,6 +432,8 @@ export interface MatchConfig {
     mentalDeficitGold: number;
     mentalPenaltyPer: number; // per (100 - mental)
     formPer: number;
+    /** Effect of full chemistry (100) between the five starters (T25); 0 chemistry does nothing. Each at most ±5% (Q7). */
+    chemistry: { mechanics: number; teamwork: number };
     fatigue: { start: number; per: number }; // performance -per for each fatigue point above start
     role: { primary: number; secondary: number; off: number };
     retreatThreshold: CoefLinear; // awareness
@@ -508,6 +510,14 @@ export interface GrowthConfig {
   /** Share of players of each growth type and how far its age curve is shifted (years; T23). */
   growthTypes: Record<GrowthType, { weight: number; ageShift: number }>;
   retirement: RetirementConfig;
+  chemistry: ChemistryConfig;
+}
+
+/** How chemistry between two teammates (0-100) grows and fades (T25). */
+export interface ChemistryConfig {
+  perMatch: number; // both started the same match
+  perTeamworkWeek: number; // on the same club in a week that trained teamwork
+  decayApart: number; // at the start of a season, for two players no longer on the same club
 }
 
 /** When players stop (T23). Checked once a season, a few weeks before it ends. */

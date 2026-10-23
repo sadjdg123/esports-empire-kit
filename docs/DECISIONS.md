@@ -215,8 +215,14 @@
   - 性格加颜色分类（`tone`: good / bad / mixed），界面标签用。
   - 经济快速测试（8 局）改为与正式校准同样的玩法和种子；原来 10 周练操作的捷径已不代表正式校准。
 
+- **D55** · 2026-10-23 · Claude Code · T25 默契：
+  - 两两默契 0–100 存在 `state.chemistry`。一起首发一场 +2，俱乐部练配合一周全队两两 +2，新赛季开始时不在同一队的两人 −25（≤0 删除）（`growth.json` chemistry）。
+  - 比赛用首发五人的平均默契：满 100 时操作 +1%、配合 +5%，按比例（`match.json` coefficients.chemistry，各限 ±5%）。只加配合实测只 +3 个百分点，所以加了操作。
+  - 原定每场 +4 时新队一季就到 70，大换血反而更好（胜率 52%、冠军 3.6 次）；改成 +2 后固定阵容 53% / 2.33 倍资金，大换血 50% / 3.4 冠 / 0.80 倍资金，两种都可行。
+
 ## 接口变更申请
 
 （格式：申请编号 · 日期 · 申请人 · 要改什么 · 为什么 · 影响哪些模块 · 处理结果）
 
 - **IC-01** · 2026-10-23 · Claude Code · 比赛快照（`RenderSnapshot`）加入野怪营地：`SnapshotUnitKind` 新增 `'CAMP'`；`getSnapshot` 为每个营地输出位置、血量、满血量、是否活着；营地状态新增只用于快照的 `maxHp`（刷新时记下）。· 为什么：V3 画面要画出野怪，并在野怪死后隐藏，原快照里没有营地；英雄打野的攻击记录早就带营地 id，但画面找不到目标。· 影响：`src/core/types.ts`、`src/sim/engine.ts`、`src/sim/units.ts`，以及只读快照的画面代码。· 处理结果：已做。比赛计算不变：40 场固定对局校验码与改前逐一相同，看比赛与跳过的一致性测试照常通过。
+- **IC-02** · 2026-10-23 · Claude Code · 比赛输入（`MatchInput`）每一方多一个可选的 `chemistry`（0–100，首发五人平均默契）；`MatchConfig.coefficients` 多 `chemistry: { mechanics, teamwork }`。· 为什么：T25 默契要进比赛，比赛引擎看不到游戏状态。· 影响：`src/core/types.ts`、`src/core/config.ts`、`src/sim/engine.ts`（一行）、`src/sim/units.ts`、`src/game/season.ts`。· 处理结果：已做。没有这个字段时等于 0，比赛结果完全不变：40 场固定对局校验码与改前逐一相同，G1–G9 通过。

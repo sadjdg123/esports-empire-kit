@@ -4,7 +4,7 @@
 // player's match first: prepareMatchDay -> (watch) -> commitMatchDay.
 
 import { hashString, rngFromState } from '../core/rng';
-import type { AutoPauseEvent, ClubId, GameData, MatchInput, MatchResult } from '../core/types';
+import type { AutoPauseEvent, ClubId, GameData, MatchInput, MatchResult, Player, TeamLineup } from '../core/types';
 import { runMatch } from '../sim';
 import { buildReport } from '../sim/report';
 import { autoLineup } from '../sim/scenario';
@@ -21,6 +21,7 @@ import { refreshTalent } from './talent';
 import { applyMatchFinance, applyPlayoffAwards, autoSponsor, financeSummary, rescueOptions, runPayDay, settleReputation } from './finance';
 import { aiUpgradeFacilities } from './facilities';
 import { announceRetirements, retirePlayers, retirementNoticeDue } from './career';
+import { chemistryFromMatch, chemistryNewSeason, groupChemistry } from './chemistry';
 import { postMessage } from './messages';
 import { applyDailyRecovery, applyMatchEffects, applyTrainingWeek } from './training';
 import { expireOffers, generateAiOffers } from './transfers';
@@ -69,10 +70,11 @@ export function describeDate(state: GameState, data: GameData): string {
 // Today's matches
 
 function teamFor(state: GameState, data: GameData, clubId: ClubId, fixtureSeed: number) {
-  if (clubId === PLAYER_CLUB_ID) return { lineup: structuredClone(state.lineup!), players: rosterOf(state, clubId).map((p) => structuredClone(p)) };
+  const withChemistry = (t: { lineup: TeamLineup; players: Player[] }) => ({ ...t, chemistry: groupChemistry(state, t.lineup.picks.map((pk) => pk.playerId)) });
+  if (clubId === PLAYER_CLUB_ID) return withChemistry({ lineup: structuredClone(state.lineup!), players: rosterOf(state, clubId).map((p) => structuredClone(p)) });
   const club = clubById(state, clubId);
   const players = aiMatchSquad(state, data, club).map((p) => structuredClone(p));
-  return { lineup: autoLineup(data, clubId, players, aiTactic(state, data, club, fixtureSeed)), players };
+  return withChemistry({ lineup: autoLineup(data, clubId, players, aiTactic(state, data, club, fixtureSeed)), players });
 }
 
 export function matchInputFor(state: GameState, data: GameData, fixture: { blue: ClubId; red: ClubId; seed: number }): MatchInput {
@@ -210,6 +212,7 @@ export function startNewSeason(state: GameState, data: GameData): boolean {
   const talent = refreshTalent(state, data);
   postMessage(state, 'SEASON', '自由市场更新', `${talent.joined} 名新秀进入自由市场${talent.retired > 0 ? `；${talent.retired} 名没有球队的老将退役` : ''}${talent.left > 0 ? `；${talent.left} 名自由球员离开了联赛` : ''}。`);
   aiSignFreeAgents(state, data);
+  chemistryNewSeason(state, data);
   return remindExpiring(state);
 }
 
@@ -352,6 +355,7 @@ export function commitMatchDay(state: GameState, data: GameData, playerMatchResu
     const fr = toFixtureResult(round, f, input, r);
     results.push(fr);
     applyMatchEffects(state, data, input, r);
+    chemistryFromMatch(state, data, input);
     if (stage !== 'LEAGUE') {
       const pm = state.playoffs.find((m) => m.stage === stage && m.index === f.index)!;
       pm.winner = fr.winner;

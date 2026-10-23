@@ -374,6 +374,8 @@ function checkMatch(c: Checker, raw: unknown, heroIds: Set<string>): void {
     for (const k of ['masteryCooldown', 'mentalDeficitGold', 'mentalPenaltyPer', 'formPer', 'teamworkDelay']) c.num(coef, k, `${p}.coefficients`, 0);
     checkNumbers(c, coef.role, `${p}.coefficients.role`, ['primary', 'secondary', 'off']);
     checkNumbers(c, coef.fatigue, `${p}.coefficients.fatigue`, ['start', 'per']);
+    const chem = c.obj(coef.chemistry, `${p}.coefficients.chemistry`);
+    if (chem) for (const k of ['mechanics', 'teamwork']) c.num(chem, k, `${p}.coefficients.chemistry`, -0.05, 0.05);
   }
   const ai = c.obj(o.ai, `${p}.ai`);
   if (ai) {
@@ -460,6 +462,8 @@ function checkGrowth(c: Checker, raw: unknown): void {
     const tb = c.obj(ret.typeBonus, `${rp}.typeBonus`);
     if (tb) for (const gt of GROWTH_TYPES) c.num(tb, gt, `${rp}.typeBonus`, -1, 1);
   }
+  const chem = c.obj(o.chemistry, `${p}.chemistry`);
+  if (chem) for (const k of ['perMatch', 'perTeamworkWeek', 'decayApart']) c.num(chem, k, `${p}.chemistry`, 0, 100);
   for (const k of ['moraleWin', 'moraleLoss', 'moraleBench']) c.num(o, k, p, -100, 100);
   const focus = c.obj(o.trainingFocus, `${p}.trainingFocus`);
   if (focus) for (const f of TRAINING_FOCI) if (!focus[f]) c.fail(`${p}.trainingFocus`, `missing focus ${f}`);

@@ -255,3 +255,8 @@ button.link.name { padding: 0; margin: 0; color: var(--text); font-weight: 600; 
 .trait.mixed { color: #8a6416; background: #f6ecd2; }
 .traits.full { flex-direction: column; gap: 6px; text-align: left; }
 .trait-line { font-size: 14px; }
+
+/* Chemistry of the starting five (T25) */
+.chemistry { margin: 8px 0 12px; }
+.chemistry .bar { height: 10px; border-radius: 5px; background: #eadfc6; overflow: hidden; margin: 6px 0; }
+.chemistry .bar i { display: block; height: 100%; background: linear-gradient(90deg, #e9a23b, #3e9d5d); }
