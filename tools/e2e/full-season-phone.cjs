@@ -50,11 +50,11 @@ const SHOTS = '/home/user/esports-empire-kit/docs/reports/t18';
   // Let the clock run at 4x until it stops by itself on match day.
   await p.click('.calendar-bar button:has-text("4×")');
   for (let i = 0; i < 6; i++) {
-    if (await p.locator('canvas').count()) break;
+    if (await p.locator('.canvas-host canvas').count()) break;
     if (await p.locator('.calendar-bar button:has-text("开始")').count()) await p.click('.calendar-bar button:has-text("开始")');
-    try { await p.waitForSelector('canvas', { timeout: 15000 }); } catch { log.push(`clock stopped: ${await toast()}`); }
+    try { await p.waitForSelector('.canvas-host canvas', { timeout: 15000 }); } catch { log.push(`clock stopped: ${await toast()}`); }
   }
-  log.push(`clock reached match: ${await p.locator('canvas').count() > 0}`);
+  log.push(`clock reached match: ${await p.locator('.canvas-host canvas').count() > 0}`);
   await p.waitForTimeout(1500); await shot('06-match');
   await p.click('button:has-text("跳过")'); await p.click('button:has-text("查看战报")'); await p.waitForSelector('text=关键原因'); await shot('07-report');
   log.push(await p.textContent('.report h2'));
@@ -74,7 +74,7 @@ const SHOTS = '/home/user/esports-empire-kit/docs/reports/t18';
     await nav('主页');
     if (await p.locator('button:has-text("进入第 2 赛季")').count()) break;
     await p.click('.calendar-bar button:has-text("下一场")');
-    if (!(await p.locator('canvas').count())) { try { await p.waitForSelector('canvas', { timeout: 2000 }); } catch { continue; } }
+    if (!(await p.locator('.canvas-host canvas').count())) { try { await p.waitForSelector('.canvas-host canvas', { timeout: 2000 }); } catch { continue; } }
     await p.click('button:has-text("跳过")'); await p.click('button:has-text("查看战报")'); await p.waitForSelector('text=关键原因');
     log.push(await p.textContent('.report h2'));
   }

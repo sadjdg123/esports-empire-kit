@@ -43,4 +43,10 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Browser check scripts run by Node with Playwright (CommonJS).
+    files: ['tools/e2e/**/*.cjs'],
+    languageOptions: { sourceType: 'commonjs', globals: { ...globals.node, ...globals.browser } },
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
 );

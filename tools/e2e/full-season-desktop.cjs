@@ -17,7 +17,7 @@ const { chromium } = require('playwright');
     if (await p.locator('button:has-text("进入第 2 赛季")').count()) break;
     log.push(await p.textContent('.hero-card .dim'));
     await p.click('button:has-text("前进到")');
-    if (await p.locator('canvas').count() === 0) { try { await p.waitForSelector('canvas', { timeout: 3000 }); } catch { continue; } }
+    if (await p.locator('.canvas-host canvas').count() === 0) { try { await p.waitForSelector('.canvas-host canvas', { timeout: 3000 }); } catch { continue; } }
     await p.click('button:has-text("跳过")'); await p.click('button:has-text("查看战报")'); await p.waitForSelector('text=关键原因');
     log.push(await p.textContent('.report h2'));
   }

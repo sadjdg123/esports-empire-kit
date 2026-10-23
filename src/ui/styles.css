@@ -210,3 +210,6 @@ button.link.name { padding: 0; margin: 0; color: var(--text); font-weight: 600; 
 .modal-back { position: fixed; inset: 0; background: #000a; display: grid; place-items: center; z-index: 30; padding: 16px; }
 .modal { max-width: 420px; width: 100%; }
 .save-text { width: 100%; min-height: 90px; margin: 8px 0; font: 12px/1.4 ui-monospace, monospace; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+
+.club-view { padding-bottom: 10px; }
+.club-canvas { display: block; width: 100%; aspect-ratio: 244 / 160; image-rendering: pixelated; background: #0d0f14; border-radius: 8px; cursor: pointer; touch-action: manipulation; }

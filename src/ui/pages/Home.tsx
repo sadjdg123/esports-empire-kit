@@ -3,10 +3,11 @@ import {
   standings, transferWindowOpen, type WeekSummary,
 } from '../../game';
 import type { Page } from '../App';
+import { ClubView } from '../components/ClubView';
 import type { PageProps } from '../App';
 import { STYLE_NAME, money } from '../labels';
 
-export function HomePage({ game, data, go, act, flash, toNextMatch, lastWeek }: PageProps & { lastWeek: WeekSummary | null }) {
+export function HomePage({ game, data, go, act, flash, toNextMatch, showPlayer, lastWeek }: PageProps & { lastWeek: WeekSummary | null }) {
   const table = standings(game);
   const myRank = table.findIndex((r) => r.clubId === PLAYER_CLUB_ID) + 1;
   const next = nextPlayerFixture(game, data);
@@ -77,6 +78,8 @@ export function HomePage({ game, data, go, act, flash, toNextMatch, lastWeek }: 
           </>
         )}
       </section>
+
+      <ClubView game={game} data={data} showPlayer={showPlayer} />
 
       {todo.length > 0 && (
         <section className="card todo-card">
