@@ -26,6 +26,9 @@ export function MatchPage({ game, data, act, go, flash, onDone }: PageProps & { 
   const [speed, setSpeed] = useState<Speed>(1);
   const [paused, setPaused] = useState(false);
   const [fps, setFps] = useState(0);
+  // Read by the match view every frame; the button below flips it.
+  const view = useRef({ follow: true });
+  const [follow, setFollow] = useState(true);
   const [finished, setFinished] = useState(false);
   const committed = useRef(false);
 
@@ -44,7 +47,7 @@ export function MatchPage({ game, data, act, go, flash, onDone }: PageProps & { 
     void import('../../render/MatchScene').then(({ mountMatch }) => {
       if (cancelled || !hostRef.current) return;
       cleanup = mountMatch(hostRef.current, {
-        player, data, colors, names, onFps: setFps,
+        player, data, colors, names, onFps: setFps, view: view.current,
         onTick: (snaps) => {
           const last = snaps[snaps.length - 1]!;
           setSnap(last);
@@ -119,6 +122,7 @@ export function MatchPage({ game, data, act, go, flash, onDone }: PageProps & { 
             <button onClick={togglePause}>{paused ? '▶ 继续' : '⏸ 暂停'}</button>
             {([1, 2, 4] as Speed[]).map((v) => <button key={v} className={speed === v ? 'primary' : ''} onClick={() => setSpd(v)}>{v}×</button>)}
             <button onClick={skip}>⏭ 跳过</button>
+            <button onClick={() => { view.current.follow = !follow; setFollow(!follow); }} title="打团时镜头是否拉近">{follow ? '🎥 跟随团战' : '🗺 看全图'}</button>
             <span className="dim">画面 {fps} 帧/秒</span>
           </>
         ) : (
