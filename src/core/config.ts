@@ -506,6 +506,13 @@ function checkFacilities(c: Checker, raw: unknown): void {
     });
   });
   for (const id of FACILITY_IDS) if (!seen.has(id)) c.fail(`${p}.rooms`, `missing room ${id}`);
+  const prio = c.obj(o.aiPriority, `${p}.aiPriority`);
+  if (prio) {
+    for (const st of MANAGEMENT_STYLES) {
+      const list = c.arr(prio[st], `${p}.aiPriority.${st}`, 1) ?? [];
+      list.forEach((r, i) => { if (!FACILITY_IDS.includes(r as never)) c.fail(`${p}.aiPriority.${st}[${i}]`, `unknown room ${String(r)}`); });
+    }
+  }
 }
 
 /** Effects a trait may have, and the most each may change match performance by (D50: ±5%). */

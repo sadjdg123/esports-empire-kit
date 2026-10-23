@@ -54,7 +54,8 @@ describe('club scene activities', () => {
 });
 
 describe('club base markers (furniture that needs the player)', () => {
-  const calm = (s: GameState) => { for (const m of s.inbox) m.read = true; return s; };
+  // Read all mail; keep the money low enough that no room upgrade is suggested (that has its own test).
+  const calm = (s: GameState) => { for (const m of s.inbox) m.read = true; s.funds = 40000; return s; };
 
   it('a new club is pointed at the notice board (sign players) and the safe (no sponsor yet)', () => {
     const s = calm(newGame('空', '#3a7bd5', 1, data));
@@ -73,6 +74,15 @@ describe('club base markers (furniture that needs the player)', () => {
     expect(markersFor(s, data)).toEqual({ inbox: 'bang', lineup: 'bang', contracts: 'bang' });
     expect(acceptRenewal(s, data, s.club.roster[0]!, 1).ok).toBe(true);
     expect(markersFor(s, data).contracts).toBeUndefined();
+  });
+
+  it('in the pre-season, money to spare for a room upgrade puts a note on the toolbox (T22)', () => {
+    const s = calm(club());
+    expect(markersFor(s, data).facilities).toBeUndefined();
+    s.funds = 400000;
+    expect(markersFor(s, data).facilities).toBe('note');
+    s.calendar.phase = 'REGULAR';
+    expect(markersFor(s, data).facilities).toBeUndefined();
   });
 
   it('tired players make the training desks sweat, unless it is a rest week or training is automatic', () => {

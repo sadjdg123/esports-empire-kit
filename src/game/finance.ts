@@ -6,6 +6,7 @@ import type { ClubId, GameData, SponsorDef } from '../core/types';
 import { addLedger, clubById, contractStartSeason, rosterOf, weekOfSeason, weeklySalaries, type Result } from './game';
 import { postMessage } from './messages';
 import { PLAYER_CLUB_ID, type ClubState, type FixtureResult, type GameState, type LedgerKind } from './state';
+import { facilityUpkeep, facilityValue, sponsorStanding } from './facilities';
 import { trainingFocusOf } from './training';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
@@ -21,7 +22,7 @@ export function activeSponsor(state: GameState) {
 /** Sponsors open to a club of this reputation (plus the emergency deal when money is short). */
 export function sponsorOffers(state: GameState, data: GameData): SponsorDef[] {
   const f = data.economy.finance;
-  const list = f.sponsorTiers.filter((t) => t.minReputation <= state.club.reputation).flatMap((t) => t.sponsors);
+  const list = f.sponsorTiers.filter((t) => t.minReputation <= sponsorStanding(state, data)).flatMap((t) => t.sponsors);
   return financeSummary(state, data).lowFunds ? [...list, f.emergencySponsor] : list;
 }
 
@@ -50,7 +51,7 @@ export function signSponsor(state: GameState, data: GameData, sponsorId: string,
 /** A club without a deal when the league starts gets the best one it can, for one season. */
 export function autoSponsor(state: GameState, data: GameData): void {
   if (activeSponsor(state)) return;
-  const best = bestSponsorFor(data, state.club.reputation);
+  const best = bestSponsorFor(data, sponsorStanding(state, data));
   signSponsor(state, data, best.id, 1);
   postMessage(state, 'FINANCE', `自动签下赞助：${best.name}`, `开赛时你还没选赞助商，系统替你签了能签到的最好一家（1 个赛季）：每周 ${best.weekly}，每赢一场另给 ${best.winBonus}。`);
 }
@@ -65,7 +66,7 @@ export function expectedWeeklyIncome(state: GameState, data: GameData, clubId: C
   const club = clubById(state, clubId);
   const playoffWeeks = data.season.playoffTeams === 4 ? 2 : 1;
   const weeks = data.season.preseasonWeeks + state.totalRounds + playoffWeeks;
-  const deal = clubId === PLAYER_CLUB_ID ? (activeSponsor(state) ?? bestSponsorFor(data, club.reputation)) : bestSponsorFor(data, club.reputation);
+  const deal = clubId === PLAYER_CLUB_ID ? (activeSponsor(state) ?? bestSponsorFor(data, sponsorStanding(state, data))) : bestSponsorFor(data, sponsorStanding(state, data, clubId));
   const perMatch = (eco.prizeWin + eco.prizeLoss) / 2 + deal.winBonus / 2;
   return deal.weekly + (f.leagueShareWeekly * (state.totalRounds + playoffWeeks)) / weeks + f.merchBase + club.reputation * f.merchPerReputation
     + (state.totalRounds * perMatch) / weeks;
@@ -82,6 +83,7 @@ export interface WeeklyMoney {
   league: number;
   merch: number;
   training: number; // as a positive amount
+  upkeep: number; // facilities, as a positive amount
   net: number;
 }
 
@@ -90,12 +92,14 @@ export function weeklyMoney(state: GameState, data: GameData, clubId: ClubId = P
   const f = data.economy.finance;
   const club = clubById(state, clubId);
   const salaries = rosterOf(state, clubId).reduce((a, p) => a + p.salaryPerWeek, 0);
-  const sponsor = clubId === PLAYER_CLUB_ID ? (activeSponsor(state)?.weekly ?? 0) : bestSponsorFor(data, club.reputation).weekly;
+  const sponsor = clubId === PLAYER_CLUB_ID ? (activeSponsor(state)?.weekly ?? 0) : bestSponsorFor(data, sponsorStanding(state, data, clubId)).weekly;
   const inLeague = state.calendar.phase === 'REGULAR' || state.calendar.phase === 'PLAYOFFS';
   const league = inLeague ? f.leagueShareWeekly : 0;
-  const merch = Math.round((f.merchBase + club.reputation * f.merchPerReputation) * (1 + (seasonWinRate(state, clubId) - 0.5) * f.merchWinRateEffect));
+  const merch = Math.round((f.merchBase + club.reputation * f.merchPerReputation) * (1 + (seasonWinRate(state, clubId) - 0.5) * f.merchWinRateEffect)
+    * (1 + facilityValue(state, data, clubId, 'STREAM')));
   const training = trainingFocusOf(state, data, clubId) === 'REST' ? 0 : club.roster.length * f.trainingCostPerPlayer;
-  return { salaries, sponsor, league, merch, training, net: sponsor + league + merch - salaries - training };
+  const upkeep = facilityUpkeep(data, club);
+  return { salaries, sponsor, league, merch, training, upkeep, net: sponsor + league + merch - salaries - training - upkeep };
 }
 
 /** Pay day for every club. */
@@ -108,6 +112,7 @@ export function runPayDay(state: GameState, data: GameData): void {
   line('LEAGUE', m.league, '联赛分成');
   line('MERCH', m.merch, '周边收入');
   line('TRAINING', -m.training, '训练开销');
+  line('UPKEEP', -m.upkeep, '设施维护');
   for (const club of state.aiClubs) club.funds += weeklyMoney(state, data, club.id).net;
 }
 
@@ -130,7 +135,7 @@ export function applyMatchFinance(state: GameState, data: GameData, fr: FixtureR
     const club = clubById(state, id);
     const won = fr.winner === id;
     credit(state, club, 'PRIZE', won ? eco.prizeWin : eco.prizeLoss, won ? `${label}胜利奖金` : `${label}出场奖金`);
-    const bonus = won ? (id === PLAYER_CLUB_ID ? (activeSponsor(state)?.winBonus ?? 0) : bestSponsorFor(data, club.reputation).winBonus) : 0;
+    const bonus = won ? (id === PLAYER_CLUB_ID ? (activeSponsor(state)?.winBonus ?? 0) : bestSponsorFor(data, sponsorStanding(state, data, id)).winBonus) : 0;
     credit(state, club, 'SPONSOR', bonus, '赞助商胜场奖励');
     addReputation(club, won ? rep.win : rep.loss);
     if (!won && stage === 'LEAGUE') {

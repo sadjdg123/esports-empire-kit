@@ -7,6 +7,7 @@
 import { chibi, lookFor, type ChibiFrame, type ChibiLook } from '../pixel/chibi';
 import { fillPoly, makeSprite, mix, outlinedPoly, shade, type Pt } from '../pixel/raster';
 import type { Activity, ClubActivity } from './activities';
+import type { FacilityId } from '../../core/types';
 import type { Hotspot, Marker } from './markers';
 
 export const SCENE_W = 208;
@@ -33,6 +34,7 @@ export type Tap = { kind: 'player'; id: string } | { kind: 'hotspot'; name: Hots
 export interface SceneExtras {
   titles: number; // championships won (gold cups)
   finals: number; // lost finals (silver cups)
+  facilities?: Partial<Record<FacilityId, number>>; // room levels (T22): more furniture at higher levels
 }
 
 const z0 = (f: Floor) => (f === 1 ? FH : 0);
@@ -126,6 +128,11 @@ export class ClubScene {
 
   setExtras(e: SceneExtras): void {
     this.extras = e;
+  }
+
+  /** A room's level (1 when unknown). */
+  private lvl(id: FacilityId): number {
+    return this.extras.facilities?.[id] ?? 1;
   }
 
   /** Bouncing marks over furniture that needs attention (unread mail, expiring contracts...). */
@@ -322,7 +329,7 @@ export class ClubScene {
 
   /** Everything that does not move is drawn once, and again only when the club colour or the trophies change. */
   private build(): void {
-    const key = `${this.color}|${this.extras.titles}|${this.extras.finals}`;
+    const key = `${this.color}|${this.extras.titles}|${this.extras.finals}|${JSON.stringify(this.extras.facilities ?? {})}`;
     if (key === this.builtFor) return;
     this.builtFor = key;
     this.sky = this.capture(() => {
@@ -391,6 +398,11 @@ export class ClubScene {
     // Training room carpet and the walkway along the front.
     for (let i = 0; i < L; i++) for (let j = 0; j < D; j++) this.tile(i, j, 1, 1, (i + j) % 2 ? '#5d74a8' : '#6880b4');
     this.tile(0, CJ - 0.45, L, 0.9, '#8792ad');
+    if (this.lvl('TRAINING') >= 3) {
+      // A rug with a gold border under the desks, in a lighter club colour.
+      this.tile(0.25, 0.3, 5.9, 3.9, '#e8c27a');
+      this.tile(0.4, 0.45, 5.6, 3.6, mix(this.color, '#ffffff', 0.35));
+    }
     // Back walls, tall: the upper floor hides their top.
     for (let i = 0; i < L; i += 0.5) this.back(i, i + 0.5, 0, FH, Math.round(i * 2) % 2 ? '#d7e3f0' : '#e6eef7', 0, false);
     for (let j = 0; j < D; j += 0.5) this.left(j, j + 0.5, 0, FH, Math.round(j * 2) % 2 ? '#c9d6e6' : '#d3deeb', 0, false);
@@ -460,6 +472,10 @@ export class ClubScene {
     fillPoly(this.ctx, [iso(4.36, 0, 1), iso(4.44, 0, 1), iso(4.44, D, 1), iso(4.36, D, 1)], '#8a6a4a');
     this.tile(1.2, 1.9, 1.9, 1.1, '#a8403d', 1);
     this.tile(1.32, 2.02, 1.66, 0.86, '#e07a5f', 1);
+    if (this.lvl('OFFICE') >= 3) {
+      this.tile(4.7, 1.7, 2.3, 2.6, '#a8403d', 1);
+      this.tile(4.82, 1.82, 2.06, 2.36, '#c4534a', 1);
+    }
     this.tile(5.0, 2.9, 1.6, 1.3, '#e8d9a8', 1);
     this.tile(5.12, 3.02, 1.36, 1.06, '#f3e8c4', 1);
     // Walls with wallpaper per room.
@@ -481,6 +497,12 @@ export class ClubScene {
     this.back(2.15, 5.85, WALL2 + 4, WALL2 + 11, '#7a5232', 1, false);
     // Lounge window and TV frame (the picture is animated); office certificate and lift.
     this.window(0.5, 1.6, 1);
+    if (this.lvl('LOUNGE') >= 2) {
+      // A painting between the window and the TV.
+      this.back(1.75, 2.45, 16, 28, '#8a5a34', 1);
+      this.back(1.82, 2.38, 18, 26, '#7cc6f2', 1, false);
+      this.back(1.82, 2.38, 18, 21, '#59b36b', 1, false);
+    }
     this.back(4.7, 5.3, 20, 30, '#f7f1dc', 1);
     this.back(4.8, 5.2, 22, 28, '#e8cf7a', 1, false);
     this.lift(1);
@@ -531,6 +553,7 @@ export class ClubScene {
         this.box(di + 0.85, dj + 0.06, 0.18, 0.3, 9, '#3b3f4c', 10);
         this.box(di + 0.2, dj + 0.07, 0.55, 0.1, 9, '#22252e', 10);
         this.box(di + 0.25, dj + 0.28, 0.45, 0.13, 1, '#e8e8ee', 10);
+        if (this.lvl('TRAINING') >= 2) this.box(di + 0.85, dj + 0.3, 0.15, 0.12, 2, '#2b2b33', 10); // headset
       }, {
         hotspot: 'training',
         anim: () => {
@@ -538,6 +561,13 @@ export class ClubScene {
           const [x, y] = iso(di + 0.2, dj + 0.17);
           this.px(x + 2, y - 18, 8, 5, lit ? '#7fe3ff' : '#4fb6e8');
           this.px(x + 3, y - 17, 2, 1, '#ffffff');
+          if (this.lvl('TRAINING') >= 2) {
+            // RGB light strip along the front edge of the desk.
+            const hue = ['#ff5a7a', '#ffd35a', '#5aff9a', '#5ac8ff', '#c95aff'][(Math.floor(this.time * 3) + k) % 5]!;
+            const [ax, ay] = iso(di, dj + 0.55);
+            const [bx] = iso(di + 1.1, dj + 0.55);
+            for (let x2 = Math.ceil(ax); x2 < bx; x2++) this.px(x2, ay - 8 + Math.round((x2 - ax) / 2), 1, 1, hue);
+          }
         },
       });
       const [si, sj] = SEAT([di, dj]);
@@ -545,6 +575,11 @@ export class ClubScene {
         this.box(si - 0.04, sj + 0.1, 0.08, 0.08, 4, '#555555');
         this.box(si - 0.18, sj + 0.02, 0.36, 0.3, 3, '#2b2b33', 4);
         this.box(si - 0.2, sj + 0.25, 0.4, 0.08, 8, k % 2 ? '#c0392b' : '#2d6cdf', 6);
+        if (this.lvl('TRAINING') >= 3) {
+          // Gaming chairs: a tall back with a headrest in the club colour.
+          this.box(si - 0.2, sj + 0.25, 0.4, 0.08, 10, this.color, 6);
+          this.box(si - 0.12, sj + 0.25, 0.24, 0.08, 2, '#f4f4f4', 14);
+        }
       });
     });
     // Tactics whiteboard on the left wall.
@@ -567,6 +602,42 @@ export class ClubScene {
     });
     add(0, 7.5 + 4.5 + 0.4, () => this.plant(7.45, 4.4, 0));
     add(0, 0.2 + 4.6 + 0.4, () => this.plant(0.15, 4.5, 0));
+    // Analysis corner by the big screen (T22): an analyst's desk from level 2, a hologram table at level 3.
+    if (this.lvl('ANALYSIS') >= 2) {
+      add(0, 6.2 + 1.3 + 0.6, () => {
+        this.box(6.2, 1.3, 0.75, 0.45, 8, '#5c6470');
+        this.box(6.3, 1.38, 0.35, 0.22, 1, '#22252e', 8);
+        this.box(6.32, 1.38, 0.32, 0.04, 5, '#22252e', 9);
+        const [x, y] = iso(6.3, 1.42);
+        this.px(x + 2, y - 13, 4, 3, '#7fe3ff');
+        this.box(6.72, 1.42, 0.18, 0.14, 1, '#f4f4f4', 8); // printouts
+      });
+    }
+    if (this.lvl('ANALYSIS') >= 3) {
+      add(0, 6.25 + 2.75 + 0.6, () => {
+        this.box(6.25, 2.75, 0.6, 0.5, 6, '#3b3f4c');
+        this.box(6.3, 2.8, 0.5, 0.4, 1, '#2a6f8a', 6);
+      }, {
+        anim: () => {
+          // A turning hologram of the match map above the table.
+          const [x, y] = up(iso(6.55, 3.0), 9);
+          const t = this.time * 2;
+          for (let k = 0; k < 6; k++) {
+            const a = t + (k * Math.PI) / 3;
+            this.px(Math.round(x + Math.cos(a) * 6), Math.round(y - 6 + Math.sin(a) * 2), 1, 1, '#9ff0ff');
+          }
+          this.px(x - 2, y - 9, 4, 4, Math.sin(t * 2) > 0 ? '#7fe3ff' : '#c6f6ff');
+          this.px(x, y - 12, 1, 3, '#9ff0ff');
+        },
+      });
+    }
+    // The toolbox in the yard opens the facilities window.
+    add(0, 8.1 + D + 0.9 + 0.5, () => {
+      this.box(8.1, D + 0.9, 0.6, 0.35, 5, '#d23c3c');
+      this.box(8.1, D + 0.9, 0.6, 0.35, 1, '#a82c2c', 5);
+      this.box(8.32, D + 1.02, 0.16, 0.1, 2, '#f2b84b', 4);
+      this.box(8.25, D + 1.06, 0.3, 0.04, 3, '#2b2b33', 6);
+    }, { hotspot: 'facilities' });
     // In the yard: the mailbox, the scouting notice board, a tree.
     add(0, 1.0 + D + 1.0 + 0.5, () => {
       this.box(1.05, D + 1.05, 0.1, 0.1, 10, '#6b4a2b');
@@ -653,6 +724,98 @@ export class ClubScene {
     }, { hotspot: 'contracts' });
     add(1, 5.65 + 3.3 + 0.3, () => this.box(5.45, 3.55, 0.4, 0.08, 8, '#6d4c8a', 5, 1));
     add(1, 7.5 + 4.5 + 0.4, () => this.plant(7.45, 4.4, 1));
+    this.addRoomUpgrades(add);
+  }
+
+  /** Furniture that rooms gain as they level up (T22). */
+  private addRoomUpgrades(add: AddProp): void {
+    const lounge = this.lvl('LOUNGE');
+    if (lounge >= 2) {
+      // A floor lamp by the sofa.
+      add(1, 0.15 + 0.3 + 0.4, () => {
+        this.box(0.15, 0.3, 0.2, 0.2, 2, '#5a3a22', 0, 1);
+        this.box(0.22, 0.37, 0.06, 0.06, 20, '#3b3f4c', 2, 1);
+        this.box(0.12, 0.27, 0.26, 0.26, 6, '#ffe9a8', 22, 1);
+      });
+    }
+    if (lounge >= 3) {
+      // An aquarium on the left wall, with fish.
+      add(1, 0.02, () => {
+        this.left(3.5, 4.8, 18, 32, '#5a6a7a', 1);
+        this.left(3.6, 4.7, 20, 30, '#4aa8d8', 1, false);
+        this.left(3.6, 4.7, 20, 22, '#e0c890', 1, false);
+      }, {
+        anim: () => {
+          for (let k = 0; k < 3; k++) {
+            const j = 3.7 + ((this.time * 0.25 + k * 0.33) % 1) * 0.9;
+            const [x, y] = up(iso(0, j, 1), 24 + k * 2);
+            this.px(x, y, 2, 1, ['#ff8a3a', '#ffd35a', '#ff5a7a'][k]!);
+          }
+        },
+      });
+    }
+    const stream = this.lvl('STREAM');
+    // Streaming corner in the lounge: a ring light and a phone on a tripod; a desk with a
+    // microphone and a LIVE sign from level 2; a green screen and a camera at level 3.
+    add(1, 3.95 + 3.0 + 0.3, () => {
+      this.box(3.95, 3.0, 0.06, 0.06, 22, '#3b3f4c', 0, 1);
+      const [x, y] = up(iso(3.98, 3.03, 1), 24);
+      for (let k = 0; k < 10; k++) {
+        const a = (k * Math.PI) / 5;
+        this.px(Math.round(x + Math.cos(a) * 4), Math.round(y + Math.sin(a) * 4), 1, 1, '#fff6d8');
+      }
+      this.box(3.5, 3.35, 0.05, 0.05, 12, '#3b3f4c', 0, 1);
+      this.box(3.46, 3.31, 0.13, 0.04, 4, '#22252e', 12, 1);
+    });
+    if (stream >= 2) {
+      add(1, 3.4 + 3.8 + 0.6, () => {
+        this.box(3.4, 3.8, 0.85, 0.45, 8, '#8a5a34', 0, 1);
+        this.box(3.75, 3.82, 0.35, 0.08, 7, '#22252e', 8, 1);
+        this.box(3.5, 3.95, 0.06, 0.06, 4, '#c9cdd6', 8, 1);
+        this.box(3.47, 3.92, 0.12, 0.12, 2, '#5c6470', 12, 1);
+      }, {
+        anim: () => {
+          const [x, y] = up(iso(3.8, 3.86, 1), 15);
+          this.px(x + 1, y - 2, 6, 4, Math.sin(this.time * 5) > -0.3 ? '#ff5a7a' : '#c03a5a');
+          // LIVE: a red sign that blinks.
+          const [lx, ly] = up(iso(4.2, 3.85, 1), 26);
+          const on = Math.floor(this.time * 2) % 2 === 0;
+          this.px(lx - 6, ly, 12, 5, on ? '#e8304a' : '#a8202e');
+          if (on) for (const dx of [-4, -1, 2]) this.px(lx + dx, ly + 1, 2, 3, '#ffffff');
+        },
+      });
+    }
+    if (stream >= 3) {
+      add(1, 4.15 + 2.7 + 0.2, () => {
+        this.box(4.15, 2.75, 0.08, 0.8, 24, '#3ec46a', 0, 1);
+        this.box(3.2, 2.95, 0.05, 0.05, 14, '#3b3f4c', 0, 1);
+        this.box(3.12, 2.9, 0.22, 0.16, 5, '#22252e', 14, 1);
+        this.box(3.31, 2.95, 0.06, 0.06, 2, '#7fe3ff', 16, 1);
+      });
+    }
+    const office = this.lvl('OFFICE');
+    if (office >= 2) {
+      // A water dispenser and a second certificate.
+      add(1, 6.55 + 0.25 + 0.4, () => {
+        this.box(6.55, 0.25, 0.28, 0.28, 14, '#d0d6de', 0, 1);
+        this.box(6.6, 0.3, 0.18, 0.18, 7, '#7fc8f8', 14, 1);
+        this.back(6.5, 6.85, 22, 32, '#f7f1dc', 1);
+        this.back(6.56, 6.79, 24, 30, '#9fd8a7', 1, false);
+      });
+    }
+    if (office >= 3) {
+      // A globe on a stand and a gold nameplate on the desk.
+      add(1, 4.65 + 3.6 + 0.4, () => {
+        this.box(4.7, 3.65, 0.2, 0.2, 2, '#6b4a2b', 0, 1);
+        this.box(4.77, 3.72, 0.06, 0.06, 8, '#6b4a2b', 2, 1);
+        const [x, y] = up(iso(4.8, 3.75, 1), 14);
+        this.px(x - 3, y - 3, 7, 7, OUT);
+        this.px(x - 2, y - 2, 5, 5, '#3a7bd5');
+        this.px(x - 1, y - 2, 2, 2, '#59b36b');
+        this.px(x + 1, y, 2, 2, '#59b36b');
+      });
+      add(1, 5.0 + 2.05 + 1.6, () => this.box(5.6, 2.5, 0.35, 0.06, 2, '#f2c230', 10, 1));
+    }
   }
 
   private plant(i: number, j: number, f: Floor): void {

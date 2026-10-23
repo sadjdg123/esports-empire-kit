@@ -5,6 +5,7 @@
 import { createRng } from '../core/rng';
 import { ROLES, TACTICS, type AiStyleConfig, type GameData, type Player, type Role, type Tactic } from '../core/types';
 import { autoLineup } from '../sim/scenario';
+import { facilityValue } from './facilities';
 import { expiringPlayers, marketValue, releaseFeeFor, remainingContractWeeks, renewalAsk, seasonWeeks } from './contracts';
 import { expectedWeeklyIncome } from './finance';
 import { contractStartSeason, emergencySalaryCap, playerOverall, rosterOf } from './game';
@@ -85,7 +86,7 @@ export function aiRenewals(state: GameState, data: GameData, endedSeason: number
     const budget = aiWageBudget(state, data, club);
     for (const p of expiringPlayers(state, club.id, endedSeason).sort((a, b) => aiEval(style, b) - aiEval(style, a) || a.id.localeCompare(b.id))) {
       if (!keep.has(p.id) || p.age >= data.ai.talent.freeAgentLeaveAge) continue;
-      const ask = renewalAsk(data, p);
+      const ask = renewalAsk(data, p, facilityValue(state, data, club.id, 'OFFICE'));
       const after = payroll(state, club) - p.salaryPerWeek + ask;
       // Starters may stretch the budget a little, never far beyond what the club earns.
       const limit = starters.has(p.id) && club.funds > 0 ? Math.max(budget, expectedWeeklyIncome(state, data, club.id)) * 1.1 : budget;

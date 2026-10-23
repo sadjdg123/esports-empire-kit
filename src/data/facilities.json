@@ -4,42 +4,49 @@
       "id": "TRAINING", "name": "训练室", "effect": "训练成长 +value（比例）",
       "levels": [
         { "cost": 0, "upkeep": 0, "value": 0 },
-        { "cost": 30000, "upkeep": 300, "value": 0.1 },
-        { "cost": 70000, "upkeep": 700, "value": 0.2 }
+        { "cost": 30000, "upkeep": 350, "value": 0.1 },
+        { "cost": 70000, "upkeep": 800, "value": 0.2 }
       ]
     },
     {
       "id": "LOUNGE", "name": "休息室", "effect": "每天多恢复 value 点疲劳",
       "levels": [
         { "cost": 0, "upkeep": 0, "value": 0 },
-        { "cost": 25000, "upkeep": 250, "value": 1 },
-        { "cost": 60000, "upkeep": 600, "value": 2 }
+        { "cost": 25000, "upkeep": 300, "value": 1 },
+        { "cost": 60000, "upkeep": 700, "value": 2 }
       ]
     },
     {
-      "id": "OFFICE", "name": "办公室", "effect": "续约和签约周薪 +value（比例，负数是便宜）；赞助档位声望要求降低 sponsorReputation",
+      "id": "OFFICE", "name": "办公室", "effect": "续约要价 +value（比例，负数是便宜）；赞助档位声望要求降低 sponsorReputation",
       "levels": [
         { "cost": 0, "upkeep": 0, "value": 0, "sponsorReputation": 0 },
-        { "cost": 30000, "upkeep": 300, "value": -0.05, "sponsorReputation": 5 },
-        { "cost": 70000, "upkeep": 700, "value": -0.1, "sponsorReputation": 10 }
+        { "cost": 30000, "upkeep": 350, "value": -0.05, "sponsorReputation": 5 },
+        { "cost": 70000, "upkeep": 800, "value": -0.1, "sponsorReputation": 10 }
       ]
     },
     {
       "id": "ANALYSIS", "name": "分析室", "effect": "英雄熟练度成长 +value（比例）",
       "levels": [
         { "cost": 0, "upkeep": 0, "value": 0 },
-        { "cost": 25000, "upkeep": 250, "value": 0.25 },
-        { "cost": 60000, "upkeep": 600, "value": 0.5 }
+        { "cost": 25000, "upkeep": 300, "value": 0.25 },
+        { "cost": 60000, "upkeep": 700, "value": 0.5 }
       ]
     },
     {
       "id": "STREAM", "name": "直播间", "effect": "周边收入 +value（比例）",
       "levels": [
         { "cost": 0, "upkeep": 0, "value": 0 },
-        { "cost": 30000, "upkeep": 300, "value": 0.15 },
-        { "cost": 70000, "upkeep": 700, "value": 0.3 }
+        { "cost": 30000, "upkeep": 350, "value": 0.15 },
+        { "cost": 70000, "upkeep": 800, "value": 0.3 }
       ]
     }
   ],
-  "aiSpareShare": 0.3
+  "aiSpareShare": 0.3,
+  "aiPriority": {
+    "RICH": ["STREAM", "OFFICE", "TRAINING", "LOUNGE", "ANALYSIS"],
+    "YOUTH": ["TRAINING", "ANALYSIS", "LOUNGE", "OFFICE", "STREAM"],
+    "STEADY": ["LOUNGE", "TRAINING", "OFFICE", "ANALYSIS", "STREAM"],
+    "AGGRESSIVE": ["TRAINING", "LOUNGE", "ANALYSIS", "STREAM", "OFFICE"],
+    "FALLEN": ["OFFICE", "STREAM", "TRAINING", "LOUNGE", "ANALYSIS"]
+  }
 }

@@ -34,7 +34,7 @@ const SHOTS = 'docs/reports/v1';
   }
   log.push(`windows opened by tapping the base: ${[...opened].join('、')}`);
   log.push(`player card from a tap: ${card}`);
-  for (const want of ['阵容', '训练', '收件箱', '签人', '合同转会', '赛程', '财务', '历史', '战报']) if (!opened.has(want)) errs.push(`no tap target opens ${want}`);
+  for (const want of ['阵容', '训练', '收件箱', '签人', '合同转会', '赛程', '财务', '历史', '战报', '设施']) if (!opened.has(want)) errs.push(`no tap target opens ${want}`);
   // Rest day: everyone goes upstairs by lift.
   await helpers.nav(p, '训练'); await p.click('.tactic:has-text("休息")'); await helpers.closeWindows(p);
   await p.waitForTimeout(9000);

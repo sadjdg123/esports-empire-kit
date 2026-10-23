@@ -114,7 +114,7 @@ export interface FixtureResult {
   checksum: string;
 }
 
-export type LedgerKind = 'SALARY' | 'SPONSOR' | 'PRIZE' | 'SIGNING' | 'RELEASE' | 'TRANSFER' | 'LEAGUE' | 'MERCH' | 'TRAINING';
+export type LedgerKind = 'SALARY' | 'SPONSOR' | 'PRIZE' | 'SIGNING' | 'RELEASE' | 'TRANSFER' | 'LEAGUE' | 'MERCH' | 'TRAINING' | 'FACILITY' | 'UPKEEP';
 
 export interface LedgerEntry {
   week: number; // round index the entry belongs to (0-based); -1 = before the season

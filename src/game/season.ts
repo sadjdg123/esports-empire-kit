@@ -19,6 +19,7 @@ import { aiMatchSquad, aiPreseasonWeek, aiRenewals, aiSignFreeAgents, aiTactic }
 import { remindExpiring, rollContracts } from './contracts';
 import { refreshTalent } from './talent';
 import { applyMatchFinance, applyPlayoffAwards, autoSponsor, financeSummary, rescueOptions, runPayDay, settleReputation } from './finance';
+import { aiUpgradeFacilities } from './facilities';
 import { postMessage } from './messages';
 import { applyDailyRecovery, applyMatchEffects, applyTrainingWeek } from './training';
 import { expireOffers, generateAiOffers } from './transfers';
@@ -188,6 +189,7 @@ function recordCareers(state: GameState, champion: ClubId | null): void {
 /** Returns true when the player has contracts ending in the new season (a reminder was posted). */
 export function startNewSeason(state: GameState, data: GameData): boolean {
   aiRenewals(state, data, state.calendar.season);
+  aiUpgradeFacilities(state, data, (club) => (club.management === 'PLAYER' ? 0 : data.ai.styles[club.management].reserveWeeks));
   const rng = rngFromState(state.rngState);
   state.calendar = { season: state.calendar.season + 1, phase: 'PRESEASON', day: 0 };
   state.schedule = buildSchedule([PLAYER_CLUB_ID, ...state.aiClubs.map((c) => c.id)], state.seed, rng, state.calendar.season);

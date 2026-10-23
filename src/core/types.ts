@@ -529,6 +529,7 @@ export interface FacilityDef {
 export interface FacilitiesConfig {
   rooms: FacilityDef[];
   aiSpareShare: number; // AI clubs spend up to this share of their spare money on upgrades in the off-season
+  aiPriority: Record<ManagementStyle, FacilityId[]>; // which rooms each AI style upgrades first
 }
 
 /** A personality trait (P2, T24). Effects are small: match performance at most ±5% each (D50). */

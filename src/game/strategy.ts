@@ -1,12 +1,13 @@
 // Simple automatic management used for economy calibration and tests:
 // sign the best-value player of each role, then use the recommended lineup.
 
-import type { GameData, Player, Role } from '../core/types';
+import type { FacilityId, GameData, Player, Role } from '../core/types';
 import { ROLES } from '../core/types';
 import { acceptRenewal, expiringPlayers, negotiationFor, renewalAsk } from './contracts';
+import { facilityValue, nextFacilityLevel, sponsorStanding, upgradeFacility } from './facilities';
 import { activeSponsor, bestSponsorFor, expectedWeeklyIncome, signSponsor } from './finance';
 import { emergencySalaryCap, marketPlayers, playerOverall, recommendLineup, rosterOf, setLineup, signPlayer, type Result } from './game';
-import type { GameState } from './state';
+import { PLAYER_CLUB_ID, type GameState } from './state';
 
 /** Ability per unit of salary, with diminishing returns on cost. */
 export function valueScore(p: Player): number {
@@ -21,7 +22,7 @@ export function signValueSquad(state: GameState, data: GameData): Result {
     const r = signPlayer(state, data, pick.id);
     if (!r.ok) return r;
   }
-  if (!activeSponsor(state) && state.calendar.phase !== 'FINISHED') signSponsor(state, data, bestSponsorFor(data, state.club.reputation).id, 1);
+  if (!activeSponsor(state) && state.calendar.phase !== 'FINISHED') signSponsor(state, data, bestSponsorFor(data, sponsorStanding(state, data)).id, 1);
   const lineup = recommendLineup(state, data);
   if (!lineup.ok) return lineup;
   return setLineup(state, data, lineup.value);
@@ -46,7 +47,7 @@ export function autoManage(state: GameState, data: GameData, style: ManageStyle 
   if (state.calendar.phase !== 'FINISHED') {
     for (const p of expiringPlayers(state)) {
       if (negotiationFor(state, p.id)) continue;
-      if (renewalAsk(data, p) * 4 <= state.funds) acceptRenewal(state, data, p.id, data.economy.contracts.defaultYears);
+      if (renewalAsk(data, p, facilityValue(state, data, PLAYER_CLUB_ID, 'OFFICE')) * 4 <= state.funds) acceptRenewal(state, data, p.id, data.economy.contracts.defaultYears);
     }
   }
   const has = (role: Role) => rosterOf(state).some((p) => p.primaryRole === role);
@@ -61,10 +62,27 @@ export function autoManage(state: GameState, data: GameData, style: ManageStyle 
     const r = signPlayer(state, data, pick.id);
     if (!r.ok) return r;
   }
-  if (!activeSponsor(state) && state.calendar.phase !== 'FINISHED') signSponsor(state, data, bestSponsorFor(data, state.club.reputation).id, 1);
+  if (!activeSponsor(state) && state.calendar.phase !== 'FINISHED') signSponsor(state, data, bestSponsorFor(data, sponsorStanding(state, data)).id, 1);
+  if (style !== 'value' && state.calendar.phase === 'PRESEASON') autoFacilities(state, data);
   const lineup = recommendLineup(state, data);
   if (!lineup.ok) return lineup;
   return setLineup(state, data, lineup.value);
+}
+
+/** Room order of the automatic manager: what helps on the pitch first, then money. */
+const AUTO_FACILITIES: FacilityId[] = ['TRAINING', 'LOUNGE', 'ANALYSIS', 'STREAM', 'OFFICE'];
+/** Weeks of wages the automatic manager keeps in hand before spending on rooms. */
+const AUTO_RESERVE_WEEKS = 12;
+
+/** In the pre-season, spend half of the money beyond a wage reserve on room upgrades, in AUTO_FACILITIES order. */
+export function autoFacilities(state: GameState, data: GameData): void {
+  const wages = rosterOf(state).reduce((a, p) => a + p.salaryPerWeek, 0);
+  let budget = Math.max(0, state.funds - wages * AUTO_RESERVE_WEEKS) * 0.5;
+  for (const id of AUTO_FACILITIES) {
+    const next = nextFacilityLevel(data, state.club, id);
+    if (!next || next.cost > budget) continue;
+    if (upgradeFacility(state, data, id).ok) budget -= next.cost;
+  }
 }
 
 /** Training plan of the calibration manager: rest every third week. */

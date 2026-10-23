@@ -2,7 +2,7 @@
 //   npm run sim -- --one --seed 42 [--blue jinyu --red tianshu]   one match, zh-CN report
 //   npm run sim -- --n 1000 [--threads 4] [--only G4,G5] [--no-write]  balance report (GDD 16.1)
 //   npm run sim -- --economy [--n 100]                              economy calibration (T07, T16)
-//   npm run sim -- --league [--seasons 20] [--seeds 8]              multi-season league health (T17, T20)
+//   npm run sim -- --league [--seasons 20] [--seeds 8] [--write [--out file.md]]  multi-season league health (T17, T20)
 import { loadGameData } from '../src/core/config';
 import type { Tactic } from '../src/core/types';
 import { runMatch } from '../src/sim';
@@ -140,12 +140,17 @@ async function league(): Promise<void> {
   const first = rows.map((r) => r.talent[0]!);
   const m = (xs: number[]) => (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(1);
   console.log(`  人才（第 1 → 第 ${seasons} 赛季平均）：首发均值 ${m(first.map((t) => t.starterAvg))} → ${m(last.map((t) => t.starterAvg))} · 全联盟均值 ${m(first.map((t) => t.leagueAvg))} → ${m(last.map((t) => t.leagueAvg))} · 最强选手 ${m(first.map((t) => t.best))} → ${m(last.map((t) => t.best))} · 平均年龄 ${m(first.map((t) => t.avgAge))} → ${m(last.map((t) => t.avgAge))} · 自由市场 ${m(first.map((t) => t.marketSize))} → ${m(last.map((t) => t.marketSize))} 人`);
+  // The player's money as a multiple of the starting money (median over the runs), T22.
+  const start = 100000;
+  const med = (xs: number[]) => { const v = [...xs].sort((a2, b2) => a2 - b2); return v[Math.floor(v.length / 2)]!; };
+  const at = (k: number) => (med(rows.map((r) => r.playerFunds[k]!)) / start).toFixed(2);
+  console.log(`  玩家资金（开局的倍数，各局中位数）：第 1 季 ${at(0)} · 第 5 季 ${at(Math.min(4, seasons - 1))} · 第 10 季 ${at(Math.min(9, seasons - 1))} · 第 ${seasons} 季 ${at(seasons - 1)}`);
   console.log(`  标准：AI 始终 ≥5 人；AI 资金在起始的 −1 倍到 5 倍之间；至少 3 家不同冠军；没有一家拿走超过 60% 的冠军 → ${ok ? '✅ 全部通过' : '❌ 有未通过'}`);
   process.exitCode = ok ? 0 : 1;
   if (process.argv.includes('--write')) {
     const { writeFileSync } = await import('node:fs');
     const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const path = `docs/reports/seasons-${day}.md`;
+    const path = arg('out') ?? `docs/reports/seasons-${day}.md`;
     const md: string[] = [`# ${seasons} 赛季长期运行报告 ${day}`, '', `> 命令：\`npm run sim -- --league --seasons ${seasons} --seeds ${seeds} --write\` · ${rows.length} 局，每局从新开档连续打 ${seasons} 个赛季，玩家俱乐部用"普通经营"自动策略`, ''];
     md.push('## 每局结果', '', '| 局 | 冠军分布 | AI 最少人数 | AI 资金 / 起始（最低～最高） | 结论 |', '|---|---|---|---|---|');
     for (const r of rows) {

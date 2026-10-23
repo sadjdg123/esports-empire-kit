@@ -14,6 +14,7 @@ const ROWS: Record<string, string[]> = {
   report: ['............', '.oooooooooo.', '.orrrrorrro.', '.orwwrorwwo.', '.orwwrorwwo.', '.orrrrorrro.', '.orwwrorwwo.', '.orrrrorrro.', '.oooooooooo.', '............', '............', '............'],
   history: ['.oooooooooo.', 'oyoyyyyyyoyo', 'oyoyyyyyyoyo', '.ooyyyyyyoo.', '...oyyyyo...', '....oyyo....', '.....oo.....', '.....yy.....', '....oyyo....', '...oooooo...', '...onnnno...', '...oooooo...'],
   home: ['.....oo.....', '....orro....', '...orrrro...', '..orrrrrro..', '.orrrrrrrro.', 'oooooooooooo', '.onnnnnnnno.', '.onwwnnoono.', '.onwwnnoono.', '.onnnnnoono.', '.oooooooooo.', '............'],
+  facilities: ['............', '....oooo....', '...okkkko...', '...o....o...', 'oooooooooooo', 'orrrrrrrrrro', 'orrrryyrrrro', 'oooooyyooooo', 'orrrrrrrrrro', 'orrrrrrrrrro', 'oooooooooooo', '............'],
   settings: ['....oooo....', '.oo.oggo.oo.', '.oggoggoggo.', '..oggggggo..', 'oogggoogggoo', 'ogggo..ogggo', 'ogggo..ogggo', 'oogggoogggoo', '..oggggggo..', '.oggoggoggo.', '.oo.oggo.oo.', '....oooo....'],
 };
 

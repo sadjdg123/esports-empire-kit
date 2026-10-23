@@ -33,7 +33,8 @@ export function BaseView({ game, data, markers, cheer, onPlayer, onHotspot }: {
   useEffect(() => { sceneRef.current?.setMarkers(markers); }, [markers]);
   const titles = game.history.filter((h) => h.playerPlayoff === 'CHAMPION').length;
   const finals = game.history.filter((h) => h.playerPlayoff === 'FINAL').length;
-  useEffect(() => { sceneRef.current?.setExtras({ titles, finals }); }, [titles, finals]);
+  const rooms = JSON.stringify(game.club.facilities);
+  useEffect(() => { sceneRef.current?.setExtras({ titles, finals, facilities: JSON.parse(rooms) }); }, [titles, finals, rooms]);
 
   const tap = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const r = e.currentTarget.getBoundingClientRect();

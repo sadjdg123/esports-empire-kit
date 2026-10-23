@@ -20,6 +20,7 @@ import { ASSISTANT } from './components/Portrait';
 import { GameWindow } from './components/Window';
 import { iconUrl } from './icons';
 import { ContractsPage } from './pages/Contracts';
+import { FacilitiesPage } from './pages/Facilities';
 import { FinancePage } from './pages/Finance';
 import { HistoryPage } from './pages/History';
 import { HomePage } from './pages/Home';
@@ -37,7 +38,7 @@ import './styles.css';
 
 export type Page =
   | 'start' | 'home' | 'overview' | 'inbox' | 'market' | 'lineup' | 'training' | 'contracts' | 'schedule' | 'finance' | 'history'
-  | 'report' | 'settings' | 'match' | 'menu' | 'matchday' | 'seasonend';
+  | 'report' | 'settings' | 'match' | 'menu' | 'matchday' | 'seasonend' | 'facilities';
 
 export interface PageProps {
   game: GameState;
@@ -60,7 +61,7 @@ export type ClockSpeed = 1 | 2 | 4;
 
 const HOTSPOT_PAGE: Record<Hotspot, Page> = {
   lineup: 'lineup', training: 'training', schedule: 'schedule', contracts: 'contracts', finance: 'finance',
-  history: 'history', report: 'report', inbox: 'inbox', market: 'market',
+  history: 'history', report: 'report', inbox: 'inbox', market: 'market', facilities: 'facilities',
 };
 const TITLES: Partial<Record<Page, [string, string]>> = {
   menu: ['菜单', 'home'], matchday: ['比赛日', 'schedule'], seasonend: ['赛季结束', 'history'],
@@ -258,6 +259,7 @@ export function App() {
           {win === 'contracts' && <ContractsPage {...props} />}
           {win === 'schedule' && <SchedulePage {...props} />}
           {win === 'finance' && <FinancePage {...props} />}
+          {win === 'facilities' && <FacilitiesPage {...props} />}
           {win === 'history' && <HistoryPage {...props} />}
           {win === 'report' && <ReportPage {...props} round={reportRound} lastWeek={lastWeek} />}
           {win === 'settings' && <SettingsPage {...props} onReplace={(g) => { setGame(g); gameRef.current = g; setLastWeek(null); setRunning(false); setWin(null); }} onNewGame={() => go('start')} />}

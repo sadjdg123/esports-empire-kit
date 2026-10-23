@@ -3,6 +3,7 @@
 
 import type { ClubId, GameData, Player, PlayerId } from '../core/types';
 import { addLedger, playerOverall, rosterOf, weekOfSeason, type Result } from './game';
+import { facilityValue } from './facilities';
 import { postMessage } from './messages';
 import { PLAYER_CLUB_ID, type GameState, type Negotiation } from './state';
 
@@ -56,12 +57,15 @@ export function validYears(data: GameData, years: number): boolean {
 // ---------------------------------------------------------------------------
 // Renewals (player club)
 
-/** Weekly salary a player asks for: fair pay, more when unhappy, never much less than now. */
-export function renewalAsk(data: GameData, p: Player): number {
+/**
+ * Weekly salary a player asks for: fair pay, more when unhappy, never much less than now.
+ * `office` is the club office's effect (T22): −0.05 asks 5% less.
+ */
+export function renewalAsk(data: GameData, p: Player, office = 0): number {
   const k = data.economy.contracts;
   const neutral = data.growth.moraleNeutral;
   const moodMult = 1 + (neutral - (p.morale ?? neutral)) * k.askMoralePer;
-  return roundTo(Math.max(fairSalary(data, p) * moodMult, p.salaryPerWeek * k.askMinOfCurrent), 50);
+  return roundTo(Math.max(fairSalary(data, p) * moodMult, p.salaryPerWeek * k.askMinOfCurrent) * (1 + office), 50);
 }
 
 export function negotiationFor(state: GameState, playerId: PlayerId): Negotiation | undefined {
@@ -76,7 +80,7 @@ export function openNegotiation(state: GameState, data: GameData, playerId: Play
   if (p.contractUntil === undefined || p.contractUntil > state.calendar.season) return fail(`${p.name} 的合同到第 ${p.contractUntil} 赛季，最后一个赛季才能续约`);
   const existing = negotiationFor(state, playerId);
   if (existing) return existing.status === 'OPEN' ? ok(existing) : fail(existing.status === 'AGREED' ? '已经续约了' : `${p.name} 已经拒绝续约，赛季结束后离队`);
-  const n: Negotiation = { playerId, season: state.calendar.season, ask: renewalAsk(data, p), countered: false, status: 'OPEN' };
+  const n: Negotiation = { playerId, season: state.calendar.season, ask: renewalAsk(data, p, facilityValue(state, data, PLAYER_CLUB_ID, 'OFFICE')), countered: false, status: 'OPEN' };
   state.negotiations.push(n);
   return ok(n);
 }

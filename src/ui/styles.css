@@ -243,3 +243,6 @@ button.link.name { padding: 0; margin: 0; color: var(--text); font-weight: 600; 
 .table button { white-space: nowrap; }
 .hero-pick { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
 .hero-sprite { flex: none; image-rendering: pixelated; background: #d9e8c4; border: 2px solid var(--wood-dark); border-radius: 8px; }
+.facilities { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.facility { display: flex; flex-direction: column; gap: 6px; padding: 10px; background: #f3e6c8; border: 2px solid #e2cfa4; border-radius: 10px; }
+.facility .stars { color: #e0a800; letter-spacing: 1px; }

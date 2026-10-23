@@ -6,6 +6,7 @@ import type { ClubId, GameData, GrowthConfig, MatchInput, MatchResult, Player, P
 import { DEFAULT_MASTERY } from '../core/types';
 import { clubById, playerOverall, weekOfSeason } from './game';
 import { PLAYER_CLUB_ID, type GameState } from './state';
+import { facilityValue } from './facilities';
 
 const ATTRS: readonly (keyof PlayerAttributes)[] = ['mechanics', 'awareness', 'teamwork', 'mental'];
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -51,20 +52,28 @@ export function trainingFocusOf(state: GameState, data: GameData, clubId: ClubId
   return g.aiFocusRotation[weekOfSeason(state) % g.aiFocusRotation.length]!;
 }
 
+/** Facility boosts for one club's training: multipliers on attribute growth and on hero mastery growth (T22). */
+export interface TrainingBoost { growth: number; mastery: number }
+const NO_BOOST: TrainingBoost = { growth: 1, mastery: 1 };
+
+export function trainingBoost(state: GameState, data: GameData, clubId: ClubId): TrainingBoost {
+  return { growth: 1 + facilityValue(state, data, clubId, 'TRAINING'), mastery: 1 + facilityValue(state, data, clubId, 'ANALYSIS') };
+}
+
 /** One week of training for one player. */
-export function trainPlayer(p: Player, focus: TrainingFocus, g: GrowthConfig): void {
+export function trainPlayer(p: Player, focus: TrainingFocus, g: GrowthConfig, boost: TrainingBoost = NO_BOOST): void {
   const rate = ageRate(g, p.age);
   if (rate < 0) {
     // Decline hits everyone past their peak, training or not.
     for (const k of ATTRS) addAttr(p, k, g.weeklyGrowthBase * rate);
   } else if (focus !== 'REST') {
-    const gain = g.weeklyGrowthBase * rate * headroom(g, p);
+    const gain = g.weeklyGrowthBase * rate * headroom(g, p) * boost.growth;
     const weights = g.trainingFocus[focus];
     for (const k of ATTRS) addAttr(p, k, gain * (weights[k] ?? g.offFocusShare));
     const masteryWeight = weights.mastery ?? 0;
     if (masteryWeight > 0) {
       const best = Object.entries(p.heroMastery).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, g.masteryFocusHeroes);
-      for (const [heroId] of best) addMastery(p, heroId, g.masteryFocusGain * rate * masteryWeight);
+      for (const [heroId] of best) addMastery(p, heroId, g.masteryFocusGain * rate * masteryWeight * boost.mastery);
     }
   }
   p.fatigue = clamp((p.fatigue ?? 0) + (focus === 'REST' ? -g.fatigueRestRecovery : g.fatiguePerTrainingWeek), 0, 100);
@@ -82,7 +91,8 @@ export function applyTrainingWeek(state: GameState, data: GameData): void {
   const g = data.growth;
   for (const club of [state.club, ...state.aiClubs]) {
     const focus = trainingFocusOf(state, data, club.id);
-    for (const id of [...club.roster].sort()) trainPlayer(state.players[id]!, focus, g);
+    const boost = trainingBoost(state, data, club.id);
+    for (const id of [...club.roster].sort()) trainPlayer(state.players[id]!, focus, g, boost);
   }
   // Free agents do not train, but still age.
   for (const id of [...state.market].sort()) {
@@ -101,12 +111,17 @@ export function applyTrainingWeek(state: GameState, data: GameData): void {
 
 const OVR_HISTORY = 40;
 
-/** Daily recovery: fatigue goes down, morale drifts back toward neutral. */
+/** Daily recovery: fatigue goes down (faster with a better lounge), morale drifts back toward neutral. */
 export function applyDailyRecovery(state: GameState, data: GameData): void {
   const g = data.growth;
+  const lounge = new Map<string, number>();
+  for (const club of [state.club, ...state.aiClubs]) {
+    const extra = facilityValue(state, data, club.id, 'LOUNGE');
+    if (extra) for (const id of club.roster) lounge.set(id, extra);
+  }
   for (const id of Object.keys(state.players).sort()) {
     const p = state.players[id]!;
-    p.fatigue = round2(Math.max(0, (p.fatigue ?? 0) - g.fatigueDailyRecovery));
+    p.fatigue = round2(Math.max(0, (p.fatigue ?? 0) - g.fatigueDailyRecovery - (lounge.get(id) ?? 0)));
     const m = p.morale ?? g.moraleNeutral;
     const step = Math.min(g.moraleDailyDrift, Math.abs(g.moraleNeutral - m));
     p.morale = round2(m + Math.sign(g.moraleNeutral - m) * step);
@@ -123,6 +138,7 @@ export function applyMatchEffects(state: GameState, data: GameData, input: Match
   const lines = new Map(result.players.map((r) => [r.playerId, r]));
   for (const { team, won } of sides) {
     const starters = new Set(team.lineup.picks.map((pk) => pk.playerId));
+    const masteryBoost = 1 + facilityValue(state, data, team.lineup.clubId, 'ANALYSIS');
     for (const pk of team.lineup.picks) {
       const p = state.players[pk.playerId];
       if (!p) continue;
@@ -133,7 +149,7 @@ export function applyMatchEffects(state: GameState, data: GameData, input: Match
         const gain = g.matchExperience * rate * headroom(g, p);
         for (const k of ATTRS) addAttr(p, k, gain);
       }
-      addMastery(p, pk.heroId, g.masteryPerMatch);
+      addMastery(p, pk.heroId, g.masteryPerMatch * masteryBoost);
       const line = lines.get(pk.playerId);
       const st = (p.stats ??= { played: 0, wins: 0, kills: 0, deaths: 0, assists: 0 });
       st.played++;
