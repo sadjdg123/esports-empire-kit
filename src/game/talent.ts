@@ -1,6 +1,6 @@
 // Talent supply (P1): new young free agents every season, and old unsigned
-// free agents leave the league, so a long save neither ages nor fills up.
-// (Full careers and retirement are P2.)
+// free agents retire, so a long save neither ages nor fills up.
+// (Players on clubs retire through career.ts, T23.)
 
 import { rngFromState, type Rng } from '../core/rng';
 import { ROLES, type GameData, type Player, type Role } from '../core/types';
@@ -51,8 +51,11 @@ function youngPlayer(state: GameState, data: GameData, rng: Rng, role: Role, ind
   return withP2Defaults(withP1Defaults(p), data);
 }
 
-/** New season: old unsigned free agents leave; a fresh class of young players enters the market. */
-export function refreshTalent(state: GameState, data: GameData): { left: number; joined: number } {
+/**
+ * New season: old unsigned free agents retire; a fresh class of young players enters the market;
+ * when the market is too full, the weakest older free agents leave.
+ */
+export function refreshTalent(state: GameState, data: GameData): { retired: number; left: number; joined: number } {
   const t = data.ai.talent;
   const leaving = state.market.filter((id) => state.players[id]!.age >= t.freeAgentLeaveAge);
   for (const id of leaving) delete state.players[id];
@@ -79,5 +82,5 @@ export function refreshTalent(state: GameState, data: GameData): { left: number;
     state.market = state.market.filter((id) => state.players[id]);
     trimmed = out.length;
   }
-  return { left: leaving.length + trimmed, joined };
+  return { retired: leaving.length, left: trimmed, joined };
 }

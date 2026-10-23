@@ -67,6 +67,15 @@
     "NORMAL": { "weight": 50, "ageShift": 0 },
     "LATE": { "weight": 25, "ageShift": 2 }
   },
+  "retirement": {
+    "fromAge": 29,
+    "alwaysAt": 34,
+    "chance": [0.05, 0.12, 0.25, 0.45, 0.7],
+    "declinePoints": 8,
+    "declineBonus": 0.15,
+    "typeBonus": { "EARLY": 0.1, "NORMAL": 0, "LATE": -0.1 },
+    "noticeWeeks": 4
+  },
   "aiFocusRotation": [
     "MECHANICS",
     "AWARENESS",

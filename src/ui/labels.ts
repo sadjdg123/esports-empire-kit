@@ -1,4 +1,4 @@
-import type { Archetype, ClubStyle, FacilityId, FacilityLevel, Role, TrainingFocus } from '../core/types';
+import type { Archetype, ClubStyle, FacilityId, FacilityLevel, GrowthType, Role, TrainingFocus } from '../core/types';
 
 export const ROLE_NAME: Record<Role, string> = { TOP: '上单', JUNGLE: '打野', MID: '中单', ADC: '射手', SUPPORT: '辅助' };
 export const ARCHETYPE_NAME: Record<Archetype, string> = { TANK: '坦克', ASSASSIN: '刺客', MAGE: '法师', MARKSMAN: '射手', SUPPORT: '辅助' };
@@ -34,6 +34,11 @@ export function growthRoom(potential: number | undefined, overall: number): stri
   const room = (potential ?? overall) - overall;
   return room >= 15 ? '很大' : room >= 8 ? '较大' : room >= 3 ? '一般' : '接近上限';
 }
+
+/** Growth types in the player card (T23). */
+export const GROWTH_NAME: Record<GrowthType, string> = {
+  EARLY: '早熟（巅峰早）', NORMAL: '正常', LATE: '大器晚成（巅峰晚）',
+};
 
 export const PLAYOFF_NAME: Record<'CHAMPION' | 'FINAL' | 'SEMI' | 'NONE', string> = {
   CHAMPION: '🏆 总冠军', FINAL: '亚军', SEMI: '半决赛', NONE: '未进季后赛',

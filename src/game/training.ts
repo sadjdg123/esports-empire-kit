@@ -24,6 +24,14 @@ export function ageRate(g: GrowthConfig, age: number): number {
   return c[c.length - 1]!.rate;
 }
 
+/**
+ * A player's growth rate: the age curve, shifted by the growth type (T23). An early bloomer
+ * (shift −2) at 25 grows like a normal 27-year-old; a late bloomer (+2) like a normal 23-year-old.
+ */
+export function ageRateOf(g: GrowthConfig, p: Player): number {
+  return ageRate(g, p.age - g.growthTypes[p.growthType ?? 'NORMAL'].ageShift);
+}
+
 /** Share of normal growth a player still gets: 1 well below potential, 0 at or above it. */
 function headroom(g: GrowthConfig, p: Player): number {
   return clamp(((p.potential ?? 100) - playerOverall(p)) / g.potentialSoftCap, 0, 1);
@@ -62,7 +70,7 @@ export function trainingBoost(state: GameState, data: GameData, clubId: ClubId):
 
 /** One week of training for one player. */
 export function trainPlayer(p: Player, focus: TrainingFocus, g: GrowthConfig, boost: TrainingBoost = NO_BOOST): void {
-  const rate = ageRate(g, p.age);
+  const rate = ageRateOf(g, p);
   if (rate < 0) {
     // Decline hits everyone past their peak, training or not.
     for (const k of ATTRS) addAttr(p, k, g.weeklyGrowthBase * rate);
@@ -97,7 +105,7 @@ export function applyTrainingWeek(state: GameState, data: GameData): void {
   // Free agents do not train, but still age.
   for (const id of [...state.market].sort()) {
     const p = state.players[id]!;
-    const rate = ageRate(g, p.age);
+    const rate = ageRateOf(g, p);
     if (rate < 0) for (const k of ATTRS) addAttr(p, k, g.weeklyGrowthBase * rate);
   }
   const rng = rngFromState(state.rngState);
@@ -144,7 +152,7 @@ export function applyMatchEffects(state: GameState, data: GameData, input: Match
       if (!p) continue;
       p.fatigue = clamp((p.fatigue ?? 0) + g.fatiguePerMatch, 0, 100);
       p.morale = clamp((p.morale ?? g.moraleNeutral) + (won ? g.moraleWin : g.moraleLoss), 0, 100);
-      const rate = ageRate(g, p.age);
+      const rate = ageRateOf(g, p);
       if (rate > 0) {
         const gain = g.matchExperience * rate * headroom(g, p);
         for (const k of ATTRS) addAttr(p, k, gain);

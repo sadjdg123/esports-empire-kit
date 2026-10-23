@@ -4,7 +4,7 @@
 //   npm run sim -- --economy [--n 100]                              economy calibration (T07, T16)
 //   npm run sim -- --league [--seasons 20] [--seeds 8] [--write [--out file.md]]  multi-season league health (T17, T20)
 import { loadGameData } from '../src/core/config';
-import type { Tactic } from '../src/core/types';
+import { ROLES, type Tactic } from '../src/core/types';
 import { runMatch } from '../src/sim';
 import { describeEvent, formatTime, nameBook } from '../src/sim/events';
 import { buildReport } from '../src/sim/report';
@@ -139,6 +139,13 @@ async function league(): Promise<void> {
   const last = rows.map((r) => r.talent[r.talent.length - 1]!);
   const first = rows.map((r) => r.talent[0]!);
   const m = (xs: number[]) => (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(1);
+  const all = rows.flatMap((r) => r.talent);
+  const per = (f: (t: Rec['talent'][number]) => number) => m(all.map(f));
+  const withRet = all.filter((t) => t.retiring + t.retiredFree > 0).length;
+  const firstRet = Math.max(...rows.map((r) => r.talent.findIndex((t) => t.retiring + t.retiredFree > 0))) + 1;
+  const fromK = all.filter((t) => t.season >= firstRet);
+  console.log(`  退役：每赛季平均 ${per((t) => t.retiring + t.retiredFree)} 人（在队 ${per((t) => t.retiring)}，自由球员 ${per((t) => t.retiredFree)}）· ${withRet}/${all.length} 个赛季有人退役，第 ${firstRet} 季起 ${fromK.filter((t) => t.retiring + t.retiredFree > 0).length}/${fromK.length}`);
+  console.log(`  新秀：每赛季 ${data.ai.talent.intakePerRole * ROLES.length} 名进入自由市场 · 当季就进队平均 ${per((t) => t.rookies)} 人 · 第 ${seasons} 季在队选手中新秀出身 ${(rows.reduce((a2, r) => a2 + r.talent[r.talent.length - 1]!.fromRookies, 0) / rows.length * 100).toFixed(0)}%`);
   console.log(`  人才（第 1 → 第 ${seasons} 赛季平均）：首发均值 ${m(first.map((t) => t.starterAvg))} → ${m(last.map((t) => t.starterAvg))} · 全联盟均值 ${m(first.map((t) => t.leagueAvg))} → ${m(last.map((t) => t.leagueAvg))} · 最强选手 ${m(first.map((t) => t.best))} → ${m(last.map((t) => t.best))} · 平均年龄 ${m(first.map((t) => t.avgAge))} → ${m(last.map((t) => t.avgAge))} · 自由市场 ${m(first.map((t) => t.marketSize))} → ${m(last.map((t) => t.marketSize))} 人`);
   // The player's money as a multiple of the starting money (median over the runs), T22.
   const start = 100000;
@@ -160,12 +167,12 @@ async function league(): Promise<void> {
       const pass = r.minAiRoster >= 5 && r.aiFundsRatio.min > -1 && r.aiFundsRatio.max < 5 && count.size >= 3 && top / r.champions.length <= 0.6;
       md.push(`| ${r.seed + 1} | ${[...count].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join('、')} | ${r.minAiRoster} | ${r.aiFundsRatio.min.toFixed(2)}～${r.aiFundsRatio.max.toFixed(2)} | ${pass ? '✅' : '⚠️'} |`);
     }
-    md.push('', '## 逐赛季平均（所有局取平均）', '', '| 赛季 | 首发平均能力 | 在队选手能力 10% / 50% / 90% | 最强选手 | 平均年龄 | 自由市场人数 | 在队平均周薪 | 全联盟资金总量 | 玩家资金 |', '|---|---|---|---|---|---|---|---|---|');
+    md.push('', '## 逐赛季平均（所有局取平均）', '', '| 赛季 | 首发平均能力 | 在队选手能力 10% / 50% / 90% | 最强选手 | 平均年龄 | 自由市场人数 | 在队平均周薪 | 全联盟资金总量 | 玩家资金 | 退役：在队 / 自由球员 | 本季新秀进队 | 在队选手中新秀出身 |', '|---|---|---|---|---|---|---|---|---|---|---|---|');
     for (let k = 0; k < seasons; k++) {
       const t = rows.map((r) => r.talent[k]!);
       const a = (f: (x: (typeof t)[number]) => number) => t.reduce((s2, x) => s2 + f(x), 0) / t.length;
       const pf = rows.reduce((s2, r) => s2 + r.playerFunds[k]!, 0) / rows.length;
-      md.push(`| ${k + 1} | ${a((x) => x.starterAvg).toFixed(1)} | ${a((x) => x.p10).toFixed(0)} / ${a((x) => x.p50).toFixed(0)} / ${a((x) => x.p90).toFixed(0)} | ${a((x) => x.best).toFixed(0)} | ${a((x) => x.avgAge).toFixed(1)} | ${a((x) => x.marketSize).toFixed(0)} | ${a((x) => x.avgSalary).toFixed(0)} | ${(a((x) => x.totalMoney) / 1000).toFixed(0)}k | ${(pf / 1000).toFixed(0)}k |`);
+      md.push(`| ${k + 1} | ${a((x) => x.starterAvg).toFixed(1)} | ${a((x) => x.p10).toFixed(0)} / ${a((x) => x.p50).toFixed(0)} / ${a((x) => x.p90).toFixed(0)} | ${a((x) => x.best).toFixed(0)} | ${a((x) => x.avgAge).toFixed(1)} | ${a((x) => x.marketSize).toFixed(0)} | ${a((x) => x.avgSalary).toFixed(0)} | ${(a((x) => x.totalMoney) / 1000).toFixed(0)}k | ${(pf / 1000).toFixed(0)}k | ${a((x) => x.retiring).toFixed(1)} / ${a((x) => x.retiredFree).toFixed(1)} | ${a((x) => x.rookies).toFixed(1)} | ${(a((x) => x.fromRookies) * 100).toFixed(0)}% |`);
     }
     md.push('', '标准（T17/T20）：AI 始终 ≥5 人；AI 资金在起始的 −1 到 5 倍之间；至少 3 家不同冠军；没有一家拿走超过 60% 的冠军。人才和通胀看逐赛季表：能力分布、年龄、市场人数、周薪和资金总量不应一路单向失控。', '');
     writeFileSync(path, md.join('\n'));

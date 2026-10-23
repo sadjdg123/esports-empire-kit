@@ -20,6 +20,7 @@ import { remindExpiring, rollContracts } from './contracts';
 import { refreshTalent } from './talent';
 import { applyMatchFinance, applyPlayoffAwards, autoSponsor, financeSummary, rescueOptions, runPayDay, settleReputation } from './finance';
 import { aiUpgradeFacilities } from './facilities';
+import { announceRetirements, retirePlayers, retirementNoticeDue } from './career';
 import { postMessage } from './messages';
 import { applyDailyRecovery, applyMatchEffects, applyTrainingWeek } from './training';
 import { expireOffers, generateAiOffers } from './transfers';
@@ -185,9 +186,10 @@ function recordCareers(state: GameState, champion: ClubId | null): void {
   }
 }
 
-/** Starts the next season: new schedule, clean table, everyone one year older. */
+/** Starts the next season: retirees leave, new schedule, clean table, everyone one year older. */
 /** Returns true when the player has contracts ending in the new season (a reminder was posted). */
 export function startNewSeason(state: GameState, data: GameData): boolean {
+  retirePlayers(state);
   aiRenewals(state, data, state.calendar.season);
   aiUpgradeFacilities(state, data, (club) => (club.management === 'PLAYER' ? 0 : data.ai.styles[club.management].reserveWeeks));
   const rng = rngFromState(state.rngState);
@@ -206,7 +208,7 @@ export function startNewSeason(state: GameState, data: GameData): boolean {
   rollContracts(state, data);
   settleReputation(state, data);
   const talent = refreshTalent(state, data);
-  postMessage(state, 'SEASON', '自由市场更新', `${talent.joined} 名新秀进入自由市场${talent.left > 0 ? `，${talent.left} 名年龄较大的自由球员离开了联赛` : ''}。`);
+  postMessage(state, 'SEASON', '自由市场更新', `${talent.joined} 名新秀进入自由市场${talent.retired > 0 ? `；${talent.retired} 名没有球队的老将退役` : ''}${talent.left > 0 ? `；${talent.left} 名自由球员离开了联赛` : ''}。`);
   aiSignFreeAgents(state, data);
   return remindExpiring(state);
 }
@@ -244,6 +246,7 @@ export function advanceDay(state: GameState, data: GameData): DayResult {
   if (day % cfg.daysPerWeek === cfg.payWeekday) {
     runPayDay(state, data); // before training: this week's training is paid for
     applyTrainingWeek(state, data);
+    if (retirementNoticeDue(state, data)) announceRetirements(state, data);
     if (state.calendar.phase === 'PRESEASON') aiPreseasonWeek(state, data);
     if (generateAiOffers(state, data).length > 0) pause ??= 'OFFER';
     const f = financeSummary(state, data);

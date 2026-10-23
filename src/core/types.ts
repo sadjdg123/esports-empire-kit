@@ -48,6 +48,7 @@ export interface Player {
   growthType?: GrowthType; // when a career peaks
   career?: CareerSeason[]; // one entry per finished season on a club
   retired?: boolean;
+  retiring?: boolean; // T23: stops when this season ends (announced a few weeks before)
 }
 
 /** When a career peaks: early, normal or late bloomer (growth.json growthTypes). */
@@ -506,6 +507,18 @@ export interface GrowthConfig {
   autoRestFatigue: number;
   /** Share of players of each growth type and how far its age curve is shifted (years; T23). */
   growthTypes: Record<GrowthType, { weight: number; ageShift: number }>;
+  retirement: RetirementConfig;
+}
+
+/** When players stop (T23). Checked once a season, a few weeks before it ends. */
+export interface RetirementConfig {
+  fromAge: number; // nobody younger retires
+  alwaysAt: number; // everyone this old retires after the season
+  chance: number[]; // chance at fromAge, fromAge+1, ... (the last value holds until alwaysAt)
+  declinePoints: number; // this far below the career peak counts as clearly past it ...
+  declineBonus: number; // ... and adds this to the chance
+  typeBonus: Record<GrowthType, number>; // early bloomers stop sooner, late bloomers later
+  noticeWeeks: number; // weeks before the season ends that it is decided and announced
 }
 
 /** A club room that can be upgraded (P2, T22). */

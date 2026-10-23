@@ -446,6 +446,20 @@ function checkGrowth(c: Checker, raw: unknown): void {
       if (t) { c.num(t, 'weight', `${p}.growthTypes.${gt}`, 0); c.num(t, 'ageShift', `${p}.growthTypes.${gt}`, -6, 6); }
     }
   }
+  const ret = c.obj(o.retirement, `${p}.retirement`);
+  if (ret) {
+    const rp = `${p}.retirement`;
+    c.num(ret, 'fromAge', rp, 16, 50);
+    c.num(ret, 'alwaysAt', rp, 16, 60);
+    if (typeof ret.alwaysAt === 'number' && typeof ret.fromAge === 'number' && ret.alwaysAt <= ret.fromAge) c.fail(`${rp}.alwaysAt`, 'must be above fromAge');
+    const chance = c.arr(ret.chance, `${rp}.chance`, 1) ?? [];
+    chance.forEach((v, i) => { if (typeof v !== 'number' || v < 0 || v > 1) c.fail(`${rp}.chance[${i}]`, 'expected a number from 0 to 1'); });
+    c.num(ret, 'declinePoints', rp, 0, 100);
+    c.num(ret, 'declineBonus', rp, 0, 1);
+    c.num(ret, 'noticeWeeks', rp, 1, 20);
+    const tb = c.obj(ret.typeBonus, `${rp}.typeBonus`);
+    if (tb) for (const gt of GROWTH_TYPES) c.num(tb, gt, `${rp}.typeBonus`, -1, 1);
+  }
   for (const k of ['moraleWin', 'moraleLoss', 'moraleBench']) c.num(o, k, p, -100, 100);
   const focus = c.obj(o.trainingFocus, `${p}.trainingFocus`);
   if (focus) for (const f of TRAINING_FOCI) if (!focus[f]) c.fail(`${p}.trainingFocus`, `missing focus ${f}`);

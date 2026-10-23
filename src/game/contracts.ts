@@ -77,6 +77,7 @@ export function openNegotiation(state: GameState, data: GameData, playerId: Play
   const p = state.players[playerId];
   if (!p || !state.club.roster.includes(playerId)) return fail('这名选手不在你的队伍里');
   if (state.calendar.phase === 'FINISHED') return fail('赛季已经结束，续约要在合同最后一个赛季内谈');
+  if (p.retiring) return fail(`${p.name} 打完这个赛季就退役，不再续约`);
   if (p.contractUntil === undefined || p.contractUntil > state.calendar.season) return fail(`${p.name} 的合同到第 ${p.contractUntil} 赛季，最后一个赛季才能续约`);
   const existing = negotiationFor(state, playerId);
   if (existing) return existing.status === 'OPEN' ? ok(existing) : fail(existing.status === 'AGREED' ? '已经续约了' : `${p.name} 已经拒绝续约，赛季结束后离队`);
@@ -166,7 +167,7 @@ export function rollContracts(state: GameState, data: GameData): void {
 
 /** Inbox reminder for the player's contracts ending this season. Returns true if there were any. */
 export function remindExpiring(state: GameState): boolean {
-  const list = expiringPlayers(state).filter((p) => negotiationFor(state, p.id)?.status !== 'AGREED' && negotiationFor(state, p.id)?.status !== 'REFUSED');
+  const list = expiringPlayers(state).filter((p) => !p.retiring && negotiationFor(state, p.id)?.status !== 'AGREED' && negotiationFor(state, p.id)?.status !== 'REFUSED');
   if (list.length === 0) return false;
   postMessage(state, 'CONTRACT', '合同即将到期', `${list.map((p) => p.name).join('、')} 的合同本赛季结束。不续约的话，赛季结束后会离队。`,
     { players: list.map((p) => p.id).join(',') });

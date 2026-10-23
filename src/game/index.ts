@@ -9,3 +9,4 @@ export * from './finance';
 export * from './ai-clubs';
 export * from './talent';
 export * from './facilities';
+export * from './career';

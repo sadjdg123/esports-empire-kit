@@ -1,7 +1,7 @@
 import { PLAYER_CLUB_ID, clubById, marketValue, playerOverall } from '../../game';
 import { lookFor } from '../../render/pixel/chibi';
 import type { PageProps } from '../App';
-import { growthRoom, money, ROLE_NAME } from '../labels';
+import { GROWTH_NAME, growthRoom, money, ROLE_NAME } from '../labels';
 import { Attrs, Fatigue, Form, Heroes, Morale, Ovr, Roles } from './PlayerBits';
 import { Portrait } from './Portrait';
 
@@ -41,9 +41,11 @@ export function PlayerCard({ game, data, playerId, close }: PageProps & { player
           <button className="small" onClick={close}>关闭</button>
         </div>
         <p>{p.age} 岁 · <Roles p={p} /> · {club ? (club.id === PLAYER_CLUB_ID ? '你的选手' : club.name) : '自由球员'}</p>
+        {p.retiring && <p className="bad">打完本赛季就退役</p>}
         <dl className="kv">
           <dt>操作 / 意识 / 配合 / 心态</dt><dd><Attrs p={p} /></dd>
           <dt>成长空间</dt><dd>{growthRoom(p.potential, playerOverall(p))}</dd>
+          <dt>成长类型</dt><dd>{GROWTH_NAME[p.growthType ?? 'NORMAL']}</dd>
           <dt>疲劳</dt><dd><Fatigue p={p} /></dd>
           <dt>士气</dt><dd><Morale p={p} /></dd>
           <dt>状态</dt><dd><Form p={p} /></dd>

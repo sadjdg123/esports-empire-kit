@@ -14,7 +14,7 @@ export interface LeagueRecord {
   champions: string[]; // club short names, per season
   minAiRoster: number;
   aiFundsRatio: { min: number; max: number }; // funds / starting funds, worst over all clubs and seasons
-  talent: { season: number; marketSize: number; leagueAvg: number; starterAvg: number; best: number; avgAge: number; p10: number; p50: number; p90: number; totalMoney: number; avgSalary: number }[];
+  talent: { season: number; marketSize: number; leagueAvg: number; starterAvg: number; best: number; avgAge: number; p10: number; p50: number; p90: number; totalMoney: number; avgSalary: number; retiring: number; retiredFree: number; rookies: number; fromRookies: number }[];
   playerFunds: number[];
 }
 
@@ -53,6 +53,7 @@ if (mode === 'league') {
     const start = Object.fromEntries(s.aiClubs.map((c) => [c.id, c.funds]));
     const rec: LeagueRecord = { seed, champions: [], minAiRoster: 99, aiFundsRatio: { min: Infinity, max: -Infinity }, talent: [], playerFunds: [] };
     for (let k = 0; k < (workerData.seasons as number); k++) {
+      const atStart = Object.keys(s.players);
       autoManage(s, data, 'balanced');
       for (let guard = 0; guard < 400 && s.calendar.phase !== 'FINISHED'; guard++) {
         autoTraining(s);
@@ -78,9 +79,16 @@ if (mode === 'league') {
         season: h.season, marketSize: s.market.length, leagueAvg: mean(all.map(playerOverall)), starterAvg: mean(starters), best: Math.max(...all.map(playerOverall)),
         avgAge: mean(all.map((p) => p.age)), p10: q(0.1), p50: q(0.5), p90: q(0.9),
         totalMoney: s.funds + s.aiClubs.reduce((a, c) => a + c.funds, 0), avgSalary: mean(rostered.map((p) => p.salaryPerWeek)),
+        retiring: rostered.filter((p) => p.retiring).length, rookies: rostered.filter((p) => p.id.startsWith(`yt_s${h.season}_`)).length,
+        // Free agents who retired: during the season (only retirement removes players then), and
+        // the old ones at the change of season (the weakest trimmed from a full market are all younger).
+        retiredFree: atStart.filter((id) => !s.players[id]).length,
+        fromRookies: rostered.filter((p) => p.id.startsWith('yt_')).length / Math.max(1, rostered.length),
       });
       rec.playerFunds.push(s.funds);
+      const ages = Object.values(s.players).filter((p) => !p.retiring).map((p) => [p.id, p.age] as const);
       advanceDay(s, data);
+      rec.talent[rec.talent.length - 1]!.retiredFree += ages.filter(([id, age]) => !s.players[id] && age + 1 >= data.ai.talent.freeAgentLeaveAge).length;
     }
     rows.push(rec);
   }
