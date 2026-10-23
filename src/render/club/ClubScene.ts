@@ -1,80 +1,76 @@
-// The club base: a small isometric pixel scene with three rooms. Drawn with the
-// plain 2D canvas at a low resolution and scaled up, so it stays cheap on phones.
-// Figures walk along the front corridor between rooms to the spot their
-// activity puts them on. Purely visual: the only input is a tap on a figure.
+// The club base in a bright pixel-art style: a cut-away building with a
+// training room, a lounge and an office, seen at a 2:1 isometric angle.
+// Drawn pixel-exact at a low resolution and scaled up. Chibi players walk
+// to the spot their activity gives them; the only input is a tap.
 
-import type { Activity, ClubActivity, Room } from './activities';
+import { chibi, lookFor, type ChibiFrame, type ChibiLook } from '../pixel/chibi';
+import { fillPoly, makeSprite, mix, outlinedPoly, shade, type Pt } from '../pixel/raster';
+import type { Activity, ClubActivity } from './activities';
 
-export const SCENE_W = 244;
-export const SCENE_H = 160;
-const TW = 24; // tile width
-const TH = 12; // tile height
-const OX = 80; // screen x of tile (0, 0)
-const OY = 40; // screen y of tile (0, 0)
-const WALL = 34;
-const CORRIDOR_J = 5.3;
-const SPEED = 2.4; // tiles per second
+export const SCENE_W = 256;
+export const SCENE_H = 176;
+const TW = 24;
+const TH = 12;
+const OX = 88;
+const OY = 54;
+const WALL = 40;
+const ROOM_J = 5; // depth of the building
+const LEN_I = 12; // length of the building
+const WALK_J = 4.35;
+const SPEED = 2.2; // tiles per second
 const FPS = 30;
+const OUT = '#2a1a14';
 
-const ROOMS: Record<Room, { i0: number; i1: number; floor: string; floor2: string; label: string }> = {
-  TRAINING: { i0: 0, i1: 6, floor: '#3a4258', floor2: '#353c50', label: '训练室' },
-  LOUNGE: { i0: 6, i1: 10, floor: '#4a3f37', floor2: '#433932', label: '休息室' },
-  OFFICE: { i0: 10, i1: 13, floor: '#34463d', floor2: '#2f4038', label: '办公室' },
-};
-const DEPTH = 6;
+export interface SceneExtras {
+  titles: number; // championships won (gold cups)
+  finals: number; // lost finals (silver cups)
+}
 
-/** Where figures stand or sit, per activity (tile coordinates). */
-const SPOTS: Record<Activity, [number, number][]> = {
-  TRAIN: [[1.2, 1.9], [2.6, 1.9], [4.0, 1.9], [1.2, 3.7], [2.6, 3.7], [4.0, 3.7], [5.2, 1.9], [5.2, 3.7]],
-  REST: [[6.7, 1.3], [7.6, 1.3], [8.5, 1.3], [7.2, 3.6], [8.8, 3.6], [9.3, 2.4], [6.8, 2.6], [8.1, 2.6]],
-  IDLE: [[9.4, 4.4], [6.6, 4.4], [8.0, 4.6], [9.4, 3.2], [6.6, 3.2], [8.0, 0.8], [7.0, 0.8], [9.0, 0.8]],
-  TALK: [[11.4, 3.0]],
-};
-const MANAGER: [number, number] = [11.4, 1.5];
+const iso = (i: number, j: number): Pt => [OX + (i - j) * (TW / 2), OY + (i + j) * (TH / 2)];
+const up = (p: Pt, h: number): Pt => [p[0], p[1] - h];
 
 interface Figure {
   id: string;
-  color: string;
-  hair: string;
+  look: ChibiLook;
   i: number;
   j: number;
-  path: [number, number][];
+  path: Pt[];
   activity: Activity;
-  phase: number; // animation offset
-  idleTimer: number;
+  phase: number;
+  flip: boolean;
 }
 
-const iso = (i: number, j: number): [number, number] => [OX + (i - j) * (TW / 2), OY + (i + j) * (TH / 2)];
+const DESKS: Pt[] = [[0.35, 0.45], [1.5, 0.45], [2.65, 0.45], [3.8, 0.45], [0.35, 2.25], [1.5, 2.25], [2.65, 2.25], [3.8, 2.25]];
+const SEAT = (d: Pt): Pt => [d[0] + 0.45, d[1] + 1.05];
+const SOFA_SEATS: Pt[] = [[5.75, 0.95], [6.45, 0.95], [7.15, 0.95]];
+const BEDS: Pt[] = [[5.3, 2.7], [7.3, 2.7]];
+const BED_SPOT = (b: Pt): Pt => [b[0] + 0.5, b[1] + 0.7];
+const IDLE_SPOTS: Pt[] = [[8.55, 1.6], [6.3, 2.0], [8.4, 3.9], [5.6, 3.95], [7.7, 1.9], [6.9, 3.95], [8.7, 0.95], [5.5, 1.9]];
+const MANAGER: Pt = [10.45, 1.05];
+const GUEST: Pt = [10.45, 2.75];
 
-function shade(hex: string, f: number): string {
-  const n = Number.parseInt(hex.slice(1), 16);
-  const c = (v: number) => Math.max(0, Math.min(255, Math.round(v * f)));
-  return `rgb(${c((n >> 16) & 255)},${c((n >> 8) & 255)},${c(n & 255)})`;
+function spotsFor(a: Activity): Pt[] {
+  if (a === 'TRAIN') return DESKS.map(SEAT);
+  if (a === 'REST') return [...BEDS.map(BED_SPOT), ...SOFA_SEATS, [8.1, 3.3], [6.2, 3.3], [7.8, 0.95]];
+  if (a === 'TALK') return [GUEST];
+  return IDLE_SPOTS;
 }
 
-function quad(ctx: CanvasRenderingContext2D, pts: [number, number][], color: string): void {
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.moveTo(pts[0]![0], pts[0]![1]);
-  for (const [x, y] of pts.slice(1)) ctx.lineTo(x, y);
-  ctx.closePath();
-  ctx.fill();
+// Small icons for the speech bubbles (6x6).
+const ICON_PAL = { o: OUT, n: '#3a6fd8', z: '#5a5aa8', r: '#e04848', b: '#5ab0ee', d: '#555555' };
+const ICON_ROWS: Record<string, string[]> = {
+  note: ['...nn.', '...n.n', '...n..', '.nnn..', 'nnnn..', '.nn...'],
+  zzz: ['zzzz..', '..z...', '.z....', 'zzzz..', '...zz.', '...zz.'],
+  bang: ['..rr..', '..rr..', '..rr..', '..rr..', '......', '..rr..'],
+  dots: ['......', '......', '......', 'd.d.d.', '......', '......'],
+  sweat: ['...b..', '..bb..', '.bbbb.', '.bbbb.', '..bb..', '......'],
+};
+const ICONS = new Map<string, HTMLCanvasElement>();
+function icon(name: string): HTMLCanvasElement {
+  let c = ICONS.get(name);
+  if (!c) { c = makeSprite(ICON_ROWS[name]!, ICON_PAL); ICONS.set(name, c); }
+  return c;
 }
-
-/** An isometric box standing on tile area [i, i+w] x [j, j+d], h pixels tall. */
-function box(ctx: CanvasRenderingContext2D, i: number, j: number, w: number, d: number, h: number, top: string): void {
-  const a = iso(i, j);
-  const b = iso(i + w, j);
-  const c = iso(i + w, j + d);
-  const e = iso(i, j + d);
-  const up = (p: [number, number]): [number, number] => [p[0], p[1] - h];
-  quad(ctx, [e, c, up(c), up(e)], shade(top, 0.62)); // front-left face
-  quad(ctx, [c, b, up(b), up(c)], shade(top, 0.8)); // front-right face
-  quad(ctx, [up(a), up(b), up(c), up(e)], top);
-}
-
-const SKIN = '#f1c9a5';
-const HAIRS = ['#2b2118', '#5a3b22', '#1c1c24', '#8a5a2b', '#3d2c4e', '#b8b8c0'];
 
 export class ClubScene {
   private ctx: CanvasRenderingContext2D;
@@ -84,7 +80,9 @@ export class ClubScene {
   private acc = 0;
   private time = 0;
   private color: string;
+  private extras: SceneExtras = { titles: 0, finals: 0 };
   private onFrame?: (ms: number) => void;
+  private manager: ChibiLook = { hair: 'short', hairColor: '#2b2118', skin: '#f1c9a5', shirt: '#3b4252', accent: '#c0392b', trousers: '#2b2f3a' };
 
   constructor(canvas: HTMLCanvasElement, clubColor: string, onFrame?: (ms: number) => void) {
     canvas.width = SCENE_W;
@@ -97,6 +95,10 @@ export class ClubScene {
     this.onFrame = onFrame;
   }
 
+  setExtras(e: SceneExtras): void {
+    this.extras = e;
+  }
+
   /** New activities: figures keep their position and walk to their new spot. */
   setActivities(list: ClubActivity[], clubColor: string): void {
     this.color = clubColor;
@@ -104,35 +106,35 @@ export class ClubScene {
     const used: Record<Activity, number> = { TRAIN: 0, REST: 0, IDLE: 0, TALK: 0 };
     list.forEach((a, k) => {
       seen.add(a.playerId);
-      const spots = SPOTS[a.activity];
+      const spots = spotsFor(a.activity);
       const target = spots[used[a.activity]++ % spots.length]!;
       let f = this.figures.get(a.playerId);
       if (!f) {
-        // New arrivals come in through the front door of the training room.
-        f = { id: a.playerId, color: clubColor, hair: HAIRS[k % HAIRS.length]!, i: 0.5, j: CORRIDOR_J + 0.4, path: [], activity: a.activity, phase: k * 0.37, idleTimer: 0 };
+        // New signings walk in through the front of the training room.
+        f = { id: a.playerId, look: lookFor(a.playerId, clubColor), i: 0.3, j: WALK_J + 0.3, path: [], activity: a.activity, phase: k * 0.77, flip: false };
         this.figures.set(a.playerId, f);
       }
-      f.color = clubColor;
-      if (f.activity !== a.activity || f.path.length === 0) f.path = this.route(f.i, f.j, target);
+      f.look = { ...f.look, shirt: clubColor, accent: shade(clubColor, 1.5) };
+      const goal = f.path[f.path.length - 1] ?? [f.i, f.j];
+      if (f.activity !== a.activity || Math.abs(goal[0] - target[0]) > 0.01 || Math.abs(goal[1] - target[1]) > 0.01) f.path = this.route(f.i, f.j, target);
       f.activity = a.activity;
     });
     for (const id of [...this.figures.keys()]) if (!seen.has(id)) this.figures.delete(id);
   }
 
-  /** Through the corridor in front of the rooms, unless already in the same room. */
-  private route(i: number, j: number, to: [number, number]): [number, number][] {
-    const roomOf = (x: number) => (x < 6 ? 0 : x < 10 ? 1 : 2);
-    if (roomOf(i) === roomOf(to[0]) && j < CORRIDOR_J - 0.5) return [to];
-    return [[i, CORRIDOR_J], [to[0], CORRIDOR_J], to];
+  /** Out to the front corridor, along it, and in to the spot. */
+  private route(i: number, j: number, to: Pt): Pt[] {
+    if (Math.abs(i - to[0]) < 0.05 && Math.abs(j - to[1]) < 0.05) return [];
+    return [[i, WALK_J], [to[0], WALK_J], to];
   }
 
-  /** The figure under a point in canvas pixels (scene coordinates), if any. */
+  /** The figure under a point in scene pixels, if any. */
   pick(x: number, y: number): string | null {
     let best: string | null = null;
-    let bestD = 12;
+    let bestD = 14;
     for (const f of this.figures.values()) {
       const [sx, sy] = iso(f.i, f.j);
-      const d = Math.hypot(sx - x, sy - 8 - y);
+      const d = Math.hypot(sx - x, sy - 9 - y);
       if (d < bestD) { bestD = d; best = f.id; }
     }
     return best;
@@ -164,128 +166,423 @@ export class ClubScene {
     this.time += dt;
     for (const f of this.figures.values()) {
       const next = f.path[0];
-      if (!next) {
-        // Daydreamers drift a little on the spot.
-        if (f.activity === 'IDLE') {
-          f.idleTimer += dt;
-          if (f.idleTimer > 3) { f.idleTimer = 0; f.path = [[f.i + (Math.sin(this.time + f.phase) > 0 ? 0.4 : -0.4), f.j]]; }
-        }
-        continue;
-      }
+      if (!next) continue;
       const di = next[0] - f.i;
       const dj = next[1] - f.j;
       const dist = Math.hypot(di, dj);
       const move = SPEED * dt;
+      // On screen, +i goes right and +j goes left.
+      if (Math.abs(di - dj) > 0.01) f.flip = di - dj < 0;
       if (dist <= move) { f.i = next[0]; f.j = next[1]; f.path.shift(); } else { f.i += (di / dist) * move; f.j += (dj / dist) * move; }
     }
   }
 
-  private draw(): void {
+  // -------------------------------------------------------------------------
+  // Drawing helpers
+
+  /** An outlined isometric box on tile area [i, i+w] x [j, j+d], h pixels tall, raised z pixels. */
+  private box(i: number, j: number, w: number, d: number, h: number, top: string, z = 0): void {
     const ctx = this.ctx;
-    ctx.fillStyle = '#0d0f14';
-    ctx.fillRect(0, 0, SCENE_W, SCENE_H);
-    // Floors, checkered per room.
-    for (const r of Object.values(ROOMS)) {
-      for (let i = r.i0; i < r.i1; i++) {
-        for (let j = 0; j < DEPTH; j++) quad(ctx, [iso(i, j), iso(i + 1, j), iso(i + 1, j + 1), iso(i, j + 1)], (i + j) % 2 ? r.floor : r.floor2);
-      }
-    }
-    // Back walls.
-    const wallTop = (p: [number, number]): [number, number] => [p[0], p[1] - WALL];
-    quad(ctx, [iso(0, 0), iso(13, 0), wallTop(iso(13, 0)), wallTop(iso(0, 0))], '#262b3a');
-    quad(ctx, [iso(0, DEPTH), iso(0, 0), wallTop(iso(0, 0)), wallTop(iso(0, DEPTH))], '#1e2230');
-    // Posters and windows.
-    this.wallRect(1.5, 2.5, 8, 22, this.color);
-    this.wallRect(7, 9, 6, 18, '#6fa8dc');
-    this.wallRect(11, 12.2, 8, 16, '#a3b18a');
-    // Room labels on the back wall.
-    ctx.fillStyle = '#c9cede';
-    ctx.font = '8px sans-serif';
-    for (const r of Object.values(ROOMS)) {
-      const [x, y] = iso((r.i0 + r.i1) / 2, 0);
-      ctx.fillText(r.label, x - 12, y - WALL + 9);
-    }
-    // Everything standing on the floor, back to front.
-    const items: { depth: number; draw: () => void }[] = [];
-    const add = (depth: number, draw: () => void) => items.push({ depth, draw });
-    // Low partitions between rooms (open at the corridor).
-    for (const pi of [6, 10]) for (let j = 0; j < 4.4; j += 1) add(pi + j + 0.5, () => box(ctx, pi - 0.08, j, 0.16, Math.min(1, 4.4 - j), 14, '#4b5266'));
-    // Training room: desks with monitors.
-    for (const [di, dj] of [[0.7, 1.0], [2.1, 1.0], [3.5, 1.0], [0.7, 2.8], [2.1, 2.8], [3.5, 2.8]] as [number, number][]) {
-      add(di + dj + 1, () => {
-        box(ctx, di, dj, 1.1, 0.5, 9, '#5b4a3a');
-        box(ctx, di + 0.3, dj + 0.05, 0.5, 0.12, 8, '#15171e');
-        const [x, y] = iso(di + 0.55, dj + 0.1);
-        ctx.fillStyle = Math.sin(this.time * 3 + di) > 0 ? '#7fd1ff' : '#4fa3ff';
-        ctx.fillRect(Math.round(x) - 3, Math.round(y) - 16, 6, 4);
-      });
-    }
-    // Lounge: sofa, beds, coffee table, plant.
-    add(7.8, () => box(ctx, 6.4, 0.5, 2.6, 0.6, 7, '#8a4b4b'));
-    add(10.5, () => box(ctx, 6.8, 3.3, 0.9, 1.3, 5, '#cfd6e6'));
-    add(12.1, () => box(ctx, 8.4, 3.3, 0.9, 1.3, 5, '#cfd6e6'));
-    add(9.6, () => box(ctx, 7.4, 1.8, 0.8, 0.5, 4, '#6b5440'));
-    add(10.4, () => { box(ctx, 9.5, 0.4, 0.4, 0.4, 6, '#6b4a2b'); box(ctx, 9.5, 0.4, 0.4, 0.4, 16, '#3c8d5a'); });
-    // Office: desk, shelf, plant.
-    add(12.6, () => box(ctx, 10.8, 1.9, 1.3, 0.6, 9, '#6b5440'));
-    add(10.9, () => box(ctx, 12.2, 0.3, 0.5, 0.5, 26, '#4a3d33'));
-    add(16.4, () => { box(ctx, 12.3, 3.8, 0.4, 0.4, 6, '#6b4a2b'); box(ctx, 12.3, 3.8, 0.4, 0.4, 16, '#3c8d5a'); });
-    // The manager (you) at the office desk.
-    add(MANAGER[0] + MANAGER[1], () => this.person(MANAGER[0], MANAGER[1], '#2c3e50', '#1c1c24', false, true, 0));
-    for (const f of this.figures.values()) add(f.i + f.j + 0.2, () => this.drawFigure(f));
-    items.sort((a, b) => a.depth - b.depth);
-    for (const it of items) it.draw();
+    const a = up(iso(i, j), z);
+    const b = up(iso(i + w, j), z);
+    const c = up(iso(i + w, j + d), z);
+    const e = up(iso(i, j + d), z);
+    outlinedPoly(ctx, [e, c, up(c, h), up(e, h)], shade(top, 0.78), OUT);
+    outlinedPoly(ctx, [c, b, up(b, h), up(c, h)], shade(top, 0.62), OUT);
+    outlinedPoly(ctx, [up(a, h), up(b, h), up(c, h), up(e, h)], top, OUT);
   }
 
-  private wallRect(i0: number, i1: number, low: number, high: number, color: string): void {
+  /** A flat panel on the back wall (j = 0), from i0 to i1 and from height lo to hi. */
+  private onBackWall(i0: number, i1: number, lo: number, hi: number, color: string, outline = true): void {
     const a = iso(i0, 0);
     const b = iso(i1, 0);
-    quad(this.ctx, [[a[0], a[1] - low], [b[0], b[1] - low], [b[0], b[1] - high], [a[0], a[1] - high]], color);
+    const pts: Pt[] = [up(a, lo), up(b, lo), up(b, hi), up(a, hi)];
+    if (outline) outlinedPoly(this.ctx, pts, color, OUT); else fillPoly(this.ctx, pts, color);
+  }
+
+  /** A flat panel on the left wall (i = 0), from j0 to j1. */
+  private onLeftWall(j0: number, j1: number, lo: number, hi: number, color: string, outline = true): void {
+    const a = iso(0, j0);
+    const b = iso(0, j1);
+    const pts: Pt[] = [up(a, lo), up(b, lo), up(b, hi), up(a, hi)];
+    if (outline) outlinedPoly(this.ctx, pts, color, OUT); else fillPoly(this.ctx, pts, color);
+  }
+
+  private floorTile(i: number, j: number, w: number, d: number, color: string): void {
+    fillPoly(this.ctx, [iso(i, j), iso(i + w, j), iso(i + w, j + d), iso(i, j + d)], color);
+  }
+
+  private px(x: number, y: number, w: number, h: number, color: string): void {
+    this.ctx.fillStyle = color;
+    this.ctx.fillRect(Math.round(x), Math.round(y), w, h);
+  }
+
+  private sprite(img: HTMLCanvasElement, i: number, j: number, dx = 0, dy = 0, sh?: number): void {
+    const [x, y] = iso(i, j);
+    const h = sh ?? img.height;
+    this.ctx.drawImage(img, 0, 0, img.width, h, Math.round(x - img.width / 2 + dx), Math.round(y - h + dy), img.width, h);
+  }
+
+  private bubble(i: number, j: number, name: string, lift: number): void {
+    const [x, y] = iso(i, j);
+    const bx = Math.round(x) - 5;
+    const by = Math.round(y) - lift - 11;
+    this.px(bx, by + 1, 10, 7, OUT);
+    this.px(bx + 1, by, 8, 9, OUT);
+    this.px(bx + 1, by + 1, 8, 7, '#ffffff');
+    this.px(bx + 3, by + 9, 2, 1, OUT);
+    this.px(bx + 3, by + 10, 1, 1, OUT);
+    this.ctx.drawImage(icon(name), bx + 2, by + 1);
+  }
+
+  // -------------------------------------------------------------------------
+
+  private sky: HTMLCanvasElement | null = null;
+  private ground: { img: HTMLCanvasElement; x: number; y: number } | null = null;
+  private props: { depth: number; img: HTMLCanvasElement; x: number; y: number; anim?: () => void }[] = [];
+  private builtFor = '';
+
+  /** Renders `fn` into an off-screen copy of the scene and returns the drawn part. */
+  private capture(fn: () => void): { img: HTMLCanvasElement; x: number; y: number } {
+    const full = document.createElement('canvas');
+    full.width = SCENE_W;
+    full.height = SCENE_H;
+    const saved = this.ctx;
+    this.ctx = full.getContext('2d')!;
+    fn();
+    const data = this.ctx.getImageData(0, 0, SCENE_W, SCENE_H).data;
+    this.ctx = saved;
+    let x0 = SCENE_W, y0 = SCENE_H, x1 = -1, y1 = -1;
+    for (let y = 0; y < SCENE_H; y++) {
+      for (let x = 0; x < SCENE_W; x++) {
+        if (data[(y * SCENE_W + x) * 4 + 3] === 0) continue;
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+    const img = document.createElement('canvas');
+    img.width = Math.max(1, x1 - x0 + 1);
+    img.height = Math.max(1, y1 - y0 + 1);
+    if (x1 >= 0) img.getContext('2d')!.drawImage(full, x0, y0, img.width, img.height, 0, 0, img.width, img.height);
+    return { img, x: x0, y: y0 };
+  }
+
+  /** Everything that does not move is drawn once, and again only when the club colour or the trophies change. */
+  private build(): void {
+    const key = `${this.color}|${this.extras.titles}|${this.extras.finals}`;
+    if (key === this.builtFor) return;
+    this.builtFor = key;
+    this.sky = this.capture(() => {
+      for (let y = 0; y < SCENE_H; y += 4) this.px(0, y, SCENE_W, 4, mix('#7cc6f2', '#d7eef9', y / SCENE_H));
+    }).img;
+    this.ground = this.capture(() => {
+      fillPoly(this.ctx, [iso(-1.4, -1.4), iso(LEN_I + 1.4, -1.4), iso(LEN_I + 1.4, ROOM_J + 1.8), iso(-1.4, ROOM_J + 1.8)], '#79b84a');
+      for (let k = 0; k < 30; k++) {
+        const gi = ((k * 7.31) % (LEN_I + 2.4)) - 1.2;
+        const gj = ROOM_J + 0.35 + ((k * 3.17) % 1.3);
+        const [x, y] = iso(gi, gj);
+        const flower = k % 5 === 0 || k % 7 === 0;
+        this.px(x, y, flower ? 2 : 1, flower ? 2 : 3, k % 5 === 0 ? '#f6e05e' : k % 7 === 0 ? '#f08aa6' : '#5e9a35');
+      }
+      fillPoly(this.ctx, [iso(LEN_I, ROOM_J), iso(LEN_I, 0), up(iso(LEN_I, 0), -4), up(iso(LEN_I, ROOM_J), -4)], '#8c8c94');
+      fillPoly(this.ctx, [iso(0, ROOM_J), iso(LEN_I, ROOM_J), up(iso(LEN_I, ROOM_J), -4), up(iso(0, ROOM_J), -4)], '#a7a7ae');
+      this.drawFloors();
+      this.drawWalls();
+    });
+    this.props = [];
+    const add = (depth: number, draw: () => void, anim?: () => void) => {
+      const c = this.capture(draw);
+      this.props.push({ depth, img: c.img, x: c.x, y: c.y, anim });
+    };
+    this.addTraining(add);
+    this.addLounge(add);
+    this.addOffice(add);
+  }
+
+  private draw(): void {
+    this.build();
+    const ctx = this.ctx;
+    ctx.drawImage(this.sky!, 0, 0);
+    for (const [cx, cy, w] of [[30, 16, 22], [150, 8, 30], [232, 30, 18]] as const) {
+      const x = ((cx + this.time * 2) % (SCENE_W + 40)) - 20;
+      this.px(x, cy, w, 5, '#ffffff');
+      this.px(x + 4, cy - 3, w - 10, 3, '#ffffff');
+    }
+    ctx.drawImage(this.ground!.img, this.ground!.x, this.ground!.y);
+    this.drawTv();
+    // Furniture and people, back to front.
+    const items: { depth: number; draw: () => void }[] = this.props.map((p) => ({
+      depth: p.depth,
+      draw: () => { ctx.drawImage(p.img, p.x, p.y); p.anim?.(); },
+    }));
+    for (const f of this.figures.values()) items.push({ depth: this.figureDepth(f), draw: () => this.drawFigure(f) });
+    items.sort((a, b) => a.depth - b.depth);
+    for (const it of items) it.draw();
+    for (const f of this.figures.values()) this.drawBubble(f);
+  }
+
+  private drawTv(): void {
+    const tv = Math.floor(this.time * 2) % 4;
+    this.onBackWall(7.4, 8.6, 17, 29, ['#3ea55a', '#46b062', '#3ea55a', '#4fb96b'][tv]!, false);
+    this.onBackWall(7.6 + (tv % 2) * 0.3, 7.8 + (tv % 2) * 0.3, 21, 23, '#3a7bd5', false);
+    this.onBackWall(8.2 - (tv % 2) * 0.2, 8.4 - (tv % 2) * 0.2, 23, 25, '#d9572b', false);
+  }
+
+  private drawFloors(): void {
+    // Training: blue carpet tiles.
+    for (let i = 0; i < 5; i++) for (let j = 0; j < ROOM_J; j++) this.floorTile(i, j, 1, 1, (i + j) % 2 ? '#5d74a8' : '#6880b4');
+    // Lounge: wooden planks in staggered rows.
+    for (let r = 0; r < ROOM_J * 2; r++) {
+      for (let i = 5 - (r % 2); i < 9; i += 2) {
+        const i0 = Math.max(5, i);
+        const i1 = Math.min(9, i + 2);
+        this.floorTile(i0, r / 2, i1 - i0, 0.5, (Math.floor(i) + r) % 3 === 0 ? '#c99256' : r % 2 ? '#d6a066' : '#c98f54');
+      }
+    }
+    // Office: green carpet.
+    for (let i = 9; i < LEN_I; i++) for (let j = 0; j < ROOM_J; j++) this.floorTile(i, j, 1, 1, (i + j) % 2 ? '#5e9a6e' : '#67a576');
+    // Rugs.
+    this.floorTile(6, 1.85, 1.9, 1.15, '#a8403d');
+    this.floorTile(6.12, 1.97, 1.66, 0.91, '#e07a5f');
+    this.floorTile(9.6, 2.4, 1.8, 1.4, '#e8d9a8');
+    this.floorTile(9.72, 2.52, 1.56, 1.16, '#f3e8c4');
+    // Sunlight from the windows.
+    this.ctx.globalAlpha = 0.16;
+    fillPoly(this.ctx, [iso(5.6, 0), iso(6.8, 0), iso(7.6, 1.6), iso(6.4, 1.6)], '#fff8d8');
+    fillPoly(this.ctx, [iso(10.95, 0), iso(11.65, 0), iso(12, 1.0), iso(11.6, 1.6)], '#fff8d8');
+    this.ctx.globalAlpha = 1;
+    // Thresholds between the rooms.
+    for (const bi of [5, 9]) fillPoly(this.ctx, [iso(bi - 0.04, 0), iso(bi + 0.04, 0), iso(bi + 0.04, ROOM_J), iso(bi - 0.04, ROOM_J)], '#8a6a4a');
+    // Front edge of the floor.
+    fillPoly(this.ctx, [iso(0, ROOM_J), iso(LEN_I, ROOM_J), up(iso(LEN_I, ROOM_J), 2), up(iso(0, ROOM_J), 2)], '#3d2a20');
+  }
+
+  private drawWalls(): void {
+    const zones: [number, number, string, string][] = [[0, 5, '#e6eef7', '#d7e3f0'], [5, 9, '#f7e8c6', '#efdcb2'], [9, LEN_I, '#e4f0dc', '#d6e6cc']];
+    for (const [i0, i1, a, b] of zones) {
+      for (let i = i0; i < i1; i += 0.5) this.onBackWall(i, i + 0.5, 0, WALL, Math.round(i * 2) % 2 ? b : a, false);
+      this.onBackWall(i0, i1, 0, 8, '#a8693c', false); // wainscot
+      this.onBackWall(i0, i1, 8, 9, '#7b4a2a', false);
+    }
+    for (let j = 0; j < ROOM_J; j += 0.5) this.onLeftWall(j, j + 0.5, 0, WALL, Math.round(j * 2) % 2 ? '#c9d6e6' : '#d3deeb', false);
+    this.onLeftWall(0, ROOM_J, 0, 8, '#935b33', false);
+    this.onLeftWall(0, ROOM_J, 8, 9, '#6d4226', false);
+    // Wall caps and the corner.
+    fillPoly(this.ctx, [up(iso(0, 0), WALL), up(iso(LEN_I, 0), WALL), up(iso(LEN_I, -0.2), WALL), up(iso(0, -0.2), WALL)], '#8a5a3a');
+    fillPoly(this.ctx, [up(iso(-0.2, ROOM_J), WALL), up(iso(0, ROOM_J), WALL), up(iso(0, -0.2), WALL), up(iso(-0.2, -0.2), WALL)], '#7a4e32');
+    const [cx, cy] = iso(0, 0);
+    this.px(cx, cy - WALL, 1, WALL, OUT);
+
+    // Training room: club banner, tactics whiteboard, clock; posters on the left wall.
+    this.onBackWall(0.4, 1.2, 13, 36, this.color);
+    this.onBackWall(0.4, 1.2, 13, 16, shade(this.color, 0.7), false);
+    this.star(0.8, 27);
+    this.onBackWall(1.8, 3.6, 14, 33, '#fbfbfb');
+    this.tactics();
+    this.onBackWall(4.1, 4.6, 26, 34, '#ffffff');
+    this.clockHands(4.35, 30);
+    this.onLeftWall(1.0, 2.0, 16, 34, '#f2b84b');
+    this.onLeftWall(1.15, 1.85, 20, 30, '#e05a4a', false);
+    this.onLeftWall(2.8, 3.8, 16, 34, '#59b36b');
+    this.onLeftWall(2.95, 3.65, 21, 31, '#2f6fbf', false);
+    // Lounge: window and a TV showing a match.
+    this.window(5.5, 6.9);
+    this.onBackWall(7.3, 8.7, 15, 31, '#22252e');
+    // Office: window and framed certificates.
+    this.window(10.9, 11.7);
+    this.onBackWall(9.3, 9.9, 20, 30, '#f7f1dc');
+    this.onBackWall(9.4, 9.8, 22, 28, '#e8cf7a', false);
+    this.onBackWall(10.0, 10.6, 20, 30, '#f7f1dc');
+    this.onBackWall(10.1, 10.5, 22, 28, '#9cc3e6', false);
+  }
+
+  private window(i0: number, i1: number): void {
+    this.onBackWall(i0, i1, 14, 34, '#f4f4f4');
+    this.onBackWall(i0 + 0.1, i1 - 0.1, 16, 32, '#9fd8f7', false);
+    this.onBackWall(i0 + 0.1, i1 - 0.1, 26, 32, '#c6ecff', false);
+    const mid = (i0 + i1) / 2;
+    this.onBackWall(mid - 0.04, mid + 0.04, 16, 32, '#f4f4f4', false);
+    this.onBackWall(i0 + 0.1, i1 - 0.1, 23, 24, '#f4f4f4', false);
+  }
+
+  private star(i: number, h: number): void {
+    const [x, y] = up(iso(i, 0), h);
+    const X = Math.round(x);
+    const Y = Math.round(y);
+    // A five-point star, 7x7.
+    const rows = ['...y...', '...y...', 'yyyyyyy', '.yyyyy.', '..yyy..', '.yy.yy.', 'yy...yy'];
+    rows.forEach((r, dy) => { for (let dx = 0; dx < r.length; dx++) if (r[dx] === 'y') this.px(X - 3 + dx, Y - 3 + dy, 1, 1, '#ffe680'); });
+  }
+
+  private tactics(): void {
+    const dot = (i: number, h: number, c: string) => { const [x, y] = up(iso(i, 0), h); this.px(x, y, 2, 2, c); };
+    dot(2.1, 28, '#3a7bd5');
+    dot(2.3, 21, '#3a7bd5');
+    dot(2.6, 26, '#3a7bd5');
+    dot(3.2, 29, '#d9572b');
+    dot(3.3, 21, '#d9572b');
+    for (let k = 0; k < 7; k++) { const [x, y] = up(iso(2.4 + k * 0.1, 0), 24 + k * 0.7); this.px(x, y, 1, 1, '#4a4a4a'); }
+  }
+
+  private clockHands(i: number, h: number): void {
+    const [x, y] = up(iso(i, 0), h);
+    this.px(x, y - 2, 1, 3, OUT);
+    this.px(x, y, 2, 1, OUT);
+  }
+
+  private addTraining(add: (d: number, f: () => void, anim?: () => void) => void): void {
+    DESKS.forEach(([di, dj], k) => {
+      add(di + dj + 0.6, () => {
+        // Legs, desk top, PC tower, monitor and keyboard.
+        this.box(di + 0.02, dj + 0.38, 0.08, 0.08, 8, '#7a4a28');
+        this.box(di + 0.8, dj + 0.38, 0.08, 0.08, 8, '#7a4a28');
+        this.box(di, dj, 0.9, 0.5, 2, '#b87a46', 8);
+        this.box(di + 0.72, dj + 0.05, 0.16, 0.3, 9, '#3b3f4c', 10);
+        this.box(di + 0.15, dj + 0.06, 0.5, 0.1, 9, '#22252e', 10);
+        this.box(di + 0.2, dj + 0.25, 0.4, 0.12, 1, '#e8e8ee', 10);
+      }, () => {
+        const lit = Math.sin(this.time * 4 + k) > -0.6;
+        const [x, y] = iso(di + 0.15, dj + 0.16);
+        this.px(x + 2, y - 18, 7, 5, lit ? '#7fe3ff' : '#4fb6e8');
+        this.px(x + 3, y - 17, 2, 1, '#ffffff');
+      });
+      // Gaming chair: its back is between the player and the viewer.
+      const [si, sj] = SEAT([di, dj]);
+      add(si + sj + 0.3, () => {
+        this.box(si - 0.04, sj + 0.1, 0.08, 0.08, 4, '#555555');
+        this.box(si - 0.18, sj + 0.02, 0.36, 0.3, 3, '#2b2b33', 4);
+        this.box(si - 0.2, sj + 0.25, 0.4, 0.08, 8, k % 2 ? '#c0392b' : '#2d6cdf', 6);
+      });
+    });
+    // PC rack with blinking lights in the corner, and a plant.
+    add(0.15 + 4.2 + 0.7, () => {
+      this.box(0.15, 4.2, 0.35, 0.35, 18, '#2b2f3a');
+    }, () => {
+      const [x, y] = iso(0.15, 4.55);
+      for (let k = 0; k < 3; k++) this.px(x + 2, y - 14 + k * 3, 1, 1, Math.sin(this.time * 6 + k * 2) > 0 ? '#5df27a' : '#235c30');
+    });
+    add(4.55 + 0.3 + 0.6, () => this.plant(4.55, 0.3));
+  }
+
+  private addLounge(add: (d: number, f: () => void, anim?: () => void) => void): void {
+    // Sofa.
+    add(6.0, () => { // behind the people sitting on it
+      this.box(5.35, 0.25, 2.2, 0.22, 14, '#c64a3f');
+      this.box(5.35, 0.35, 2.2, 0.55, 6, '#d9574a');
+      this.box(5.25, 0.3, 0.2, 0.65, 10, '#b5413a');
+      this.box(7.5, 0.3, 0.2, 0.65, 10, '#b5413a');
+    });
+    // Coffee table with cups.
+    add(6.4 + 2.1 + 1.0, () => {
+      this.box(6.4, 2.1, 0.9, 0.5, 5, '#8a5a34');
+      const [x, y] = up(iso(6.7, 2.3), 5);
+      this.px(x, y - 3, 2, 3, '#ffffff');
+      this.px(x + 6, y - 1, 2, 3, '#ffffff');
+    });
+    // Beds.
+    for (const [bi, bj] of BEDS) {
+      add(bi + bj + 1.6, () => {
+        this.box(bi, bj - 0.05, 1.0, 0.12, 14, '#7a4a28');
+        this.box(bi, bj, 1.0, 1.5, 5, '#8a5a34');
+        this.box(bi + 0.05, bj + 0.05, 0.9, 1.4, 3, '#f4f4f8', 5);
+        this.box(bi + 0.1, bj + 0.1, 0.8, 0.35, 2, '#ffffff', 8);
+      });
+    }
+    // Vending machine and a plant.
+    add(8.25 + 0.2 + 1.0, () => {
+      this.box(8.25, 0.2, 0.6, 0.5, 28, '#d23c3c');
+      const [x, y] = iso(8.25, 0.7);
+      this.px(x + 2, y - 25, 5, 9, '#ffe9a8');
+      for (let k = 0; k < 3; k++) this.px(x + 2 + k * 2, y - 13, 1, 2, ['#5ab0ee', '#f2b84b', '#59b36b'][k]!);
+    });
+    add(8.55 + 4.4 + 0.5, () => this.plant(8.55, 4.4));
+  }
+
+  private addOffice(add: (d: number, f: () => void, anim?: () => void) => void): void {
+    // Bookshelf.
+    add(9.25 + 0.2 + 0.5, () => {
+      this.box(9.25, 0.2, 1.0, 0.35, 32, '#8a5a34');
+      const [x, y] = iso(9.25, 0.55);
+      const colors = ['#c0392b', '#2d6cdf', '#f2b84b', '#59b36b', '#9b59b6', '#e67e22'];
+      for (let row = 0; row < 3; row++) {
+        for (let k = 0; k < 6; k++) this.px(x + 2 + k * 2 + Math.round(k * 0.3), y - 28 + row * 9 + k, 2, 6, colors[(k + row * 2) % colors.length]!);
+      }
+    });
+    // Trophy cabinet: one gold cup per title, a silver one per lost final.
+    add(11.3 + 0.2 + 0.6, () => {
+      this.box(11.3, 0.2, 0.6, 0.4, 30, '#6b4a2b');
+      const [x, y] = iso(11.3, 0.6);
+      this.px(x + 2, y - 27, 5, 22, '#cfe8f7');
+      const gold = Math.min(4, this.extras.titles);
+      const silver = Math.max(0, Math.min(4 - gold, this.extras.finals));
+      for (let k = 0; k < gold + silver; k++) {
+        const c = k < gold ? '#f2c230' : '#c9cdd6';
+        this.px(x + 3, y - 25 + k * 5, 3, 2, c);
+        this.px(x + 4, y - 23 + k * 5, 1, 1, c);
+        this.px(x + 3, y - 22 + k * 5, 3, 1, c);
+      }
+    });
+    // You, behind the desk; the desk with a laptop; the guest chair.
+    add(MANAGER[0] + MANAGER[1], () => this.sprite(chibi(this.manager, 'stand'), MANAGER[0], MANAGER[1], 0, -2, 15));
+    add(9.85 + 1.55 + 1.5, () => {
+      this.box(9.85, 1.55, 1.3, 0.55, 10, '#a86f3e');
+      this.box(10.2, 1.62, 0.5, 0.3, 1, '#3b3f4c', 10);
+      this.box(10.25, 1.62, 0.4, 0.06, 6, '#3b3f4c', 11);
+      const [x, y] = iso(10.25, 1.68);
+      this.px(x + 1, y - 16, 4, 3, '#9fe0ff');
+      this.box(10.85, 1.65, 0.15, 0.15, 3, '#f4f4f4', 10);
+    });
+    add(GUEST[0] + GUEST[1] + 0.3, () => this.box(GUEST[0] - 0.2, GUEST[1] + 0.25, 0.4, 0.08, 8, '#6d4c8a', 5));
+    add(11.55 + 4.4 + 0.5, () => this.plant(11.55, 4.4));
+    add(9.35 + 4.2 + 0.6, () => {
+      this.box(9.35, 4.2, 0.5, 0.45, 14, '#9aa3b0');
+      this.box(9.35, 4.2, 0.5, 0.45, 1, '#c3cad4', 14);
+    });
+  }
+
+  private plant(i: number, j: number): void {
+    this.box(i, j, 0.3, 0.3, 6, '#b5653a');
+    const [x, y] = up(iso(i + 0.15, j + 0.15), 6);
+    const X = Math.round(x);
+    const Y = Math.round(y);
+    this.px(X - 5, Y - 12, 11, 11, OUT);
+    const leaves: [number, number, string][] = [[-4, -11, '#3e9a4a'], [0, -13, '#4fb35a'], [-2, -8, '#2f7d3a'], [2, -9, '#3e9a4a'], [-1, -5, '#4fb35a']];
+    for (const [dx, dy, c] of leaves) this.px(X + dx, Y + dy, 4, 4, c);
+  }
+
+  private onBed(f: Figure): boolean {
+    return f.path.length === 0 && BEDS.some((b) => { const [si, sj] = BED_SPOT(b); return Math.abs(f.i - si) < 0.05 && Math.abs(f.j - sj) < 0.05; });
+  }
+
+  /** Sleepers lie on top of their bed, so they are drawn after it. */
+  private figureDepth(f: Figure): number {
+    return this.onBed(f) ? f.i + f.j + 1.2 : f.i + f.j + 0.15;
   }
 
   private drawFigure(f: Figure): void {
     const walking = f.path.length > 0;
-    const sitting = !walking && (f.activity === 'TRAIN' || f.activity === 'TALK');
-    const lying = !walking && f.activity === 'REST';
-    this.person(f.i, f.j, f.color, f.hair, walking, sitting, f.phase, lying);
-    if (walking) return;
+    let frame: ChibiFrame = 'stand';
+    let dy = 0;
+    let crop: number | undefined;
+    if (walking) frame = Math.floor(this.time * 6 + f.phase) % 2 ? 'walkA' : 'walkB';
+    else if (f.activity === 'TRAIN' || f.activity === 'TALK') { frame = Math.floor(this.time * 5 + f.phase) % 2 ? 'typeA' : 'typeB'; dy = -3; }
+    else if (f.activity === 'REST') {
+      if (this.onBed(f)) { frame = 'sleep'; dy = -6; } else { crop = 15; dy = -3; }
+    }
     const [x, y] = iso(f.i, f.j);
-    const ctx = this.ctx;
-    ctx.font = '8px sans-serif';
-    ctx.fillStyle = '#e6e7ec';
-    const bob = Math.round(Math.sin(this.time * 2 + f.phase) * 1.5);
-    if (f.activity === 'REST') ctx.fillText('z', x + 3, y - 14 + bob);
-    if (f.activity === 'IDLE') ctx.fillText('…', x - 3, y - 19 + bob);
-    if (f.activity === 'TALK') { ctx.fillStyle = '#f2b84b'; ctx.fillText('!', x - 1, y - 19 + bob); }
+    if (frame !== 'sleep') this.px(x - 4, y - 1, 8, 2, 'rgba(40,20,10,0.28)');
+    const bob = !walking && f.activity === 'IDLE' ? Math.round(Math.sin(this.time * 1.5 + f.phase)) : 0;
+    this.sprite(chibi(f.look, frame, f.flip), f.i, f.j, 0, dy + bob, crop);
   }
 
-  /** A 7x12 pixel person standing (or sitting/lying) on tile point (i, j). */
-  private person(i: number, j: number, body: string, hair: string, walking: boolean, sitting: boolean, phase: number, lying = false): void {
-    const ctx = this.ctx;
-    const [sx, sy] = iso(i, j);
-    const x = Math.round(sx) - 3;
-    const y = Math.round(sy);
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.fillRect(x, y - 1, 7, 2);
-    if (lying) {
-      ctx.fillStyle = body; ctx.fillRect(x - 2, y - 6, 8, 3);
-      ctx.fillStyle = SKIN; ctx.fillRect(x + 6, y - 7, 3, 3);
-      ctx.fillStyle = hair; ctx.fillRect(x + 6, y - 8, 3, 1);
-      return;
-    }
-    const stride = walking ? (Math.floor((this.time * 8 + phase * 10) % 2) === 0 ? 1 : -1) : 0;
-    const lift = sitting ? 3 : 0;
-    if (!sitting) {
-      ctx.fillStyle = '#20232c';
-      ctx.fillRect(x + 1, y - 4 + Math.max(0, stride), 2, 4 - Math.max(0, stride));
-      ctx.fillRect(x + 4, y - 4 + Math.max(0, -stride), 2, 4 - Math.max(0, -stride));
-    }
-    const bob = walking ? Math.abs(stride) : 0;
-    ctx.fillStyle = body;
-    ctx.fillRect(x, y - 9 + lift - bob, 7, 5);
-    ctx.fillStyle = SKIN;
-    ctx.fillRect(x + 1, y - 13 + lift - bob, 5, 4);
-    ctx.fillStyle = hair;
-    ctx.fillRect(x + 1, y - 14 + lift - bob, 5, 2);
+  private drawBubble(f: Figure): void {
+    if (f.path.length > 0) return;
+    // Bubbles come and go so the scene stays readable.
+    if (Math.sin(this.time * 0.9 + f.phase * 2.3) <= 0.2) return;
+    const lift = f.activity === 'TRAIN' || f.activity === 'TALK' ? 18 : f.activity === 'REST' ? 10 : 20;
+    const name = f.activity === 'TALK' ? 'bang' : f.activity === 'REST' ? 'zzz' : f.activity === 'IDLE' ? 'dots' : 'note';
+    this.bubble(f.i, f.j, name, lift);
   }
 }

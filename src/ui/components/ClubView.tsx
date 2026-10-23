@@ -27,6 +27,9 @@ export function ClubView({ game, data, showPlayer }: { game: GameState; data: Ga
   }, []); // created once; colours and activities are pushed in below
 
   useEffect(() => { sceneRef.current?.setActivities(activities, game.club.color); }, [activities, game.club.color]);
+  const titles = game.history.filter((h) => h.playerPlayoff === 'CHAMPION').length;
+  const finals = game.history.filter((h) => h.playerPlayoff === 'FINAL').length;
+  useEffect(() => { sceneRef.current?.setExtras({ titles, finals }); }, [titles, finals]);
 
   const tap = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -37,9 +40,14 @@ export function ClubView({ game, data, showPlayer }: { game: GameState; data: Ga
   return (
     <section className="card club-view">
       <h3>俱乐部基地</h3>
-      <canvas ref={canvasRef} className="club-canvas" onClick={tap} aria-label="俱乐部基地：训练室、休息室、办公室" />
+      <div className="club-stage">
+        <canvas ref={canvasRef} className="club-canvas" onClick={tap} aria-label="俱乐部基地：训练室、休息室、办公室" />
+        <span className="room-tag" style={{ left: '46%', top: '11%' }}>训练室</span>
+        <span className="room-tag" style={{ left: '67%', top: '27%' }}>休息室</span>
+        <span className="room-tag" style={{ left: '84%', top: '39%' }}>办公室</span>
+      </div>
       <ul className="plain small-text">{activitySummary(game, activities).map((l) => <li key={l}>{l}</li>)}</ul>
-      <p className="dim small-text">点小人可以看选手详情。办公室里坐着的是你。</p>
+      <p className="dim small-text">点小人可以看选手详情。办公室里坐着的是你，奖杯柜里每拿一次冠军多一座金杯。</p>
     </section>
   );
 }

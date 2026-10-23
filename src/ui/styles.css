@@ -212,4 +212,6 @@ button.link.name { padding: 0; margin: 0; color: var(--text); font-weight: 600; 
 .save-text { width: 100%; min-height: 90px; margin: 8px 0; font: 12px/1.4 ui-monospace, monospace; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
 
 .club-view { padding-bottom: 10px; }
-.club-canvas { display: block; width: 100%; aspect-ratio: 244 / 160; image-rendering: pixelated; background: #0d0f14; border-radius: 8px; cursor: pointer; touch-action: manipulation; }
+.club-stage { position: relative; }
+.room-tag { position: absolute; transform: translate(-50%, -50%); padding: 1px 6px; border-radius: 4px; background: #5a3a22; color: #fff3d6; border: 1px solid #2a1a14; font-size: 11px; font-weight: 700; pointer-events: none; white-space: nowrap; }
+.club-canvas { display: block; width: 100%; aspect-ratio: 256 / 176; image-rendering: pixelated; background: #0d0f14; border-radius: 8px; cursor: pointer; touch-action: manipulation; }

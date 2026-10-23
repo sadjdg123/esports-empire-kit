@@ -4,7 +4,7 @@
 > 多 Agent 模式下，每个 Agent 只改自己负责的行。
 
 **当前阶段**：P1（任务书：docs/06_P1_TASKS.md）
-**当前任务**：GATE-3（等门哥试玩一个完整赛季）
+**当前任务**：画面升级 V1（公司画面开罗风样图已出，等门哥看风格并回答 R1–R3，见 docs/07_VISUAL_TASKS.md）
 **最近更新**：2026-10-22
 
 | 任务 | 名称 | 负责 | 状态 | 完成日期 | 备注 |
@@ -39,4 +39,15 @@
 | T18 | 界面升级 | Claude Code | ✅ 完成 | 2026-10-23 | 汇报：docs/reports/T18.md；截图 docs/reports/t18/ |
 | T19 | 斜视角俱乐部场景（最简） | Claude Code | ✅ 完成 | 2026-10-23 | 汇报：docs/reports/T19.md；截图 docs/reports/t19/ |
 | T20 | P1 整合与多赛季验收 | Claude Code | ✅ 完成 | 2026-10-23 | 汇报：docs/reports/T20.md；20 赛季报告 docs/reports/seasons-20261023.md |
-| GATE-3 | P1 关卡（门哥玩完一个赛季） | 门哥 | 👀 等门哥试玩 | | 总结：docs/reports/GATE-3.md；试玩指南 docs/PLAYTEST.md |
+| GATE-3 | P1 关卡（门哥玩完一个赛季） | 门哥 | 👀 已收到画面反馈（D41），试玩问题待答 | | 总结：docs/reports/GATE-3.md；试玩指南 docs/PLAYTEST.md |
+
+## 画面升级（GATE-3 反馈，任务书 docs/07_VISUAL_TASKS.md）
+
+| 任务 | 名称 | 负责 | 状态 | 完成日期 | 备注 |
+|---|---|---|---|---|---|
+| V1 | 公司画面（开罗风） | Claude Code | 🔄 样图已出，等确认风格 | | 样图 docs/reports/v1-club-sample.png |
+| V2 | 英雄和选手的像素形象 | | ⬜ | | |
+| V3 | 对战地图重绘 | | ⬜ | | |
+| V4 | 比赛表现与走位（只改画面） | | ⬜ | | |
+| V5 | 真实走位 AI（可选） | | ⬜ 待定 | | 会改变比赛结果 |
+| V6 | 界面皮肤（可选） | | ⬜ 待定 | | |
