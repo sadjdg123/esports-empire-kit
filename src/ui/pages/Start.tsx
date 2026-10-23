@@ -3,13 +3,16 @@ import type { GameData } from '../../core/types';
 import { newGame, type GameState } from '../../game';
 import { CLUB_COLORS, money } from '../labels';
 
-export function StartPage({ data, onStart, onCancel, hasGame }: { data: GameData; onStart: (g: GameState) => void; onCancel?: () => void; hasGame: boolean }) {
+export function StartPage({ data, onStart, onCancel, hasGame, ask }: { data: GameData; onStart: (g: GameState) => void; onCancel?: () => void; hasGame: boolean; ask: (text: string, yes: string, onYes: () => void) => void }) {
   const [name, setName] = useState('');
   const [color, setColor] = useState(CLUB_COLORS[0]!);
   const start = () => {
-    if (hasGame && !window.confirm('开始新游戏会替换当前进度（旧存档会保留一份备份）。确定吗？')) return;
-    const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
-    onStart(newGame(name.trim() || '无名战队', color, seed, data));
+    const go = () => {
+      const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+      onStart(newGame(name.trim() || '无名战队', color, seed, data));
+    };
+    if (hasGame) ask('开始新游戏会替换当前进度（旧存档会保留一份备份）。', '开始新游戏', go);
+    else go();
   };
   return (
     <div className="start">

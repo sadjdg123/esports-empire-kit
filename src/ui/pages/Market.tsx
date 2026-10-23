@@ -5,7 +5,7 @@ import type { PageProps } from '../App';
 import { Attrs, Form, Heroes, Ovr, Roles } from '../components/PlayerBits';
 import { ROLE_NAME, money } from '../labels';
 
-export function MarketPage({ game, data, act, go, flash }: PageProps) {
+export function MarketPage({ game, data, act, go, flash, ask }: PageProps) {
   const [role, setRole] = useState<Role | 'ALL'>('ALL');
   const [sort, setSort] = useState<'ovr' | 'salary' | 'value'>('ovr');
   const f = financeSummary(game, data);
@@ -23,9 +23,10 @@ export function MarketPage({ game, data, act, go, flash }: PageProps) {
   };
   const release = (id: string) => {
     const p = game.players[id]!;
-    if (!window.confirm(`与 ${p.name} 解约需要支付违约金 ${money(releaseFee(data, p))}，确定吗？`)) return;
-    const r = act((d) => releasePlayer(d, data, id));
-    flash(r.ok ? `已与 ${p.name} 解约` : r.error);
+    ask(`与 ${p.name} 解约需要支付违约金 ${money(releaseFee(data, p))}。`, '确认解约', () => {
+      const r = act((d) => releasePlayer(d, data, id));
+      flash(r.ok ? `已与 ${p.name} 解约` : r.error);
+    });
   };
 
   return (

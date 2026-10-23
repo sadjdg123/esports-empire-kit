@@ -3,6 +3,7 @@ import { loadGameData } from '../core/config';
 import type { GameData } from '../core/types';
 import type { GameState, Result, WeekSummary } from '../game';
 import { loadGame, saveGame, type LoadOutcome } from '../save';
+import { ConfirmDialog, type ConfirmRequest } from './components/Confirm';
 import { FundsBar } from './components/FundsBar';
 import { Nav } from './components/Nav';
 import { FinancePage } from './pages/Finance';
@@ -26,6 +27,8 @@ export interface PageProps {
   act: <T>(fn: (draft: GameState) => Result<T>) => Result<T>;
   go: (page: Page, opts?: { reportRound?: number }) => void;
   flash: (text: string) => void;
+  /** Ask the player to confirm before `onYes` runs. */
+  ask: (text: string, yes: string, onYes: () => void) => void;
 }
 
 const data = loadGameData();
@@ -46,6 +49,9 @@ export function App() {
       : first.outcome.status === 'failed' ? `存档无法读取：${first.outcome.error}。原存档没有被删除；你可以在“设置”里导入备份文件，或开始新游戏。` : null,
   );
   const [toast, setToast] = useState<string | null>(null);
+  const [confirmReq, setConfirmReq] = useState<ConfirmRequest | null>(null);
+  const ask = useCallback((text: string, yes: string, onYes: () => void) => setConfirmReq({ text, yes, onYes }), []);
+  const dialog = confirmReq && <ConfirmDialog req={confirmReq} close={() => setConfirmReq(null)} />;
   const toastTimer = useRef<number | undefined>(undefined);
   const loadFailed = useRef(first.outcome.status === 'failed');
 
@@ -96,15 +102,17 @@ export function App() {
         <StartPage
           data={data}
           hasGame={!!game}
+          ask={ask}
           onStart={(g) => { setGame(g); setLastWeek(null); go('market'); flash('俱乐部成立！先去自由市场签下至少 5 名选手。'); }}
           onCancel={game ? () => go('home') : undefined}
         />
         {toast && <div className="toast">{toast}</div>}
+        {dialog}
       </div>
     );
   }
 
-  const props: PageProps = { game, data, act, go, flash };
+  const props: PageProps = { game, data, act, go, flash, ask };
   return (
     <div className="app">
       <FundsBar game={game} data={data} />
@@ -121,6 +129,7 @@ export function App() {
         {page === 'match' && <MatchPage {...props} onDone={(summary) => { setLastWeek(summary); }} />}
       </main>
       {toast && <div className="toast">{toast}</div>}
+      {dialog}
     </div>
   );
 }
