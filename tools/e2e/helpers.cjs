@@ -11,6 +11,20 @@ async function closeWindows(p) {
   }
 }
 
+/**
+ * True once the season has no matches left; then the "进入第 N 赛季" button is on screen.
+ * The summary opens by itself only once, and closeWindows may have just closed it: the overview has the same button.
+ */
+async function seasonOver(p) {
+  if (!(await p.locator('.hud button:has-text("下一场")').isDisabled())) return false;
+  if (!(await p.locator('button:has-text("进入第")').count())) {
+    await p.click('.menu-btn');
+    await p.click('.menu-grid button:has-text("概况")');
+  }
+  await p.waitForSelector('button:has-text("进入第")', { timeout: 5000 });
+  return true;
+}
+
 /** Opens a window from the menu ('主页' just goes back to the base). */
 async function nav(p, label) {
   await closeWindows(p);
@@ -31,4 +45,4 @@ async function playMatch(p) {
   return p.textContent('.report h2');
 }
 
-module.exports = { closeWindows, nav, playMatch };
+module.exports = { closeWindows, nav, playMatch, seasonOver };

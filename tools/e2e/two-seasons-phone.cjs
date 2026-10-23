@@ -58,7 +58,7 @@ const SHOTS = 'docs/reports/v1';
   const playSeason = async (season) => {
     for (let i = 0; i < 30; i++) {
       await helpers.closeWindows(p);
-      if (await p.locator(`button:has-text("进入第 ${season + 1} 赛季")`).count()) return;
+      if (await helpers.seasonOver(p)) return;
       if (i === 3) await reloadCheck(`season ${season} round 3`);
       await p.click('.hud button:has-text("下一场")');
       const h = await playMatch();

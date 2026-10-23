@@ -3,6 +3,7 @@ import { validateLineup } from '../../core/config';
 import { DEFAULT_MASTERY, ROLES, TACTICS, type Pick, type Role, type Tactic, type TeamLineup } from '../../core/types';
 import { PLAYER_CLUB_ID, recommendLineup, rosterOf, setLineup } from '../../game';
 import type { PageProps } from '../App';
+import { HeroSprite } from '../components/HeroSprite';
 import { Fatigue, Form, Ovr } from '../components/PlayerBits';
 import { ARCHETYPE_NAME, ROLE_NAME } from '../labels';
 
@@ -89,7 +90,15 @@ export function LineupPage({ game, data, act, go, flash }: PageProps) {
                   ))}
                 </select>
                 {mastery !== null && <div className={mastery >= 70 ? 'good' : mastery < 45 ? 'bad' : 'dim'}>熟练度 {Math.round(mastery)}{mastery < 45 ? '：不熟练，技能效果差' : ''}</div>}
-                {pick?.heroId && <div className="dim small-text">{data.heroById[pick.heroId]?.skill.name}：{data.heroById[pick.heroId]?.skill.description}</div>}
+                {pick?.heroId && data.heroById[pick.heroId] && (
+                  <div className="hero-pick">
+                    <HeroSprite heroId={pick.heroId} archetype={data.heroById[pick.heroId]!.archetype} color={game.club.color} />
+                    <div className="dim small-text">
+                      <b>{data.heroById[pick.heroId]!.name}</b> · {data.heroById[pick.heroId]!.title}<br />
+                      {data.heroById[pick.heroId]!.skill.name}：{data.heroById[pick.heroId]!.skill.description}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

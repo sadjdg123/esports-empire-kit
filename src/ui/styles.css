@@ -240,3 +240,5 @@ button.link.name { padding: 0; margin: 0; color: var(--text); font-weight: 600; 
 .canvas-host { background: #0d0f14; }
 .win-close { color: var(--text); text-shadow: none; }
 .table button { white-space: nowrap; }
+.hero-pick { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+.hero-sprite { flex: none; image-rendering: pixelated; background: #d9e8c4; border: 2px solid var(--wood-dark); border-radius: 8px; }

@@ -79,7 +79,7 @@ const SHOTS = '/home/user/esports-empire-kit/docs/reports/v1';
   for (let i = 0; i < 30; i++) {
     if (await p.locator('button:has-text("进入第 2 赛季")').count()) break;
     await helpers.closeWindows(p);
-    if (await p.locator('button:has-text("进入第 2 赛季")').count()) break;
+    if (await helpers.seasonOver(p)) break;
     await p.click('.hud button:has-text("下一场")');
     const r = await helpers.playMatch(p);
     if (r) log.push(r);

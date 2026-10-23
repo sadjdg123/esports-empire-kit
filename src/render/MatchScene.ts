@@ -1,6 +1,9 @@
 // Top-down pixel view of a match. Reads snapshots only; never touches the sim state.
 import Phaser from 'phaser';
 import type { GameData, MatchEvent, RenderSnapshot, SnapshotUnit } from '../core/types';
+import { heroPose, updateHeroAnims, type HeroAnim } from './heroAnim';
+import { HERO_H, heroPalette, heroRows, type HeroFrame } from './pixel/heroArt';
+import { makeSprite } from './pixel/raster';
 import { lerpUnit, type MatchPlayer } from './player';
 
 export const VIEW = 720; // canvas size in pixels
@@ -18,17 +21,9 @@ export interface SceneOptions {
   onFps?: (fps: number) => void;
 }
 
-// 8x8 pixel figure, drawn at 2px per pixel. '#' = team colour, 'o' = skin, 'k' = dark outline.
-const FIGURE = [
-  '..kkkk..',
-  '..kook..',
-  '..kook..',
-  '.k####k.',
-  'k######k',
-  '.k####k.',
-  '..k##k..',
-  '..k..k..',
-];
+const HERO_SCALE = 2; // screen pixels per sprite pixel
+const HERO_TOP = (HERO_H - 3) * HERO_SCALE; // roughly the top of a hero's head above its feet
+const CHEST = 6 * HERO_SCALE;
 
 function hex(c: string): number {
   return Number.parseInt(c.replace('#', ''), 16);
@@ -38,6 +33,8 @@ interface HeroView {
   sprite: Phaser.GameObjects.Image;
   label: Phaser.GameObjects.Text;
   level: number;
+  heroId: string;
+  side: 'BLUE' | 'RED';
 }
 
 interface Fx {
@@ -49,8 +46,11 @@ interface Fx {
 export class MatchScene extends Phaser.Scene {
   private opts!: SceneOptions;
   private dyn!: Phaser.GameObjects.Graphics;
+  private hud!: Phaser.GameObjects.Graphics;
   private fxLayer!: Phaser.GameObjects.Graphics;
   private heroes = new Map<string, HeroView>();
+  private heroAnims = new Map<string, HeroAnim>();
+  private lastSnap!: RenderSnapshot;
   private fx: Fx[] = [];
   private nodeXY = new Map<string, { x: number; y: number }>();
   private frames = 0;
@@ -65,20 +65,12 @@ export class MatchScene extends Phaser.Scene {
   }
 
   create(): void {
-    const { data, colors } = this.opts;
-    for (const side of ['BLUE', 'RED'] as const) {
-      const g = this.make.graphics({}, false);
-      FIGURE.forEach((row, y) => [...row].forEach((ch, x) => {
-        if (ch === '.') return;
-        g.fillStyle(ch === '#' ? hex(colors[side]) : ch === 'o' ? 0xf1c9a0 : 0x111111, 1);
-        g.fillRect(x * 2, y * 2, 2, 2);
-      }));
-      g.generateTexture(`hero-${side}`, 16, 16);
-      g.destroy();
-    }
+    const { data } = this.opts;
     this.drawMap(data);
     this.dyn = this.add.graphics();
-    this.fxLayer = this.add.graphics();
+    this.fxLayer = this.add.graphics().setDepth(5);
+    this.hud = this.add.graphics().setDepth(10);
+    this.lastSnap = this.opts.player.cur;
     for (const n of data.match.map.nodes) this.nodeXY.set(n.id, { x: n.x, y: n.y });
   }
 
@@ -118,7 +110,11 @@ export class MatchScene extends Phaser.Scene {
     const p = this.opts.player;
     const snaps = p.advance(deltaMs / 1000);
     if (snaps.length > 0) {
-      for (const s of snaps) this.spawnFx(s);
+      for (const s of snaps) {
+        updateHeroAnims(this.heroAnims, this.lastSnap, s, this.time.now);
+        this.lastSnap = s;
+        this.spawnFx(s);
+      }
       this.opts.onTick(snaps);
     }
     this.render(p.prev, p.cur, p.alpha);
@@ -140,9 +136,22 @@ export class MatchScene extends Phaser.Scene {
     g.fillStyle(color, 1).fillRect(x - w / 2, y, Math.max(0, w * frac), 3);
   }
 
+  /** The texture for one hero frame in one team colour, made on first use. */
+  private heroTexture(heroId: string, side: 'BLUE' | 'RED', frame: HeroFrame): string {
+    const key = `hero:${heroId}:${side}:${frame}`;
+    if (!this.textures.exists(key)) {
+      const archetype = this.opts.data.heroById[heroId]?.archetype;
+      this.textures.addCanvas(key, makeSprite(heroRows(heroId, frame, archetype), heroPalette(heroId, this.opts.colors[side], archetype)));
+    }
+    return key;
+  }
+
   private render(prev: RenderSnapshot, cur: RenderSnapshot, alpha: number): void {
     const g = this.dyn;
     g.clear();
+    const hud = this.hud;
+    hud.clear();
+    const now = this.time.now;
     const { colors } = this.opts;
     const teamColor = (side: 'BLUE' | 'RED' | null) => (side ? hex(colors[side]) : 0xcccccc);
 
@@ -183,12 +192,16 @@ export class MatchScene extends Phaser.Scene {
           break;
         }
         case 'HERO': {
+          const side = u.side ?? 'BLUE';
           let view = this.heroes.get(u.id);
           if (!view) {
+            const heroId = u.heroId ?? '';
             view = {
-              sprite: this.add.image(X, Y, `hero-${u.side}`).setScale(1.5),
-              label: this.add.text(X, Y, '', { fontSize: '10px', color: '#ffffff', fontFamily: 'sans-serif', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5, 1),
+              sprite: this.add.image(X, Y, this.heroTexture(heroId, side, 'stand')).setOrigin(0.5, 1).setScale(HERO_SCALE),
+              label: this.add.text(X, Y, '', { fontSize: '11px', color: '#ffffff', fontFamily: 'sans-serif', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(11),
               level: -1,
+              heroId,
+              side,
             };
             this.heroes.set(u.id, view);
           }
@@ -196,11 +209,23 @@ export class MatchScene extends Phaser.Scene {
             view.level = u.level ?? 1;
             view.label.setText(`${view.level} ${this.opts.names[u.playerId ?? ''] ?? ''}`);
           }
-          view.sprite.setPosition(X, Y).setAlpha(u.alive ? 1 : 0.15).setTint(u.stunned ? 0xaaaaff : 0xffffff);
-          view.label.setPosition(X, Y - 17).setAlpha(u.alive ? 1 : 0);
+          const anim = this.heroAnims.get(u.id);
+          const pose = anim ? heroPose(anim, now) : { frame: 'stand' as const, flip: side === 'RED', alpha: u.alive ? 1 : 0, bob: 0 };
+          view.sprite
+            .setTexture(this.heroTexture(view.heroId, side, pose.frame))
+            .setPosition(X, Y - pose.bob * HERO_SCALE)
+            .setFlipX(pose.flip)
+            .setAlpha(pose.alpha)
+            .setVisible(pose.alpha > 0)
+            .setDepth(1 + Y / 1000)
+            .setTint(u.stunned ? 0xaaaaff : 0xffffff);
+          view.label.setPosition(X, Y - HERO_TOP - 8).setAlpha(u.alive ? 1 : 0);
           if (u.alive) {
-            this.hpBar(g, X, Y - 16, 20, u.hp / u.maxHp, u.side === 'BLUE' ? 0x6fb3ff : 0xff7b7b);
-            if (u.shield && u.shield > 0) g.lineStyle(1.5, 0xffe27a, 1).strokeCircle(X, Y, 12);
+            // Team-coloured ring under the feet, so the sides stay easy to tell apart.
+            g.lineStyle(2, teamColor(side), 0.9).strokeEllipse(X, Y, 26, 9);
+            this.hpBar(hud, X, Y - HERO_TOP - 5, 24, u.hp / u.maxHp, side === 'BLUE' ? 0x6fb3ff : 0xff7b7b);
+            if (u.shield && u.shield > 0) hud.lineStyle(2, 0xffe27a, 0.9).strokeEllipse(X, Y - HERO_TOP / 2, 34, HERO_TOP + 8);
+            if (u.stunned) this.stunStars(hud, X, Y - HERO_TOP - 12, now);
           }
           break;
         }
@@ -209,9 +234,16 @@ export class MatchScene extends Phaser.Scene {
     // attack lines / skill flashes
     const f = this.fxLayer;
     f.clear();
-    const now = this.time.now;
     this.fx = this.fx.filter((e) => e.until > now);
     for (const e of this.fx) e.draw(f, (e.until - now) / e.life);
+  }
+
+  /** Little stars circling over a stunned hero. */
+  private stunStars(g: Phaser.GameObjects.Graphics, x: number, y: number, now: number): void {
+    for (let i = 0; i < 3; i++) {
+      const a = now / 220 + (i * Math.PI * 2) / 3;
+      g.fillStyle(0xffe27a, 1).fillRect(Math.round(x + Math.cos(a) * 10) - 2, Math.round(y + Math.sin(a) * 3) - 2, 4, 4);
+    }
   }
 
   private spawnFx(snap: RenderSnapshot): void {
@@ -225,11 +257,12 @@ export class MatchScene extends Phaser.Scene {
       if (a.kind === 'SKILL') {
         const life = 450;
         const tx = sx(to.x);
-        const ty = sy(to.y);
+        const ty = sy(to.y) - (to.kind === 'HERO' ? CHEST : 0);
         this.fx.push({ until: now + life, life, draw: (g, k) => { g.lineStyle(3, 0xfff07a, k).strokeCircle(tx, ty, 10 + (1 - k) * 26); g.fillStyle(0xfff07a, 0.25 * k).fillCircle(tx, ty, 18); } });
       } else if (fromHero || from.kind === 'TOWER' || from.kind === 'BASE') {
         const life = 160;
-        const x1 = sx(from.x), y1 = sy(from.y), x2 = sx(to.x), y2 = sy(to.y);
+        // Heroes now stand taller than a dot: shoot from and at the chest.
+        const x1 = sx(from.x), y1 = sy(from.y) - (fromHero ? CHEST : 0), x2 = sx(to.x), y2 = sy(to.y) - (to.kind === 'HERO' ? CHEST : 0);
         const color = from.kind === 'HERO' ? 0xffffff : 0xffa64d;
         this.fx.push({ until: now + life, life, draw: (g, k) => { g.lineStyle(fromHero ? 1.5 : 2.5, color, 0.8 * k).lineBetween(x1, y1, x2, y2); } });
       }

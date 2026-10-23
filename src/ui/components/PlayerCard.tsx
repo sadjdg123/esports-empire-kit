@@ -1,7 +1,9 @@
 import { PLAYER_CLUB_ID, clubById, marketValue, playerOverall } from '../../game';
+import { lookFor } from '../../render/pixel/chibi';
 import type { PageProps } from '../App';
 import { growthRoom, money, ROLE_NAME } from '../labels';
 import { Attrs, Fatigue, Form, Heroes, Morale, Ovr, Roles } from './PlayerBits';
+import { Portrait } from './Portrait';
 
 function Sparkline({ points }: { points: number[] }) {
   if (points.length < 2) return <p className="dim">在你队里训练满两周后，这里会显示能力变化曲线。</p>;
@@ -32,7 +34,10 @@ export function PlayerCard({ game, data, playerId, close }: PageProps & { player
     <div className="modal-back" role="dialog" aria-modal="true" onClick={close}>
       <div className="modal card player-card" onClick={(e) => e.stopPropagation()}>
         <div className="row between">
-          <h2>{p.name} <Ovr p={p} /></h2>
+          <div className="row">
+            <Portrait look={lookFor(p.id, club?.color ?? '#9a8f80')} size={52} />
+            <h2>{p.name} <Ovr p={p} /></h2>
+          </div>
           <button className="small" onClick={close}>关闭</button>
         </div>
         <p>{p.age} 岁 · <Roles p={p} /> · {club ? (club.id === PLAYER_CLUB_ID ? '你的选手' : club.name) : '自由球员'}</p>
