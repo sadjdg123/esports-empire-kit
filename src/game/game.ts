@@ -262,7 +262,7 @@ export function commitWeek(state: GameState, data: GameData, playerMatchResult?:
       round, opponent: mySide === 'BLUE' ? f.red : f.blue, won,
       headline: rep.headline, keyReasons: rep.keyReasons, mvp: rep.mvp, ratings: rep.ratings, durationSec: r.durationSec,
       kills: mySide === 'BLUE' ? { mine: fr.kills.blue, theirs: fr.kills.red } : { mine: fr.kills.red, theirs: fr.kills.blue },
-      goldDiffTimeline: r.goldDiffTimeline.map((p) => ({ t: p.t, diff: mySide === 'BLUE' ? p.diff : 0 - p.diff })), // 0 - x avoids -0, which JSON cannot keep
+      goldDiffTimeline: r.goldDiffTimeline.map((p) => ({ t: p.t, diff: mySide === 'BLUE' ? p.diff : (0 - p.diff) || 0 })), // avoid -0, which JSON cannot keep
     };
     state.reports.push(report);
   }

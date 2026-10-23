@@ -484,7 +484,7 @@ function nearestNode(s: MatchState, x: number, y: number): string {
 function clockPhase(s: MatchState): void {
   const tm = s.cfg.time;
   if (s.t % tm.goldTimelineIntervalSec === 0) {
-    s.goldTimeline.push({ t: s.t, diff: Math.round(teamGold(s, 'BLUE') - teamGold(s, 'RED')) });
+    s.goldTimeline.push({ t: s.t, diff: Math.round(teamGold(s, 'BLUE') - teamGold(s, 'RED')) || 0 }); // || 0 turns -0 into 0
   }
   if (!s.overtimeAnnounced && s.t >= tm.overtimeStartSec) {
     s.overtimeAnnounced = true;

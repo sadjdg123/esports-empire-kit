@@ -37,6 +37,7 @@ function hex(c: string): number {
 interface HeroView {
   sprite: Phaser.GameObjects.Image;
   label: Phaser.GameObjects.Text;
+  level: number;
 }
 
 interface Fx {
@@ -186,9 +187,14 @@ export class MatchScene extends Phaser.Scene {
           if (!view) {
             view = {
               sprite: this.add.image(X, Y, `hero-${u.side}`).setScale(1.5),
-              label: this.add.text(X, Y, this.opts.names[u.playerId ?? ''] ?? '', { fontSize: '10px', color: '#ffffff', fontFamily: 'sans-serif', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5, 1),
+              label: this.add.text(X, Y, '', { fontSize: '10px', color: '#ffffff', fontFamily: 'sans-serif', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5, 1),
+              level: -1,
             };
             this.heroes.set(u.id, view);
+          }
+          if (view.level !== u.level) {
+            view.level = u.level ?? 1;
+            view.label.setText(`${view.level} ${this.opts.names[u.playerId ?? ''] ?? ''}`);
           }
           view.sprite.setPosition(X, Y).setAlpha(u.alive ? 1 : 0.15).setTint(u.stunned ? 0xaaaaff : 0xffffff);
           view.label.setPosition(X, Y - 17).setAlpha(u.alive ? 1 : 0);

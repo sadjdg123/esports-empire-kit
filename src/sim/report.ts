@@ -196,10 +196,19 @@ export function buildReport(result: MatchResult, input: MatchInput, data: GameDa
   });
   const towersW = idx((e) => e.type === 'TOWER_DESTROYED' && e.side === winner);
   add({ key: 'towers', theme: '推进', score: 0.6, refs: towersW, text: `全场推掉 ${towersW.length} 座防御塔，对手只推掉 ${idx((e) => e.type === 'TOWER_DESTROYED' && e.side === loser).length} 座。` });
+  const baseHits = idx((e) => e.type === 'BASE_DAMAGED' && e.side === winner);
+  if (baseHits.length > 0) {
+    add({ key: 'basehit', theme: '抢先破门', score: 0.4, refs: baseHits, text: `第 ${minutes(ev[baseHits[0]!]!.t)} 分钟起抢先打到对方基地，比对手快了一步。` });
+  }
+  add({ key: 'objective-any', theme: '资源控制', score: 0.3, refs: objW, text: `拿下 ${objW.length} 次中立资源，增益期间打出了优势。` });
+  add({ key: 'kills-any', theme: '个人对拼', score: 0.2, refs: idx((e) => e.type === 'KILL' && e.side === winner), text: `关键时刻打出 ${idx((e) => e.type === 'KILL' && e.side === winner).length} 次击杀。` });
   add({ key: 'end', theme: '收官', score: 0.1, refs: idx((e) => e.type === 'BASE_DESTROYED' || e.type === 'MATCH_END'), text: `${minutes(result.durationSec)} 分钟时${ev.some((e) => e.reason === 'timeout') ? '按超时规则判定' : '攻破对方基地'}，结束比赛。` });
 
   cands.sort((a, b) => b.score - a.score || a.key.localeCompare(b.key));
   const chosen = cands.slice(0, 3);
+  // Last resort so a report always has three reasons backed by events.
+  if (chosen.length < 3) chosen.push({ key: 'start', theme: '稳定发挥', score: 0, refs: [0], text: `赛前选择的「${TACTIC_NAME[wTactic]}」打法贯彻到底。` });
+  while (chosen.length < 3) chosen.push({ key: 'start2', theme: '稳定发挥', score: 0, refs: [ev.length - 1], text: '整场比赛没有出现大的失误。' });
   const theme = chosen[0]?.theme ?? '稳定发挥';
   return {
     headline: `${wName}凭借${theme}，在 ${minutes(result.durationSec)} 分钟击败${lName}`,

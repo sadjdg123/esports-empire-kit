@@ -122,6 +122,7 @@ export async function runBalance(opts: BalanceOptions): Promise<{ passed: boolea
       target: '中位数 18–28；99% <45 分钟；无死循环', pass: q(0.5) >= 18 && q(0.5) <= 28 && under45 >= 0.99,
     });
     const bad = [...all, ...get('G1')].filter((r) => !r.reportOk);
+    for (const b of bad.slice(0, 3)) console.error(`G8 failure: ${b.tags ? JSON.stringify(b.tags) : ''} i=${b.i}: ${b.reportError}`);
     rows.push({ id: 'G8', what: '战报', value: `${all.length + get('G1').length - bad.length}/${all.length + get('G1').length} 场生成合格战报`, target: '每场都有，原因都能对应事件', pass: bad.length === 0 });
   }
   // G9: wall-clock time of 1000 G2 matches through the worker pool (all cores), plus a

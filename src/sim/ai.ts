@@ -188,7 +188,27 @@ function base(s: MatchState, action: string, role: Role): number {
 }
 
 function tf(s: MatchState, h: HeroUnit, action: string): number {
-  return tacticTable(s, h.side)[ACTION_INDEX[action]! * 5 + ROLE_INDEX[h.role]!]!;
+  return tacticTable(s, h.side)[ACTION_INDEX[action]! * 5 + ROLE_INDEX[h.role]!]! * momentumFactor(s, h.side, action);
+}
+
+const PRESSING = new Set(['GANK', 'GROUP', 'PUSH', 'CONTEST_OBJECTIVE']);
+
+/** -1..1: how far ahead (positive) or behind (negative) a team is in gold, beyond a dead zone. */
+export function momentum(s: MatchState, side: Side): number {
+  const m = s.cfg.ai.momentum;
+  const diff = s.teams[side].goldDiff;
+  const beyond = Math.max(0, Math.abs(diff) - m.thresholdGold) / m.spanGold;
+  return Math.sign(diff) * Math.min(1, beyond);
+}
+
+/** A team that is ahead presses its lead; a team that is behind plays safe and defends. */
+function momentumFactor(s: MatchState, side: Side, action: string): number {
+  const mo = momentum(s, side);
+  if (mo === 0) return 1;
+  const m = s.cfg.ai.momentum;
+  if (PRESSING.has(action)) return mo > 0 ? 1 + m.aheadPress * mo : 1 + m.behindCaution * mo;
+  if (action === 'DEFEND' && mo < 0) return 1 - m.behindCaution * mo;
+  return 1;
 }
 
 const ACTION_LIST = ['FARM_LANE', 'FARM_JUNGLE', 'GANK', 'DEFEND', 'PUSH', 'GROUP', 'CONTEST_OBJECTIVE', 'SPLIT', 'RETREAT', 'RECALL'] as const;
@@ -452,7 +472,9 @@ export function decideUtility(s: MatchState, h: HeroUnit): void {
 function engageOk(s: MatchState, h: HeroUnit): boolean {
   const f = forcesAround(s, h);
   if (f.enemy === 0) return true;
-  return f.ally / f.enemy >= s.cfg.tactics[s.teams[h.side].tactic].engageRatio;
+  // Ahead teams take fights a little more readily, behind teams a little less.
+  const ratio = s.cfg.tactics[s.teams[h.side].tactic].engageRatio * (1 - s.cfg.ai.momentum.engageShift * momentum(s, h.side));
+  return f.ally / f.enemy >= ratio;
 }
 
 export function planUtility(s: MatchState, h: HeroUnit): ActionPlan {

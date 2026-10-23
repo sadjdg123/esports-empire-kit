@@ -353,6 +353,8 @@ export interface MatchConfig {
     farmDecayStartSec: number; // farming utility starts to fall off here...
     farmDecayEndSec: number; // ...reaching farmDecayMin here
     farmDecayMin: number;
+    /** Gold-lead behaviour: ahead teams press, behind teams defend. */
+    momentum: { thresholdGold: number; spanGold: number; aheadPress: number; behindCaution: number; engageShift: number };
     groupRampPerMin: number;
     gankMinSec: number;
     recallHpFraction: number;

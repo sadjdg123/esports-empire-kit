@@ -644,7 +644,14 @@
     "teamfightEndQuietSec": 5,
     "farmDecayStartSec": 600,
     "farmDecayEndSec": 1500,
-    "farmDecayMin": 0.6
+    "farmDecayMin": 0.6,
+    "momentum": {
+      "thresholdGold": 1500,
+      "spanGold": 6000,
+      "aheadPress": 0.6,
+      "behindCaution": 0.35,
+      "engageShift": 0.2
+    }
   },
   "tactics": {
     "EARLY_AGGRO": {
@@ -687,7 +694,7 @@
       "powerCurve": [
         {
           "toSec": 840,
-          "damage": 1.08
+          "damage": 1.11
         },
         {
           "fromSec": 1440,
@@ -740,10 +747,10 @@
       "powerCurve": [
         {
           "fromSec": 1080,
-          "damage": 1.1
+          "damage": 1.05
         }
       ],
-      "farmGold": 1.18,
+      "farmGold": 1.12,
       "siegeDamage": 1.0
     },
     "TEAMFIGHT_PUSH": {
@@ -782,7 +789,7 @@
         }
       ],
       "farmGold": 1.0,
-      "siegeDamage": 1.1
+      "siegeDamage": 1.2
     },
     "SPLIT_PUSH": {
       "name": "分带牵制",
@@ -802,7 +809,7 @@
           "actions": [
             "DEFEND"
           ],
-          "factor": 1.15,
+          "factor": 1.0,
           "roles": [
             "JUNGLE",
             "MID",
@@ -827,7 +834,7 @@
       ],
       "powerCurve": [],
       "farmGold": 1.0,
-      "siegeDamage": 1.25
+      "siegeDamage": 1.12
     }
   }
 }

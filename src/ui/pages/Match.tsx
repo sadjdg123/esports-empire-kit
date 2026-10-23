@@ -86,6 +86,10 @@ export function MatchPage({ game, data, act, go, flash, onDone }: PageProps & { 
 
   const s = snap ?? player.cur;
   const goldDiff = s.gold.BLUE - s.gold.RED;
+  const avgLevel = (side: 'BLUE' | 'RED') => {
+    const hs = s.units.filter((u) => u.kind === 'HERO' && u.side === side);
+    return (hs.reduce((a, u) => a + (u.level ?? 1), 0) / Math.max(1, hs.length)).toFixed(1);
+  };
   const winnerClub = s.winner ? (s.winner === 'BLUE' ? blueClub : redClub) : null;
   const won = winnerClub?.id === PLAYER_CLUB_ID;
 
@@ -98,6 +102,7 @@ export function MatchPage({ game, data, act, go, flash, onDone }: PageProps & { 
         <div className="meta">
           <span>⏱ {minutes(s.t)}</span>
           <span>经济差 {goldDiff >= 0 ? `蓝 +${goldDiff}` : `红 +${-goldDiff}`}</span>
+          <span>平均等级 {avgLevel('BLUE')} : {avgLevel('RED')}</span>
           <span>剩余塔 {s.towersStanding.BLUE} : {s.towersStanding.RED}</span>
         </div>
       </div>
