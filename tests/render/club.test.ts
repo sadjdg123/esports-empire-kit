@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../../src/core/config';
 import { acceptRenewal, newGame, signValueSquad, type GameState } from '../../src/game';
 import { activitySummary, clubActivities, TIRED_AT } from '../../src/render/club/activities';
+import { postMessage } from '../../src/game/messages';
+import { markersFor } from '../../src/render/club/markers';
 
 const data = loadGameData();
 
@@ -48,5 +50,36 @@ describe('club scene activities', () => {
     const s = newGame('空', '#3a7bd5', 1, data);
     expect(clubActivities(s, data)).toEqual([]);
     expect(activitySummary(s, [])[0]).toContain('还没有选手');
+  });
+});
+
+describe('club base markers (furniture that needs the player)', () => {
+  const calm = (s: GameState) => { for (const m of s.inbox) m.read = true; return s; };
+
+  it('a new club is pointed at the notice board (sign players) and the safe (no sponsor yet)', () => {
+    const s = calm(newGame('空', '#3a7bd5', 1, data));
+    expect(markersFor(s, data)).toEqual({ market: 'bang', finance: 'bang' });
+  });
+
+  it('a ready club with nothing pending shows no markers', () => {
+    expect(markersFor(calm(club()), data)).toEqual({});
+  });
+
+  it('unread mail, a missing lineup and an expiring contract each light up their furniture', () => {
+    const s = calm(club());
+    postMessage(s, 'INFO', '测试', '一封未读邮件');
+    s.lineup = null;
+    s.players[s.club.roster[0]!]!.contractUntil = 1;
+    expect(markersFor(s, data)).toEqual({ inbox: 'bang', lineup: 'bang', contracts: 'bang' });
+    expect(acceptRenewal(s, data, s.club.roster[0]!, 1).ok).toBe(true);
+    expect(markersFor(s, data).contracts).toBeUndefined();
+  });
+
+  it('tired players make the training desks sweat, unless it is a rest week', () => {
+    const s = calm(club());
+    s.players[s.club.roster[1]!]!.fatigue = TIRED_AT;
+    expect(markersFor(s, data)).toEqual({ training: 'sweat' });
+    s.training = 'REST';
+    expect(markersFor(s, data)).toEqual({});
   });
 });

@@ -1,7 +1,9 @@
-// Browser check (phone): the club scene on the home page: activities, tap to open the player card,
-// drawing time with a 4x slower CPU. Screenshots go to docs/reports/t19/. Run as full-season-desktop.cjs.
+// Browser check (phone): the club base as the main screen. Players walk in, taps on furniture open
+// the right windows, tapping a player opens the card, drawing stays cheap with a 4x slower CPU.
+// Screenshots go to docs/reports/v1/. Run as full-season-desktop.cjs.
 const { chromium } = require('playwright');
-const SHOTS = '/home/user/esports-empire-kit/docs/reports/t19';
+const helpers = require('./helpers.cjs');
+const SHOTS = 'docs/reports/v1';
 (async () => {
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
@@ -15,43 +17,39 @@ const SHOTS = '/home/user/esports-empire-kit/docs/reports/t19';
     await p.locator('table tbody tr').filter({ has: p.locator(`td:nth-child(2) >> text=/^${role}/`) }).nth(2).locator('button:has-text("签约")').click();
   }
   await p.click('text=去设置阵容'); await p.click('text=一键推荐'); await p.click('text=保存阵容');
-  await p.click('.nav button:has-text("主页")');
-  await p.waitForTimeout(2500); // figures walk in
-  await p.locator('.club-view').screenshot({ path: `${SHOTS}/01-preseason.png` });
-  log.push(await p.textContent('.club-view ul'));
-  // Play some weeks so people get tired, then switch to rest.
-  for (let i = 0; i < 4; i++) {
-    await p.click('.calendar-bar button:has-text("下一场")');
-    await p.waitForSelector('.canvas-host canvas'); await p.click('button:has-text("跳过")'); await p.click('button:has-text("查看战报")'); await p.waitForSelector('text=关键原因');
+  await helpers.closeWindows(p);
+  if (await p.locator('.event-dialog button:has-text("知道了")').count()) await p.click('.event-dialog button:has-text("知道了")');
+  await p.waitForTimeout(6000); // everyone walks in
+  await p.screenshot({ path: `${SHOTS}/10-base-training.png` });
+  // Tap every part of the base on a grid and record which windows open.
+  const box = await p.locator('.base-canvas').boundingBox();
+  const opened = new Set();
+  let card = false;
+  for (let y = 0.12; y < 0.98; y += 0.035) {
+    for (let x = 0.04; x < 0.98; x += 0.04) {
+      await p.mouse.click(box.x + box.width * x, box.y + box.height * y);
+      if (await p.locator('.player-card').count()) { card = true; await p.click('.player-card button:has-text("关闭")'); }
+      if (await p.locator('.win').count()) { opened.add(await p.textContent('.win-title span')); await p.click('.win-close'); }
+    }
   }
-  await p.click('.nav button:has-text("主页")'); await p.waitForTimeout(3000);
-  await p.locator('.club-view').screenshot({ path: `${SHOTS}/02-midseason.png` });
-  log.push(await p.textContent('.club-view ul'));
-  await p.click('.nav button:has-text("训练")'); await p.click('.tactic:has-text("休息")');
-  await p.click('.nav button:has-text("主页")'); await p.waitForTimeout(4000);
-  await p.locator('.club-view').screenshot({ path: `${SHOTS}/03-rest-day.png` });
-  log.push(await p.textContent('.club-view ul'));
-  await p.screenshot({ path: `${SHOTS}/04-home-phone.png` });
-  // Tap a figure: find one through the scene's own hit test by scanning the canvas.
-  const box = await p.locator('.club-canvas').boundingBox();
-  let opened = false;
-  for (let y = 0.3; y < 0.95 && !opened; y += 0.04) for (let x = 0.1; x < 0.95 && !opened; x += 0.03) {
-    await p.mouse.click(box.x + box.width * x, box.y + box.height * y);
-    if (await p.locator('.player-card').count()) opened = true;
-  }
-  log.push(`tap opened player card: ${opened}`);
-  if (opened) { await p.screenshot({ path: `${SHOTS}/05-tap-card.png` }); await p.click('.player-card button:has-text("关闭")'); }
-  await p.waitForTimeout(2000);
-  log.push(`frame ms: ${await p.getAttribute('.club-canvas', 'data-frame-ms')}`);
+  log.push(`windows opened by tapping the base: ${[...opened].join('、')}`);
+  log.push(`player card from a tap: ${card}`);
+  for (const want of ['阵容', '训练', '收件箱', '签人', '合同转会', '赛程', '财务', '历史', '战报']) if (!opened.has(want)) errs.push(`no tap target opens ${want}`);
+  // Rest day: everyone goes upstairs by lift.
+  await helpers.nav(p, '训练'); await p.click('.tactic:has-text("休息")'); await helpers.closeWindows(p);
+  await p.waitForTimeout(9000);
+  await p.screenshot({ path: `${SHOTS}/11-base-rest.png` });
+  log.push(`frame ms: ${await p.getAttribute('.base-canvas', 'data-frame-ms')}`);
   const cdp = await ctx.newCDPSession(p);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
-  await p.click('.nav button:has-text("训练")'); await p.click('.tactic:has-text("操作")'); await p.click('.nav button:has-text("主页")');
+  await helpers.nav(p, '训练'); await p.click('.tactic:has-text("操作")'); await helpers.closeWindows(p);
   await p.waitForTimeout(5000);
-  log.push(`frame ms at 4x slower CPU: ${await p.getAttribute('.club-canvas', 'data-frame-ms')}`);
+  log.push(`frame ms at 4x slower CPU: ${await p.getAttribute('.base-canvas', 'data-frame-ms')}`);
   const fps = await p.evaluate(() => new Promise((res) => { let n = 0; const t0 = performance.now(); const f = () => { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else res(n / 2); }; requestAnimationFrame(f); }));
   log.push(`page frames/s at 4x slower CPU: ${fps}`);
   const o = await p.evaluate(() => ({ sw: document.documentElement.scrollWidth, w: window.innerWidth }));
   if (o.sw > o.w + 1) errs.push(`overflow ${o.sw} > ${o.w}`);
   console.log(JSON.stringify({ log, errs }, null, 1));
   await b.close();
+  process.exitCode = errs.length ? 1 : 0;
 })();

@@ -1,13 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { loadGameData } from '../core/config';
 import type { GameData } from '../core/types';
-import { advanceDay, advanceToNextMatch, readinessIssues, type DayResult, type GameState, type Result, type WeekSummary } from '../game';
+import {
+  PLAYER_CLUB_ID, advanceDay, advanceToNextMatch, clubById, nextPlayerFixture, readinessIssues,
+  type DayResult, type GameState, type InboxMessage, type Result, type WeekSummary,
+} from '../game';
+import { lookFor } from '../render/pixel/chibi';
+import type { Hotspot } from '../render/club/ClubScene';
+import { markersFor } from '../render/club/markers';
 import { loadGame, saveGame, type LoadOutcome } from '../save';
-import { CalendarBar } from './components/CalendarBar';
+import { BaseView } from './components/BaseView';
 import { ConfirmDialog, type ConfirmRequest } from './components/Confirm';
-import { FundsBar } from './components/FundsBar';
-import { Nav } from './components/Nav';
+import { EventDialog, type DialogLine } from './components/EventDialog';
+import { Hud } from './components/Hud';
+import { MENU, MenuGrid } from './components/MenuGrid';
 import { PlayerCard } from './components/PlayerCard';
+import { ASSISTANT } from './components/Portrait';
+import { GameWindow } from './components/Window';
+import { iconUrl } from './icons';
 import { ContractsPage } from './pages/Contracts';
 import { FinancePage } from './pages/Finance';
 import { HistoryPage } from './pages/History';
@@ -25,13 +35,15 @@ import { SAVE_KEY, browserStorage } from './storage';
 import './styles.css';
 
 export type Page =
-  | 'start' | 'home' | 'inbox' | 'market' | 'lineup' | 'training' | 'contracts' | 'schedule' | 'finance' | 'history' | 'report' | 'settings' | 'match';
+  | 'start' | 'home' | 'overview' | 'inbox' | 'market' | 'lineup' | 'training' | 'contracts' | 'schedule' | 'finance' | 'history'
+  | 'report' | 'settings' | 'match' | 'menu' | 'matchday' | 'seasonend';
 
 export interface PageProps {
   game: GameState;
   data: GameData;
   /** Runs a change on a copy of the game; the copy replaces the game only when the change succeeds. */
   act: <T>(fn: (draft: GameState) => Result<T>) => Result<T>;
+  /** Opens a window ('home' goes back to the base, 'match' to the match screen). */
   go: (page: Page, opts?: { reportRound?: number }) => void;
   flash: (text: string) => void;
   /** Ask the player to confirm before `onYes` runs. */
@@ -45,15 +57,30 @@ export interface PageProps {
 const data = loadGameData();
 export type ClockSpeed = 1 | 2 | 4;
 
+const HOTSPOT_PAGE: Record<Hotspot, Page> = {
+  lineup: 'lineup', training: 'training', schedule: 'schedule', contracts: 'contracts', finance: 'finance',
+  history: 'history', report: 'report', inbox: 'inbox', market: 'market',
+};
+const TITLES: Partial<Record<Page, [string, string]>> = {
+  menu: ['菜单', 'home'], matchday: ['比赛日', 'schedule'], seasonend: ['赛季结束', 'history'],
+  ...Object.fromEntries(MENU.map((m) => [m.page, [m.label, m.icon]])),
+};
+const TUTORIAL_KEY = 'esports-empire.tutorial.v1';
+
 function initialLoad(): { outcome: LoadOutcome; game: GameState | null } {
   const outcome = loadGame(browserStorage, SAVE_KEY);
   return { outcome, game: outcome.save ? (outcome.save.game as GameState) : null };
 }
 
+function readTutorialSeen(): boolean {
+  try { return browserStorage.read(TUTORIAL_KEY) === '1'; } catch { return false; }
+}
+
 export function App() {
   const first = useMemo(initialLoad, []);
   const [game, setGame] = useState<GameState | null>(first.game);
-  const [page, setPage] = useState<Page>(first.game ? 'home' : 'start');
+  const [screen, setScreen] = useState<'start' | 'base' | 'match'>(first.game ? 'base' : 'start');
+  const [win, setWin] = useState<Page | null>(null);
   const [reportRound, setReportRound] = useState<number | null>(null);
   const [lastWeek, setLastWeek] = useState<WeekSummary | null>(null);
   const [notice, setNotice] = useState<string | null>(
@@ -65,6 +92,9 @@ export function App() {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [speed, setSpeed] = useState<ClockSpeed>(1);
+  const [cheerDay, setCheerDay] = useState(-1);
+  const [seasonEndSeen, setSeasonEndSeen] = useState(-1);
+  const [tutorialSeen, setTutorialSeen] = useState(readTutorialSeen);
   const ask = useCallback((text: string, yes: string, onYes: () => void) => setConfirmReq({ text, yes, onYes }), []);
   const dialog = confirmReq && <ConfirmDialog req={confirmReq} close={() => setConfirmReq(null)} />;
   const toastTimer = useRef<number | undefined>(undefined);
@@ -112,28 +142,23 @@ export function App() {
   const go = useCallback((p: Page, opts?: { reportRound?: number }) => {
     if (opts?.reportRound !== undefined) setReportRound(opts.reportRound);
     else if (p === 'report') setReportRound(null);
-    if (p === 'match') setRunning(false);
-    setPage(p);
-    window.scrollTo(0, 0);
+    if (p === 'match') { setRunning(false); setWin(null); setScreen('match'); window.scrollTo(0, 0); return; }
+    if (p === 'start') { setRunning(false); setWin(null); setScreen('start'); return; }
+    setScreen('base');
+    setWin(p === 'home' ? null : p);
   }, []);
 
   /** What to do when the calendar stops on its own. */
   const handlePause = useCallback((r: DayResult) => {
-    const g = gameRef.current!;
-    if (r.pause === 'MATCH_DAY') {
-      const issues = readinessIssues(g, data);
-      if (issues.length === 0) go('match');
-      else { go('home'); flash(`今天有比赛，但${issues[0]}`); }
-      return;
-    }
+    if (r.pause === 'MATCH_DAY') { setWin('matchday'); return; }
+    if (r.pause === 'SEASON_END') { setWin('seasonend'); return; }
     const last = r.messages[r.messages.length - 1];
-    if (r.pause === 'SEASON_END') { go('home'); flash('赛季结束了'); return; }
-    if (last) flash(`${last.title}（详情见收件箱）`);
-  }, [go, flash]);
+    if (last) flash(last.title);
+  }, [flash]);
 
-  // The calendar clock: one day per tick; stops at the events listed in season.json (autoPause).
+  // The calendar clock: one day per tick, paused while a window is open (like a handheld management game).
   useEffect(() => {
-    if (!running || !game || page === 'match' || page === 'start' || confirmReq) return;
+    if (!running || !game || screen !== 'base' || win || confirmReq) return;
     const ms = (data.season.secondsPerDayAt1x * 1000) / speed;
     const id = window.setInterval(() => {
       let res: DayResult | null = null;
@@ -145,7 +170,7 @@ export function App() {
       }
     }, ms);
     return () => window.clearInterval(id);
-  }, [running, speed, page, confirmReq, game === null, act, handlePause]);
+  }, [running, speed, screen, win, confirmReq, game === null, act, handlePause]);
 
   const toNextMatch = useCallback(() => {
     setRunning(false);
@@ -153,10 +178,18 @@ export function App() {
     act((d) => { res = advanceToNextMatch(d, data); return { ok: true, value: undefined }; });
     const r = res as DayResult | null;
     if (r?.pause === 'MATCH_DAY') handlePause(r);
-    else { go('home'); flash('本赛季你已经没有比赛了'); }
-  }, [act, go, flash, handlePause]);
+    else { setWin('seasonend'); flash('本赛季你已经没有比赛了'); }
+  }, [act, flash, handlePause]);
 
-  if (!game || page === 'start') {
+  // The end of a season opens its summary once.
+  useEffect(() => {
+    if (game && screen === 'base' && !win && game.calendar.phase === 'FINISHED' && seasonEndSeen !== game.calendar.season) {
+      setSeasonEndSeen(game.calendar.season);
+      setWin('seasonend');
+    }
+  }, [game, screen, win, seasonEndSeen]);
+
+  if (!game || screen === 'start') {
     return (
       <div className="app">
         {notice && <div className="notice">{notice}<button className="link" onClick={() => setNotice(null)}>知道了</button></div>}
@@ -164,8 +197,8 @@ export function App() {
           data={data}
           hasGame={!!game}
           ask={ask}
-          onStart={(g) => { setGame(g); gameRef.current = g; setLastWeek(null); setRunning(false); go('market'); flash('俱乐部成立！先去自由市场签下至少 5 名选手。'); }}
-          onCancel={game ? () => go('home') : undefined}
+          onStart={(g) => { setGame(g); gameRef.current = g; setLastWeek(null); setRunning(false); setScreen('base'); setWin('market'); flash('俱乐部成立！先在告示牌（签人）签下至少 5 名选手。'); }}
+          onCancel={game ? () => setScreen('base') : undefined}
         />
         {toast && <div className="toast">{toast}</div>}
         {dialog}
@@ -174,31 +207,115 @@ export function App() {
   }
 
   const props: PageProps = { game, data, act, go, flash, ask, showPlayer: setPlayerId, toNextMatch };
-  return (
-    <div className="app">
-      <div className="top">
-        <FundsBar game={game} data={data} />
-        {page !== 'match' && <CalendarBar game={game} data={data} running={running} speed={speed} setRunning={setRunning} setSpeed={setSpeed} toNextMatch={toNextMatch} />}
+  const unread = game.inbox.filter((m) => !m.read).length;
+
+  if (screen === 'match') {
+    return (
+      <div className="app match-screen">
+        <main className="page">
+          <MatchPage {...props} onDone={(summary) => {
+            setLastWeek(summary);
+            if (summary.playerResult?.winner === PLAYER_CLUB_ID) setCheerDay(gameRef.current!.calendar.day);
+          }} />
+        </main>
+        {toast && <div className="toast">{toast}</div>}
+        {dialog}
       </div>
-      <Nav page={page} go={go} game={game} />
+    );
+  }
+
+  const line = !win ? dialogLine(game, act, go, tutorialSeen, () => {
+    setTutorialSeen(true);
+    try { browserStorage.write(TUTORIAL_KEY, '1'); } catch { /* per-viewer hint only */ }
+  }) : null;
+  const [title, icon] = win ? (TITLES[win] ?? ['', 'home']) : ['', ''];
+
+  return (
+    <div className="app base-screen">
+      <Hud game={game} data={data} running={running} speed={speed} setRunning={setRunning} setSpeed={setSpeed} toNextMatch={toNextMatch} />
       {notice && <div className="notice">{notice}<button className="link" onClick={() => setNotice(null)}>知道了</button></div>}
-      <main className="page">
-        {page === 'home' && <HomePage {...props} lastWeek={lastWeek} />}
-        {page === 'inbox' && <InboxPage {...props} />}
-        {page === 'market' && <MarketPage {...props} />}
-        {page === 'lineup' && <LineupPage {...props} />}
-        {page === 'training' && <TrainingPage {...props} />}
-        {page === 'contracts' && <ContractsPage {...props} />}
-        {page === 'schedule' && <SchedulePage {...props} />}
-        {page === 'finance' && <FinancePage {...props} />}
-        {page === 'history' && <HistoryPage {...props} />}
-        {page === 'report' && <ReportPage {...props} round={reportRound} lastWeek={lastWeek} />}
-        {page === 'settings' && <SettingsPage {...props} onReplace={(g) => { setGame(g); gameRef.current = g; setLastWeek(null); setRunning(false); go('home'); }} onNewGame={() => { setRunning(false); go('start'); }} />}
-        {page === 'match' && <MatchPage {...props} onDone={(summary) => { setLastWeek(summary); }} />}
-      </main>
+      <BaseView
+        game={game} data={data} markers={markersFor(game, data)} cheer={game.calendar.day === cheerDay}
+        onPlayer={setPlayerId} onHotspot={(h) => go(HOTSPOT_PAGE[h])}
+      />
+      {line && <EventDialog line={line} />}
+      <button className="menu-btn" onClick={() => setWin('menu')} aria-label="菜单">
+        <img src={iconUrl('home')} alt="" className="px-icon" />菜单{unread > 0 && <span className="badge">{unread}</span>}
+      </button>
+      {win && (
+        <GameWindow title={title} icon={icon} onClose={() => setWin(null)}>
+          {win === 'menu' && <MenuGrid open={(p) => go(p)} unread={unread} hasReports={game.reports.length > 0} />}
+          {(win === 'overview' || win === 'seasonend') && <HomePage {...props} lastWeek={lastWeek} />}
+          {win === 'matchday' && <MatchDay {...props} />}
+          {win === 'inbox' && <InboxPage {...props} />}
+          {win === 'market' && <MarketPage {...props} />}
+          {win === 'lineup' && <LineupPage {...props} />}
+          {win === 'training' && <TrainingPage {...props} />}
+          {win === 'contracts' && <ContractsPage {...props} />}
+          {win === 'schedule' && <SchedulePage {...props} />}
+          {win === 'finance' && <FinancePage {...props} />}
+          {win === 'history' && <HistoryPage {...props} />}
+          {win === 'report' && <ReportPage {...props} round={reportRound} lastWeek={lastWeek} />}
+          {win === 'settings' && <SettingsPage {...props} onReplace={(g) => { setGame(g); gameRef.current = g; setLastWeek(null); setRunning(false); setWin(null); }} onNewGame={() => go('start')} />}
+        </GameWindow>
+      )}
       {playerId && game.players[playerId] && <PlayerCard {...props} playerId={playerId} close={() => setPlayerId(null)} />}
       {toast && <div className="toast">{toast}</div>}
       {dialog}
     </div>
   );
+}
+
+/** The match-day pop-up: who we play, and whether the team is ready. */
+function MatchDay({ game, data, go }: PageProps) {
+  const next = nextPlayerFixture(game, data);
+  const issues = readinessIssues(game, data);
+  if (!next || next.day !== game.calendar.day) return <p>今天没有你的比赛。</p>;
+  const opp = clubById(game, next.opponent);
+  const stage = next.kind === 'SEMI' ? '季后赛半决赛' : next.kind === 'FINAL' ? '总决赛' : `常规赛第 ${game.week + 1} 轮`;
+  return (
+    <div className="matchday">
+      <p className="big-text">{stage}：对阵 <span className="swatch" style={{ background: opp.color }} /> <b>{opp.name}</b></p>
+      {issues.length > 0 ? (
+        <>
+          <p className="bad">还不能开赛：{issues.join('；')}</p>
+          <button className="primary" onClick={() => go(game.club.roster.length < data.economy.minRoster ? 'market' : 'lineup')}>{game.club.roster.length < data.economy.minRoster ? '去签人' : '去排阵容'}</button>
+        </>
+      ) : (
+        <>
+          <p>首发和战术已就绪：<b>{data.match.tactics[game.lineup!.tactic].name}</b>。</p>
+          <div className="row">
+            <button className="primary big" onClick={() => go('match')}>开始比赛 ▶</button>
+            <button onClick={() => go('lineup')}>调整阵容</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Who says what at the bottom of the base: a tutorial first, then unread news (match results stay in the inbox). */
+function dialogLine(g: GameState, act: PageProps['act'], go: PageProps['go'], tutorialSeen: boolean, seeTutorial: () => void): DialogLine | null {
+  if (!tutorialSeen) {
+    return {
+      key: 'tutorial', speaker: '助理 小禾', look: ASSISTANT,
+      text: '老板好！基地里的东西都能点：白板排阵容，电脑定训练，门口信箱看消息，告示牌签选手，楼上办公桌谈合同，电视看赛程，奖杯柜看历史。右下角是菜单。',
+      dismiss: seeTutorial,
+    };
+  }
+  const m = g.inbox.find((x) => !x.read && x.kind !== 'MATCH');
+  if (!m) return null;
+  const markRead = () => act((d) => { const x = d.inbox.find((y) => y.id === m.id); if (x) x.read = true; return { ok: true, value: undefined }; });
+  const speakerFor = (msg: InboxMessage) => {
+    const pid = msg.kind === 'OFFER' && msg.data?.offerId !== undefined ? g.offers.find((o) => o.id === msg.data!.offerId)?.playerId
+      : msg.kind === 'CONTRACT' && typeof msg.data?.players === 'string' ? String(msg.data.players).split(',')[0] : undefined;
+    const p = pid ? g.players[pid] : undefined;
+    return p ? { speaker: p.name, look: lookFor(p.id, g.club.color) } : { speaker: '助理 小禾', look: ASSISTANT };
+  };
+  const target: Page | null = m.kind === 'OFFER' || m.kind === 'CONTRACT' ? 'contracts' : m.kind === 'FINANCE' ? 'finance' : m.kind === 'SEASON' ? 'schedule' : null;
+  return {
+    key: `msg-${m.id}`, ...speakerFor(m), text: `${m.title}：${m.body}`,
+    action: target ? { label: '去看看', run: () => { markRead(); go(target); } } : undefined,
+    dismiss: markRead,
+  };
 }

@@ -3,7 +3,8 @@
 // Reloads the page at several points and checks the game is exactly where it was.
 // Run as full-season-desktop.cjs. Screenshots go to docs/reports/t20/.
 const { chromium } = require('playwright');
-const SHOTS = 'docs/reports/t20';
+const helpers = require('./helpers.cjs');
+const SHOTS = 'docs/reports/v1';
 (async () => {
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
@@ -12,7 +13,7 @@ const SHOTS = 'docs/reports/t20';
   p.on('pageerror', (e) => errs.push(e.message)); p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
   const toast = async () => { try { return await p.textContent('.toast', { timeout: 1500 }); } catch { return ''; } };
   const confirm = async () => { await p.click('.modal-back button.primary'); };
-  const nav = async (label) => { await p.click(`.nav button:has-text("${label}")`); await p.waitForTimeout(120); };
+  const nav = (label) => helpers.nav(p, label);
   const fingerprint = async () => p.evaluate(() => {
     const raw = localStorage.getItem(Object.keys(localStorage).find((k) => !k.endsWith('.bak') && !k.endsWith('.tmp') && !k.endsWith('.unreadable')));
     const g = JSON.parse(raw).game;
@@ -20,17 +21,14 @@ const SHOTS = 'docs/reports/t20';
   });
   const reloadCheck = async (when) => {
     const before = await fingerprint();
-    const bar = await p.textContent('.calendar-bar .date');
-    await p.reload(); await p.waitForSelector('.calendar-bar');
+    const bar = await p.textContent('.hud-date');
+    await p.reload(); await p.waitForSelector('.hud');
     const after = await fingerprint();
-    const bar2 = await p.textContent('.calendar-bar .date');
+    const bar2 = await p.textContent('.hud-date');
     log.push(`reload at ${when}: ${before === after && bar === bar2 ? 'same' : 'DIFFERENT'}`);
     if (before !== after || bar !== bar2) errs.push(`reload changed the game at ${when}: ${before} vs ${after}`);
   };
-  const playMatch = async () => {
-    await p.click('button:has-text("跳过")'); await p.click('button:has-text("查看战报")'); await p.waitForSelector('text=关键原因');
-    return p.textContent('.report h2');
-  };
+  const playMatch = () => helpers.playMatch(p);
   const buyOne = async () => {
     await nav('合同转会');
     const rows = p.locator('table').nth(1).locator('tbody tr');
@@ -59,12 +57,12 @@ const SHOTS = 'docs/reports/t20';
   };
   const playSeason = async (season) => {
     for (let i = 0; i < 30; i++) {
-      await nav('主页');
+      await helpers.closeWindows(p);
       if (await p.locator(`button:has-text("进入第 ${season + 1} 赛季")`).count()) return;
       if (i === 3) await reloadCheck(`season ${season} round 3`);
-      await p.click('.calendar-bar button:has-text("下一场")');
-      if (!(await p.locator('.canvas-host canvas').count())) { try { await p.waitForSelector('.canvas-host canvas', { timeout: 2000 }); } catch { continue; } }
+      await p.click('.hud button:has-text("下一场")');
       const h = await playMatch();
+      if (!h) continue;
       log.push(h);
       if (h.includes('半决赛') || h.includes('总决赛')) await reloadCheck(`season ${season} ${h.slice(0, 3)}`);
     }
@@ -73,6 +71,7 @@ const SHOTS = 'docs/reports/t20';
 
   await p.goto('http://localhost:4173/');
   await p.fill('input', '书店电竞'); await p.click('text=成立俱乐部'); await p.waitForSelector('text=自由市场');
+  await p.evaluate(() => { try { localStorage.setItem('esports-empire.tutorial.v1', '1'); } catch { /* private mode */ } });
   await p.selectOption('select[aria-label="合同年限"]', '1');
   for (const role of ['上单', '打野', '中单', '射手', '辅助']) {
     await p.click(`.filters >> text=${role}`);
@@ -85,7 +84,7 @@ const SHOTS = 'docs/reports/t20';
   log.push(`S1 renewals: ${(await renewAll()).length}`);
   await nav('阵容'); await p.click('text=一键推荐'); await p.click('text=保存阵容');
   await playSeason(1);
-  await nav('主页'); log.push((await p.textContent('.hero-card')).slice(0, 90));
+  log.push((await p.textContent('.win .hero-card')).slice(0, 90));
   await p.screenshot({ path: `${SHOTS}/01-season1-end.png` });
   await p.click('button:has-text("进入第 2 赛季")');
   // Season 2 pre-season: offers, renewals, a transfer, sponsor if needed.
@@ -99,7 +98,7 @@ const SHOTS = 'docs/reports/t20';
   await nav('训练'); await p.click('.tactic:has-text("配合")');
   await reloadCheck('season 2 pre-season');
   await playSeason(2);
-  await nav('主页'); log.push((await p.textContent('.hero-card')).slice(0, 90));
+  log.push((await p.textContent('.win .hero-card')).slice(0, 90));
   await p.screenshot({ path: `${SHOTS}/02-season2-end.png` });
   await nav('历史'); log.push(`history rows: ${await p.locator('table').first().locator('tbody tr').count()}`);
   await p.screenshot({ path: `${SHOTS}/03-history.png` });
