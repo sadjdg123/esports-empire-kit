@@ -11,7 +11,7 @@ import growthJson from '../data/growth.json';
 import {
   ARCHETYPES, LANES, MANAGEMENT_STYLES, ROLES, TACTICS, TRAINING_FOCI,
   type ClubDef, type EconomyConfig, type GameData, type GrowthConfig, type HeroDef, type MatchConfig,
-  type Player, type Role, type SeasonConfig, type TeamLineup,
+  type Player, type Role, type SeasonConfig, type TeamLineup, type TrainingFocus,
 } from './types';
 
 export interface RawGameData {
@@ -329,6 +329,7 @@ function checkMatch(c: Checker, raw: unknown, heroIds: Set<string>): void {
     }
     for (const k of ['masteryCooldown', 'mentalDeficitGold', 'mentalPenaltyPer', 'formPer', 'teamworkDelay']) c.num(coef, k, `${p}.coefficients`, 0);
     checkNumbers(c, coef.role, `${p}.coefficients.role`, ['primary', 'secondary', 'off']);
+    checkNumbers(c, coef.fatigue, `${p}.coefficients.fatigue`, ['start', 'per']);
   }
   const ai = c.obj(o.ai, `${p}.ai`);
   if (ai) {
@@ -389,13 +390,16 @@ function checkSeason(c: Checker, raw: unknown): void {
 function checkGrowth(c: Checker, raw: unknown): void {
   const p = 'growth.json';
   const o = checkNumbers(c, raw, p, [
-    'weeklyGrowthBase', 'matchExperience', 'potentialSoftCap', 'fatiguePerMatch', 'fatiguePerTrainingWeek', 'fatigueRestRecovery',
-    'fatigueDailyRecovery', 'fatiguePenaltyStart', 'fatiguePenaltyPerPoint', 'moraleNeutral', 'moraleDailyDrift', 'moraleFormPer',
+    'weeklyGrowthBase', 'offFocusShare', 'masteryFocusHeroes', 'masteryFocusGain', 'masteryPerMatch', 'matchExperience', 'potentialSoftCap',
+    'fatiguePerMatch', 'fatiguePerTrainingWeek', 'fatigueRestRecovery', 'fatigueDailyRecovery', 'moraleNeutral', 'moraleDailyDrift', 'moraleFormPer',
+    'formPull', 'aiRestFatigue',
   ]);
   if (!o) return;
   for (const k of ['moraleWin', 'moraleLoss', 'moraleBench']) c.num(o, k, p, -100, 100);
   const focus = c.obj(o.trainingFocus, `${p}.trainingFocus`);
   if (focus) for (const f of TRAINING_FOCI) if (!focus[f]) c.fail(`${p}.trainingFocus`, `missing focus ${f}`);
+  const rotation = c.arr(o.aiFocusRotation, `${p}.aiFocusRotation`, 1) ?? [];
+  rotation.forEach((f, i) => { if (!TRAINING_FOCI.includes(f as TrainingFocus)) c.fail(`${p}.aiFocusRotation[${i}]`, `unknown focus ${String(f)}`); });
   const curve = c.arr(o.ageCurve, `${p}.ageCurve`, 2) ?? [];
   curve.forEach((pt, i) => { const po = c.obj(pt, `${p}.ageCurve[${i}]`); if (po) { c.num(po, 'age', `${p}.ageCurve[${i}]`, 10, 60); c.num(po, 'rate', `${p}.ageCurve[${i}]`, -10, 10); } });
 }

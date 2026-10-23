@@ -23,7 +23,7 @@ export function Heroes({ p, data }: { p: Player; data: GameData }) {
 
 export function Attrs({ p }: { p: Player }) {
   const a = p.attrs;
-  return <span className="attrs" title="操作 / 意识 / 配合 / 心态">{a.mechanics} / {a.awareness} / {a.teamwork} / {a.mental}</span>;
+  return <span className="attrs" title="操作 / 意识 / 配合 / 心态">{Math.round(a.mechanics)} / {Math.round(a.awareness)} / {Math.round(a.teamwork)} / {Math.round(a.mental)}</span>;
 }
 
 export function Form({ p }: { p: Player }) {

@@ -354,6 +354,7 @@ export interface MatchConfig {
     mentalDeficitGold: number;
     mentalPenaltyPer: number; // per (100 - mental)
     formPer: number;
+    fatigue: { start: number; per: number }; // performance -per for each fatigue point above start
     role: { primary: number; secondary: number; off: number };
     retreatThreshold: CoefLinear; // awareness
     decisionChance: CoefLinear; // awareness: chance to re-evaluate each tick
@@ -404,7 +405,11 @@ export const TRAINING_FOCI: readonly TrainingFocus[] = ['MECHANICS', 'AWARENESS'
 
 export interface GrowthConfig {
   trainingFocus: Record<TrainingFocus, Partial<Record<keyof PlayerAttributes | 'mastery', number>>>;
-  weeklyGrowthBase: number;
+  weeklyGrowthBase: number; // attribute points per week for the focused attribute at age rate 1
+  offFocusShare: number; // share of that growth the other attributes get
+  masteryFocusHeroes: number; // MASTERY focus trains this many of each player's best heroes
+  masteryFocusGain: number; // mastery points per week per trained hero at age rate 1
+  masteryPerMatch: number; // mastery points for the hero played in a match
   ageCurve: { age: number; rate: number }[];
   matchExperience: number;
   potentialSoftCap: number;
@@ -412,14 +417,15 @@ export interface GrowthConfig {
   fatiguePerTrainingWeek: number;
   fatigueRestRecovery: number;
   fatigueDailyRecovery: number;
-  fatiguePenaltyStart: number;
-  fatiguePenaltyPerPoint: number;
   moraleWin: number;
   moraleLoss: number;
   moraleBench: number;
   moraleDailyDrift: number;
   moraleNeutral: number;
-  moraleFormPer: number;
+  moraleFormPer: number; // form target per morale point above neutral
+  formPull: number; // weekly share of the gap between form and its morale target that closes
+  aiRestFatigue: number; // AI clubs rest when their average fatigue reaches this
+  aiFocusRotation: TrainingFocus[];
 }
 
 export interface GameData {

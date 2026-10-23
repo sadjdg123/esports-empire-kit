@@ -206,7 +206,8 @@ export function computeCoefficients(cfg: MatchConfig, player: Player, role: Role
   const roleFit = roleFitOf(player, role);
   const roleMult = k.role[roleFit];
   const formMult = 1 + player.form * k.formPer;
-  const performance = roleMult * formMult;
+  const tired = Math.max(0, (player.fatigue ?? 0) - k.fatigue.start) * k.fatigue.per;
+  const performance = roleMult * formMult * Math.max(0.5, 1 - tired);
   const mastery = masteryOf(player, heroId);
   return {
     damage: lin(k.mechanicsDamage, a.mechanics) * performance,

@@ -15,6 +15,7 @@ import {
   PLAYER_CLUB_ID, type ClubState, type Fixture, type FixtureResult, type GameState, type InboxKind, type InboxMessage,
   type LedgerEntry, type PlayoffMatch, type SeasonPhase, type StoredReport,
 } from './state';
+import { applyDailyRecovery, applyMatchEffects, applyTrainingWeek } from './training';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (error: string): Result<never> => ({ ok: false, error });
@@ -131,12 +132,6 @@ function paySalaries(state: GameState, data: GameData): void {
   const week = weekOfSeason(state);
   addLedger(state, { week, kind: 'SALARY', amount: -weeklySalaries(state), note: '选手周薪' });
   addLedger(state, { week, kind: 'SPONSOR', amount: data.economy.weeklySponsor, note: '基础赞助' });
-  const rng = rngFromState(state.rngState);
-  for (const id of Object.keys(state.players).sort()) {
-    const p = state.players[id]!;
-    p.form = Math.max(-10, Math.min(10, p.form + rng.int(-data.economy.formWeeklyDelta, data.economy.formWeeklyDelta)));
-  }
-  state.rngState = rng.state();
 }
 
 function startPlayoffs(state: GameState, data: GameData): void {
@@ -224,8 +219,10 @@ export function advanceDay(state: GameState, data: GameData): DayResult {
     state.calendar.phase = 'PLAYOFFS';
     startPlayoffs(state, data);
   }
+  applyDailyRecovery(state, data);
   if (day % cfg.daysPerWeek === cfg.payWeekday) {
     paySalaries(state, data);
+    applyTrainingWeek(state, data);
     const f = financeSummary(state, data);
     if (f.lowFunds && f.weeklySalaries > 0) {
       postMessage(state, 'FINANCE', '资金偏低', `现在资金 ${Math.round(state.funds)}，低于 ${data.economy.lowFundsWarningWeeks} 周工资。可以考虑解约高薪选手。`);
@@ -329,6 +326,7 @@ export function commitMatchDay(state: GameState, data: GameData, playerMatchResu
     const r = isPlayer && playerMatchResult ? playerMatchResult : runMatch(input, data);
     const fr = toFixtureResult(round, f, input, r);
     results.push(fr);
+    applyMatchEffects(state, data, input, r);
     if (stage !== 'LEAGUE') {
       const pm = state.playoffs.find((m) => m.stage === stage && m.index === f.index)!;
       pm.winner = fr.winner;

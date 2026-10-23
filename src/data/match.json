@@ -538,6 +538,10 @@
     "mentalDeficitGold": 2000,
     "mentalPenaltyPer": 0.002,
     "formPer": 0.005,
+    "fatigue": {
+      "start": 50,
+      "per": 0.001
+    },
     "role": {
       "primary": 1.0,
       "secondary": 0.98,

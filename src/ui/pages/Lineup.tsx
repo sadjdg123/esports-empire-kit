@@ -83,11 +83,11 @@ export function LineupPage({ game, data, act, go, flash }: PageProps) {
                   <option value="">选择英雄</option>
                   {data.heroes.map((h) => (
                     <option key={h.id} value={h.id} disabled={usedHeroes.has(h.id) && pick?.heroId !== h.id}>
-                      {h.name}·{ARCHETYPE_NAME[h.archetype]} 熟练度 {player?.heroMastery[h.id] ?? DEFAULT_MASTERY}{h.preferredRoles.includes(role) ? '' : '（非本位置英雄）'}
+                      {h.name}·{ARCHETYPE_NAME[h.archetype]} 熟练度 {Math.round(player?.heroMastery[h.id] ?? DEFAULT_MASTERY)}{h.preferredRoles.includes(role) ? '' : '（非本位置英雄）'}
                     </option>
                   ))}
                 </select>
-                {mastery !== null && <div className={mastery >= 70 ? 'good' : mastery < 45 ? 'bad' : 'dim'}>熟练度 {mastery}{mastery < 45 ? '：不熟练，技能效果差' : ''}</div>}
+                {mastery !== null && <div className={mastery >= 70 ? 'good' : mastery < 45 ? 'bad' : 'dim'}>熟练度 {Math.round(mastery)}{mastery < 45 ? '：不熟练，技能效果差' : ''}</div>}
                 {pick?.heroId && <div className="dim small-text">{data.heroById[pick.heroId]?.skill.name}：{data.heroById[pick.heroId]?.skill.description}</div>}
               </div>
             );
