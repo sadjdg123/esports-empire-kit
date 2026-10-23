@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../../src/core/config';
 import { runMatch } from '../../src/sim';
 import {
-  PLAYER_CLUB_ID, advanceToNextMatch, advanceWeek, commitWeek, financeSummary, marketPlayers, newGame, prepareWeek, readinessIssues,
+  PLAYER_CLUB_ID, advanceDay, advanceToNextMatch, advanceWeek, autoManage, autoTraining, commitMatchDay, commitWeek, financeSummary, marketPlayers, newGame, prepareWeek, readinessIssues,
   recommendLineup, releaseFeeFor, releasePlayer, rosterOf, setLineup, signPlayer, signValueSquad, standings, type GameState,
 } from '../../src/game';
 
@@ -179,16 +179,24 @@ describe('season', () => {
 });
 
 describe('economy calibration (sanity, 8 seeds; the full 100-seed check is `npm run sim -- --economy`)', () => {
-  it('a value squad ends the season with 60%-150% of the starting funds most of the time', () => {
+  it('normal management ends the season with 60%-150% of the starting funds most of the time', () => {
+    // The first seeds of the full check, played the same way (T24: the old 10-week, train-every-week
+    // shortcut no longer matched how the full check plays).
     let inside = 0;
     const n = 8;
-    for (let seed = 100; seed < 100 + n; seed++) {
-      const s = readyGame(seed);
-      s.training = 'MECHANICS'; // the P0 rule this check was calibrated on: train every week (the full-season check rests every third week)
-      for (let w = 0; w < 10; w++) advanceWeek(s, data);
+    for (let seed = 10_000; seed < 10_000 + n; seed++) {
+      const s = newGame('校准', '#3a7bd5', seed, data);
+      expect(autoManage(s, data, 'balanced').ok).toBe(true);
+      for (let guard = 0; guard < 400 && s.calendar.phase !== 'FINISHED'; guard++) {
+        autoTraining(s);
+        if (advanceDay(s, data).pause !== 'MATCH_DAY') continue;
+        let c = commitMatchDay(s, data);
+        if (!c.ok) { autoManage(s, data, 'balanced'); c = commitMatchDay(s, data); }
+        expect(c.ok).toBe(true);
+      }
       const ratio = s.funds / s.startingFunds;
       if (ratio >= 0.6 && ratio <= 1.5) inside++;
     }
     expect(inside / n).toBeGreaterThanOrEqual(0.75);
-  }, 120_000);
+  }, 180_000);
 });

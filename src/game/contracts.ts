@@ -1,6 +1,7 @@
 // Contracts (P1, GDD 10): salaries, market value, renewals, expiry and
 // release fees. A contract runs to the end of season `contractUntil`.
 
+import { traitEffect } from '../core/personality';
 import type { ClubId, GameData, Player, PlayerId } from '../core/types';
 import { addLedger, playerOverall, rosterOf, weekOfSeason, type Result } from './game';
 import { facilityValue } from './facilities';
@@ -59,13 +60,15 @@ export function validYears(data: GameData, years: number): boolean {
 
 /**
  * Weekly salary a player asks for: fair pay, more when unhappy, never much less than now.
- * `office` is the club office's effect (T22): −0.05 asks 5% less.
+ * `office` is the club office's effect (T22): −0.05 asks 5% less. Modest players ask less,
+ * greedy ones more (T24).
  */
 export function renewalAsk(data: GameData, p: Player, office = 0): number {
   const k = data.economy.contracts;
   const neutral = data.growth.moraleNeutral;
   const moodMult = 1 + (neutral - (p.morale ?? neutral)) * k.askMoralePer;
-  return roundTo(Math.max(fairSalary(data, p) * moodMult, p.salaryPerWeek * k.askMinOfCurrent) * (1 + office), 50);
+  const traits = 1 + traitEffect(data.traits, p.traits, 'salaryAsk');
+  return roundTo(Math.max(fairSalary(data, p) * moodMult, p.salaryPerWeek * k.askMinOfCurrent) * (1 + office) * traits, 50);
 }
 
 export function negotiationFor(state: GameState, playerId: PlayerId): Negotiation | undefined {

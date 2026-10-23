@@ -550,6 +550,7 @@ function checkTraits(c: Checker, raw: unknown): void {
     if (!to) return;
     for (const k of ['name', 'description']) if (typeof to[k] !== 'string' || !to[k]) c.fail(`${tp}.${k}`, 'expected text');
     c.num(to, 'weight', tp, 0);
+    if (!['good', 'bad', 'mixed'].includes(to.tone as string)) c.fail(`${tp}.tone`, 'expected good, bad or mixed');
     for (const x of (to.excludes as unknown[] | undefined) ?? []) if (!ids.has(x as string)) c.fail(`${tp}.excludes`, `unknown trait ${String(x)}`);
     const eff = c.obj(to.effects, `${tp}.effects`);
     if (eff) {

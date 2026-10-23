@@ -1,13 +1,13 @@
 {
   "countWeights": [35, 45, 20],
   "traits": [
-    { "id": "CLUTCH", "name": "大心脏", "description": "落后时反而打得更好", "weight": 10, "excludes": ["FRAGILE"], "effects": { "behindPerformance": 0.05 } },
-    { "id": "FRAGILE", "name": "玻璃心", "description": "落后时容易失误", "weight": 10, "excludes": ["CLUTCH"], "effects": { "behindPerformance": -0.05 } },
-    { "id": "DILIGENT", "name": "刻苦", "description": "训练成长 +20%", "weight": 12, "excludes": ["LAZY"], "effects": { "trainingGrowth": 0.2 } },
-    { "id": "LAZY", "name": "懒散", "description": "训练成长 −20%", "weight": 8, "excludes": ["DILIGENT"], "effects": { "trainingGrowth": -0.2 } },
-    { "id": "LEADER", "name": "领袖", "description": "全队士气回升更快", "weight": 6, "effects": { "teamMoraleDrift": 0.5 } },
-    { "id": "LONER", "name": "独行侠", "description": "个人操作更好，团队配合差一点", "weight": 8, "effects": { "mechanicsPerformance": 0.04, "teamworkPerformance": -0.05 } },
-    { "id": "MODEST", "name": "务实", "description": "续约要价低 10%", "weight": 10, "excludes": ["GREEDY"], "effects": { "salaryAsk": -0.1 } },
-    { "id": "GREEDY", "name": "爱钱", "description": "续约要价高 20%", "weight": 10, "excludes": ["MODEST"], "effects": { "salaryAsk": 0.2 } }
+    { "id": "CLUTCH", "tone": "good", "name": "大心脏", "description": "落后时反而打得更好", "weight": 10, "excludes": ["FRAGILE"], "effects": { "behindPerformance": 0.05 } },
+    { "id": "FRAGILE", "tone": "bad", "name": "玻璃心", "description": "落后时容易失误", "weight": 10, "excludes": ["CLUTCH"], "effects": { "behindPerformance": -0.05 } },
+    { "id": "DILIGENT", "tone": "good", "name": "刻苦", "description": "训练成长 +20%", "weight": 12, "excludes": ["LAZY"], "effects": { "trainingGrowth": 0.2 } },
+    { "id": "LAZY", "tone": "bad", "name": "懒散", "description": "训练成长 −20%", "weight": 8, "excludes": ["DILIGENT"], "effects": { "trainingGrowth": -0.2 } },
+    { "id": "LEADER", "tone": "good", "name": "领袖", "description": "全队士气回升更快", "weight": 6, "effects": { "teamMoraleDrift": 0.5 } },
+    { "id": "LONER", "tone": "mixed", "name": "独行侠", "description": "个人操作更好，团队配合差一点", "weight": 8, "effects": { "mechanicsPerformance": 0.005, "teamworkPerformance": -0.05 } },
+    { "id": "MODEST", "tone": "good", "name": "务实", "description": "续约要价低 10%", "weight": 10, "excludes": ["GREEDY"], "effects": { "salaryAsk": -0.1 } },
+    { "id": "GREEDY", "tone": "bad", "name": "爱钱", "description": "续约要价高 20%", "weight": 10, "excludes": ["MODEST"], "effects": { "salaryAsk": 0.2 } }
   ]
 }

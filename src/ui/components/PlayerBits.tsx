@@ -51,3 +51,11 @@ export function Morale({ p }: { p: Player }) {
 export function PlayerName({ p, show }: { p: Player; show: (id: string) => void }) {
   return <button className="link name" onClick={() => show(p.id)}>{p.name}</button>;
 }
+
+/** A player's personality as small tags (T24); `full` adds the one-line description of each. */
+export function Traits({ p, data, full = false }: { p: Player; data: GameData; full?: boolean }) {
+  const list = (p.traits ?? []).map((id) => data.traits.traits.find((t) => t.id === id)).filter((t) => t !== undefined);
+  if (list.length === 0) return full ? <span className="dim">没有特别的性格</span> : null;
+  if (full) return <span className="traits full">{list.map((t) => <span key={t.id} className="trait-line"><b className={`trait ${t.tone}`}>{t.name}</b> {t.description}</span>)}</span>;
+  return <span className="traits">{list.map((t) => <b key={t.id} className={`trait ${t.tone}`} title={t.description}>{t.name}</b>)}</span>;
+}

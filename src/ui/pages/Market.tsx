@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ROLES, type Role } from '../../core/types';
 import { financeSummary, marketPlayers, releaseFeeFor, releasePlayer, rosterOf, signPlayer } from '../../game';
 import type { PageProps } from '../App';
-import { Attrs, Form, Heroes, Ovr, PlayerName, Roles } from '../components/PlayerBits';
+import { Attrs, Form, Heroes, Ovr, PlayerName, Roles, Traits } from '../components/PlayerBits';
 import { ROLE_NAME, money } from '../labels';
 
 export function MarketPage({ game, data, act, go, flash, ask, showPlayer }: PageProps) {
@@ -52,7 +52,7 @@ export function MarketPage({ game, data, act, go, flash, ask, showPlayer }: Page
           <tbody>
             {list.map((p) => (
               <tr key={p.id}>
-                <td><PlayerName p={p} show={showPlayer} /> <span className="dim">{p.age}岁</span></td>
+                <td><PlayerName p={p} show={showPlayer} /> <span className="dim">{p.age}岁</span> <Traits p={p} data={data} /></td>
                 <td><Roles p={p} /></td>
                 <td><Ovr p={p} /></td>
                 <td className="hide-sm"><Attrs p={p} /></td>

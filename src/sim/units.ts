@@ -1,7 +1,8 @@
 // Unit records for a match and their movement and stat formulas. Units are
 // plain objects so the whole match state stays serialisable and easy to inspect.
 
-import { DEFAULT_MASTERY, type HeroDef, type Lane, type MatchConfig, type Player, type Role, type Side } from '../core/types';
+import { traitEffect } from '../core/personality';
+import { DEFAULT_MASTERY, type HeroDef, type Lane, type MatchConfig, type Player, type Role, type Side, type TraitsConfig } from '../core/types';
 import { atNode, graphDistance, moveAlongPath, moveToward, type GameMap, type Loc } from './map';
 
 export interface CreepWave {
@@ -135,7 +136,7 @@ export interface HeroCoefficients {
   gankDetect: number;
   groupDelay: number;
   focusChance: number;
-  mentalPenalty: number; // multiplier applied while the team is far behind in gold
+  mentalPenalty: number; // multiplier applied while the team is far behind in gold (with clutch / fragile traits)
   mastery: number;
   roleFit: 'primary' | 'secondary' | 'off';
 }
@@ -201,7 +202,24 @@ export function masteryOf(player: Player, heroId: string): number {
   return player.heroMastery[heroId] ?? DEFAULT_MASTERY;
 }
 
-export function computeCoefficients(cfg: MatchConfig, player: Player, role: Role, heroId: string): HeroCoefficients {
+/** What a player's personality does in a match (T24), from traits.json; each at most ±5% (D50). */
+export interface TraitMods {
+  mechanics: number; // damage, skill hits and farming
+  teamwork: number; // focusing the same target and answering group calls
+  behind: number; // damage while the team is far behind in gold
+}
+export const NO_TRAIT_MODS: TraitMods = { mechanics: 0, teamwork: 0, behind: 0 };
+
+export function traitModsOf(traits: TraitsConfig, player: Player): TraitMods {
+  if (!player.traits?.length) return NO_TRAIT_MODS;
+  return {
+    mechanics: traitEffect(traits, player.traits, 'mechanicsPerformance'),
+    teamwork: traitEffect(traits, player.traits, 'teamworkPerformance'),
+    behind: traitEffect(traits, player.traits, 'behindPerformance'),
+  };
+}
+
+export function computeCoefficients(cfg: MatchConfig, player: Player, role: Role, heroId: string, mods: TraitMods = NO_TRAIT_MODS): HeroCoefficients {
   const k = cfg.coefficients;
   const a = player.attrs;
   const roleFit = roleFitOf(player, role);
@@ -210,10 +228,11 @@ export function computeCoefficients(cfg: MatchConfig, player: Player, role: Role
   const tired = Math.max(0, (player.fatigue ?? 0) - k.fatigue.start) * k.fatigue.per;
   const performance = roleMult * formMult * Math.max(0.5, 1 - tired);
   const mastery = masteryOf(player, heroId);
+  const mech = performance * (1 + mods.mechanics);
   return {
-    damage: lin(k.mechanicsDamage, a.mechanics) * performance,
-    skillHit: Math.min(0.98, lin(k.skillHit, a.mechanics) * performance),
-    farm: lin(k.farm, a.mechanics) * performance,
+    damage: lin(k.mechanicsDamage, a.mechanics) * mech,
+    skillHit: Math.min(0.98, lin(k.skillHit, a.mechanics) * mech),
+    farm: lin(k.farm, a.mechanics) * mech,
     masteryEffect: lin(k.masteryEffect, mastery),
     cooldownMult: Math.max(0.5, 1 - mastery * k.masteryCooldown),
     performance,
@@ -221,9 +240,9 @@ export function computeCoefficients(cfg: MatchConfig, player: Player, role: Role
     decisionChance: Math.min(1, lin(k.decisionChance, a.awareness)),
     decisionNoise: k.decisionNoise.base + k.decisionNoise.per * (100 - a.awareness),
     gankDetect: Math.min(0.97, lin(k.gankDetect, a.awareness) * performance),
-    groupDelay: k.teamworkDelay * (100 - a.teamwork),
-    focusChance: Math.min(1, lin(k.teamworkFocus, a.teamwork)),
-    mentalPenalty: Math.max(0.5, 1 - (100 - a.mental) * k.mentalPenaltyPer),
+    groupDelay: k.teamworkDelay * (100 - a.teamwork) * (1 - mods.teamwork),
+    focusChance: Math.min(1, lin(k.teamworkFocus, a.teamwork) * (1 + mods.teamwork)),
+    mentalPenalty: Math.max(0.5, 1 - (100 - a.mental) * k.mentalPenaltyPer) * (1 + mods.behind),
     mastery,
     roleFit,
   };
@@ -242,7 +261,7 @@ export function refreshHeroStats(cfg: MatchConfig, h: HeroUnit): void {
   h.armor = h.hero.base.armor + h.hero.perLevel.armor * lv;
 }
 
-export function createHero(cfg: MatchConfig, idx: number, side: Side, role: Role, player: Player, hero: HeroDef, baseNode: number): HeroUnit {
+export function createHero(cfg: MatchConfig, idx: number, side: Side, role: Role, player: Player, hero: HeroDef, baseNode: number, mods: TraitMods = NO_TRAIT_MODS): HeroUnit {
   const h: HeroUnit = {
     idx,
     id: `${side}:${role}`,
@@ -251,7 +270,7 @@ export function createHero(cfg: MatchConfig, idx: number, side: Side, role: Role
     role,
     player,
     hero,
-    coef: computeCoefficients(cfg, player, role, hero.id),
+    coef: computeCoefficients(cfg, player, role, hero.id, mods),
     loc: atNode(baseNode),
     alive: true,
     respawnAt: 0,

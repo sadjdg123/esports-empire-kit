@@ -551,6 +551,7 @@ export interface TraitDef {
   name: string;
   description: string;
   weight: number; // how common it is
+  tone: 'good' | 'bad' | 'mixed'; // tag colour in the interface (T24)
   excludes?: string[]; // traits that cannot come together with this one
   effects: Record<string, number>;
 }

@@ -39,3 +39,10 @@ export function personalityFor(id: string, traits: TraitsConfig, growth: GrowthC
   const growthType = weighted(GROWTH_TYPES, (g) => growth.growthTypes[g].weight, unit(`${id}#growth`)) ?? 'NORMAL';
   return { traits: chosen, growthType };
 }
+
+/** The sum of one effect over a player's traits (T24); 0 when none of them has it. */
+export function traitEffect(traits: TraitsConfig, ids: readonly string[] | undefined, effect: string): number {
+  let v = 0;
+  for (const id of ids ?? []) v += traits.traits.find((t) => t.id === id)?.effects[effect] ?? 0;
+  return v;
+}

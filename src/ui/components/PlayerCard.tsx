@@ -2,7 +2,7 @@ import { PLAYER_CLUB_ID, clubById, marketValue, playerOverall } from '../../game
 import { lookFor } from '../../render/pixel/chibi';
 import type { PageProps } from '../App';
 import { GROWTH_NAME, growthRoom, money, ROLE_NAME } from '../labels';
-import { Attrs, Fatigue, Form, Heroes, Morale, Ovr, Roles } from './PlayerBits';
+import { Attrs, Fatigue, Form, Heroes, Morale, Ovr, Roles, Traits } from './PlayerBits';
 import { Portrait } from './Portrait';
 
 function Sparkline({ points }: { points: number[] }) {
@@ -45,6 +45,7 @@ export function PlayerCard({ game, data, playerId, close }: PageProps & { player
         <dl className="kv">
           <dt>操作 / 意识 / 配合 / 心态</dt><dd><Attrs p={p} /></dd>
           <dt>成长空间</dt><dd>{growthRoom(p.potential, playerOverall(p))}</dd>
+          <dt>性格</dt><dd><Traits p={p} data={data} full /></dd>
           <dt>成长类型</dt><dd>{GROWTH_NAME[p.growthType ?? 'NORMAL']}</dd>
           <dt>疲劳</dt><dd><Fatigue p={p} /></dd>
           <dt>士气</dt><dd><Morale p={p} /></dd>

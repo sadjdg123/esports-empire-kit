@@ -7,6 +7,7 @@ import { DEFAULT_MASTERY } from '../core/types';
 import { clubById, playerOverall, weekOfSeason } from './game';
 import { PLAYER_CLUB_ID, type GameState } from './state';
 import { facilityValue } from './facilities';
+import { traitEffect } from '../core/personality';
 
 const ATTRS: readonly (keyof PlayerAttributes)[] = ['mechanics', 'awareness', 'teamwork', 'mental'];
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -68,6 +69,12 @@ export function trainingBoost(state: GameState, data: GameData, clubId: ClubId):
   return { growth: 1 + facilityValue(state, data, clubId, 'TRAINING'), mastery: 1 + facilityValue(state, data, clubId, 'ANALYSIS') };
 }
 
+/** The club's boost for one player, with a diligent (or lazy) personality on top (T24). */
+export function playerTrainingBoost(data: GameData, p: Player, club: TrainingBoost): TrainingBoost {
+  const t = 1 + traitEffect(data.traits, p.traits, 'trainingGrowth');
+  return { growth: club.growth * t, mastery: club.mastery * t };
+}
+
 /** One week of training for one player. */
 export function trainPlayer(p: Player, focus: TrainingFocus, g: GrowthConfig, boost: TrainingBoost = NO_BOOST): void {
   const rate = ageRateOf(g, p);
@@ -100,7 +107,10 @@ export function applyTrainingWeek(state: GameState, data: GameData): void {
   for (const club of [state.club, ...state.aiClubs]) {
     const focus = trainingFocusOf(state, data, club.id);
     const boost = trainingBoost(state, data, club.id);
-    for (const id of [...club.roster].sort()) trainPlayer(state.players[id]!, focus, g, boost);
+    for (const id of [...club.roster].sort()) {
+      const p = state.players[id]!;
+      trainPlayer(p, focus, g, playerTrainingBoost(data, p, boost));
+    }
   }
   // Free agents do not train, but still age.
   for (const id of [...state.market].sort()) {
@@ -119,19 +129,23 @@ export function applyTrainingWeek(state: GameState, data: GameData): void {
 
 const OVR_HISTORY = 40;
 
-/** Daily recovery: fatigue goes down (faster with a better lounge), morale drifts back toward neutral. */
+/** Daily recovery: fatigue goes down (faster with a better lounge), morale drifts back toward neutral (low morale faster with a leader). */
 export function applyDailyRecovery(state: GameState, data: GameData): void {
   const g = data.growth;
   const lounge = new Map<string, number>();
+  const lift = new Map<string, number>(); // a leader on the club: low morale climbs back faster (T24)
   for (const club of [state.club, ...state.aiClubs]) {
     const extra = facilityValue(state, data, club.id, 'LOUNGE');
     if (extra) for (const id of club.roster) lounge.set(id, extra);
+    const leader = Math.max(0, ...club.roster.map((id) => traitEffect(data.traits, state.players[id]?.traits, 'teamMoraleDrift')));
+    if (leader) for (const id of club.roster) lift.set(id, leader);
   }
   for (const id of Object.keys(state.players).sort()) {
     const p = state.players[id]!;
     p.fatigue = round2(Math.max(0, (p.fatigue ?? 0) - g.fatigueDailyRecovery - (lounge.get(id) ?? 0)));
     const m = p.morale ?? g.moraleNeutral;
-    const step = Math.min(g.moraleDailyDrift, Math.abs(g.moraleNeutral - m));
+    const drift = g.moraleDailyDrift + (m < g.moraleNeutral ? lift.get(id) ?? 0 : 0);
+    const step = Math.min(drift, Math.abs(g.moraleNeutral - m));
     p.morale = round2(m + Math.sign(g.moraleNeutral - m) * step);
   }
 }

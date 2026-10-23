@@ -5,7 +5,7 @@ import {
   playerOverall, releaseFeeFor, releasePlayer, renewalAsk, respondToOffer, rosterOf, transferWindowOpen,
 } from '../../game';
 import type { PageProps } from '../App';
-import { Ovr, PlayerName, Roles } from '../components/PlayerBits';
+import { Ovr, PlayerName, Roles, Traits } from '../components/PlayerBits';
 import { ROLE_NAME, money } from '../labels';
 
 function YearsPicker({ value, set, max }: { value: number; set: (v: number) => void; max: number }) {
@@ -163,7 +163,7 @@ export function ContractsPage(props: PageProps) {
           <tbody>
             {targets.map((p) => (
               <tr key={p.id}>
-                <td><PlayerName p={p} show={showPlayer} /><div className="dim small-text show-sm">{clubById(game, p.clubId!).shortName} · {ROLE_NAME[p.primaryRole]}</div></td>
+                <td><PlayerName p={p} show={showPlayer} /> <Traits p={p} data={data} /><div className="dim small-text show-sm">{clubById(game, p.clubId!).shortName} · {ROLE_NAME[p.primaryRole]}</div></td>
                 <td className="hide-sm">{clubById(game, p.clubId!).name}</td>
                 <td className="hide-sm"><Roles p={p} /></td>
                 <td><Ovr p={p} /></td>
