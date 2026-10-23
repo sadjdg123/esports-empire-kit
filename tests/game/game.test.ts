@@ -184,6 +184,7 @@ describe('economy calibration (sanity, 8 seeds; the full 100-seed check is `npm 
     const n = 8;
     for (let seed = 100; seed < 100 + n; seed++) {
       const s = readyGame(seed);
+      s.training = 'MECHANICS'; // the P0 rule this check was calibrated on: train every week (the full-season check rests every third week)
       for (let w = 0; w < 10; w++) advanceWeek(s, data);
       const ratio = s.funds / s.startingFunds;
       if (ratio >= 0.6 && ratio <= 1.5) inside++;

@@ -47,7 +47,7 @@ function migrateV1toV2(save: Obj): Obj {
   const week = typeof g.week === 'number' ? g.week : 0;
   const total = typeof g.totalRounds === 'number' ? g.totalRounds : 10;
   g.calendar = { season: 1, phase: week >= total ? 'FINISHED' : week === 0 ? 'PRESEASON' : 'REGULAR', day: 14 + week * 7 };
-  g.training ??= 'MECHANICS';
+  g.training ??= 'AUTO';
   g.inbox ??= [];
   g.nextMessageId ??= 1;
   g.history ??= [];

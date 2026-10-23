@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../../src/core/config';
-import type { Player, TrainingFocus } from '../../src/core/types';
+import type { Player } from '../../src/core/types';
 import {
-  advanceDay, ageRate, applyMatchEffects, commitMatchDay, matchInputFor, newGame, playerOverall, signValueSquad,
-  todaysMatches, trainPlayer, updateForm, type GameState,
+  PLAYER_CLUB_ID, advanceDay, ageRate, applyMatchEffects, commitMatchDay, matchInputFor, newGame, playerOverall, signValueSquad,
+  todaysMatches, trainPlayer, trainingFocusOf, updateForm, type GameState, type TrainingPlan,
 } from '../../src/game';
 import { createRng } from '../../src/core/rng';
 import { runMatch } from '../../src/sim';
@@ -12,7 +12,7 @@ import { cloneTeam, clubTeam } from '../../src/sim/scenario';
 const data = loadGameData();
 const g = data.growth;
 
-function playSeason(seed: number, focusFor: (week: number) => TrainingFocus): { s: GameState; fatigueAtMatches: number[]; before: Record<string, Player> } {
+function playSeason(seed: number, focusFor: (week: number) => TrainingPlan): { s: GameState; fatigueAtMatches: number[]; before: Record<string, Player> } {
   const s = newGame('训练测试', '#3a7bd5', seed, data);
   expect(signValueSquad(s, data).ok).toBe(true);
   const before = structuredClone(s.players);
@@ -85,6 +85,21 @@ describe('fatigue and morale', () => {
     const rested = playSeason(7, (w) => (w % 3 === 2 ? 'REST' : 'MECHANICS')).fatigueAtMatches;
     expect(Math.max(...tired.slice(-3))).toBeGreaterThanOrEqual(80);
     expect(Math.max(...rested)).toBeLessThan(50);
+  }, 60_000);
+
+  it('automatic training (the default) rests the week the squad is tired and rotates otherwise', () => {
+    const s = newGame('自动', '#3a7bd5', 3, data);
+    expect(s.training).toBe('AUTO');
+    expect(signValueSquad(s, data).ok).toBe(true);
+    for (const id of s.club.roster) s.players[id]!.fatigue = 0;
+    expect(trainingFocusOf(s, data, PLAYER_CLUB_ID)).not.toBe('REST');
+    for (const id of s.club.roster) s.players[id]!.fatigue = g.autoRestFatigue;
+    expect(trainingFocusOf(s, data, PLAYER_CLUB_ID)).toBe('REST');
+    // Over a whole season the squad never wears out, and it still trains most weeks.
+    const auto = playSeason(7, () => 'AUTO');
+    expect(Math.max(...auto.fatigueAtMatches)).toBeLessThan(50);
+    const grew = auto.s.club.roster.filter((id) => playerOverall(auto.s.players[id]!) > playerOverall(auto.before[id]!)).length;
+    expect(grew).toBeGreaterThan(0);
   }, 60_000);
 
   it('tired players lose more often than the same players fresh', () => {

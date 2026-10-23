@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { loadGameData } from '../core/config';
 import type { GameData } from '../core/types';
 import {
-  PLAYER_CLUB_ID, advanceDay, advanceToNextMatch, clubById, nextPlayerFixture, readinessIssues,
+  PLAYER_CLUB_ID, advanceDay, advanceToNextMatch, clubById, commitWeek, nextPlayerFixture, prepareWeek, readinessIssues,
   type DayResult, type GameState, type InboxMessage, type Result, type WeekSummary,
 } from '../game';
 import { lookFor } from '../render/pixel/chibi';
 import type { Hotspot } from '../render/club/ClubScene';
 import { markersFor } from '../render/club/markers';
 import { loadGame, saveGame, type LoadOutcome } from '../save';
+import { runMatch } from '../sim';
 import { BaseView } from './components/BaseView';
 import { ConfirmDialog, type ConfirmRequest } from './components/Confirm';
 import { EventDialog, type DialogLine } from './components/EventDialog';
@@ -148,6 +149,12 @@ export function App() {
     setWin(p === 'home' ? null : p);
   }, []);
 
+  /** After a match, watched or not: remember the week and cheer on a win. */
+  const matchDone = useCallback((summary: WeekSummary) => {
+    setLastWeek(summary);
+    if (summary.playerResult?.winner === PLAYER_CLUB_ID) setCheerDay(gameRef.current!.calendar.day);
+  }, []);
+
   /** What to do when the calendar stops on its own. */
   const handlePause = useCallback((r: DayResult) => {
     if (r.pause === 'MATCH_DAY') { setWin('matchday'); return; }
@@ -213,10 +220,7 @@ export function App() {
     return (
       <div className="app match-screen">
         <main className="page">
-          <MatchPage {...props} onDone={(summary) => {
-            setLastWeek(summary);
-            if (summary.playerResult?.winner === PLAYER_CLUB_ID) setCheerDay(gameRef.current!.calendar.day);
-          }} />
+          <MatchPage {...props} onDone={matchDone} />
         </main>
         {toast && <div className="toast">{toast}</div>}
         {dialog}
@@ -246,7 +250,7 @@ export function App() {
         <GameWindow title={title} icon={icon} onClose={() => setWin(null)}>
           {win === 'menu' && <MenuGrid open={(p) => go(p)} unread={unread} hasReports={game.reports.length > 0} />}
           {(win === 'overview' || win === 'seasonend') && <HomePage {...props} lastWeek={lastWeek} />}
-          {win === 'matchday' && <MatchDay {...props} />}
+          {win === 'matchday' && <MatchDay {...props} onDone={matchDone} />}
           {win === 'inbox' && <InboxPage {...props} />}
           {win === 'market' && <MarketPage {...props} />}
           {win === 'lineup' && <LineupPage {...props} />}
@@ -267,12 +271,22 @@ export function App() {
 }
 
 /** The match-day pop-up: who we play, and whether the team is ready. */
-function MatchDay({ game, data, go }: PageProps) {
+function MatchDay({ game, data, go, act, flash, onDone }: PageProps & { onDone: (s: WeekSummary) => void }) {
   const next = nextPlayerFixture(game, data);
   const issues = readinessIssues(game, data);
   if (!next || next.day !== game.calendar.day) return <p>今天没有你的比赛。</p>;
   const opp = clubById(game, next.opponent);
   const stage = next.kind === 'SEMI' ? '季后赛半决赛' : next.kind === 'FINAL' ? '总决赛' : `常规赛第 ${game.week + 1} 轮`;
+  // Same match as watching it (watching, skipping and runMatch give the same result), without the match screen.
+  const quick = () => {
+    const prep = prepareWeek(game, data);
+    if (!prep.playerMatch) { flash(prep.issues.join('；') || '今天不能比赛'); return; }
+    const result = runMatch(prep.playerMatch, data);
+    const r = act((d) => commitWeek(d, data, result));
+    if (!r.ok) { flash(r.error); return; }
+    onDone(r.value);
+    go('report', { reportRound: r.value.round });
+  };
   return (
     <div className="matchday">
       <p className="big-text">{stage}：对阵 <span className="swatch" style={{ background: opp.color }} /> <b>{opp.name}</b></p>
@@ -286,6 +300,7 @@ function MatchDay({ game, data, go }: PageProps) {
           <p>首发和战术已就绪：<b>{data.match.tactics[game.lineup!.tactic].name}</b>。</p>
           <div className="row">
             <button className="primary big" onClick={() => go('match')}>开始比赛 ▶</button>
+            <button onClick={quick}>直接看结果 ⏭</button>
             <button onClick={() => go('lineup')}>调整阵容</button>
           </div>
         </>

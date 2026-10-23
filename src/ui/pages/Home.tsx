@@ -29,7 +29,7 @@ export function HomePage({ game, data, go, act, flash, toNextMatch, lastWeek }: 
   if (!over && expiring.length > 0) todo.push({ text: `${expiring.map((p) => p.name).join('、')} 的合同本赛季到期`, page: 'contracts', button: '谈续约' });
   if (!over && !activeSponsor(game)) todo.push({ text: '还没有赞助商', page: 'finance', button: '选赞助' });
   const tired = rosterOf(game).filter((p) => (p.fatigue ?? 0) >= 70);
-  if (tired.length > 0 && game.training !== 'REST') todo.push({ text: `${tired.length} 名选手很累（疲劳 ≥70）`, page: 'training', button: '安排休息' });
+  if (tired.length > 0 && game.training !== 'REST' && game.training !== 'AUTO') todo.push({ text: `${tired.length} 名选手很累（疲劳 ≥70）`, page: 'training', button: '安排休息' });
   if (transferWindowOpen(game)) todo.push({ text: '转会窗口开放中，可以买卖选手', page: 'contracts', button: '看转会' });
   const newSeason = () => {
     act((d) => { advanceDay(d, data); return { ok: true, value: undefined }; });

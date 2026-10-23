@@ -61,6 +61,7 @@
   "moraleNeutral": 60,
   "moraleFormPer": 0.08,
   "formPull": 0.5,
+  "autoRestFatigue": 40,
   "aiFocusRotation": [
     "MECHANICS",
     "AWARENESS",

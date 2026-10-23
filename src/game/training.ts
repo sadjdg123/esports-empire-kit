@@ -36,14 +36,17 @@ function addMastery(p: Player, heroId: string, v: number): void {
   p.heroMastery[heroId] = round2(clamp((p.heroMastery[heroId] ?? DEFAULT_MASTERY) + v, 0, 100));
 }
 
-/** The training focus a club uses this week. AI clubs rest when tired, otherwise rotate. */
+/**
+ * The training focus a club uses this week (settled each Monday). AI clubs, and the player
+ * on AUTO, rest when the squad is tired and otherwise rotate through the focuses.
+ */
 export function trainingFocusOf(state: GameState, data: GameData, clubId: ClubId): TrainingFocus {
-  if (clubId === PLAYER_CLUB_ID) return state.training;
+  if (clubId === PLAYER_CLUB_ID && state.training !== 'AUTO') return state.training;
   const g = data.growth;
   const club = clubById(state, clubId);
   const roster = club.roster.map((id) => state.players[id]!);
   const avgFatigue = roster.reduce((a, p) => a + (p.fatigue ?? 0), 0) / Math.max(1, roster.length);
-  const restAt = club.management === 'PLAYER' ? 100 : data.ai.styles[club.management].restFatigue;
+  const restAt = clubId === PLAYER_CLUB_ID ? g.autoRestFatigue : club.management === 'PLAYER' ? 100 : data.ai.styles[club.management].restFatigue;
   if (avgFatigue >= restAt) return 'REST';
   return g.aiFocusRotation[weekOfSeason(state) % g.aiFocusRotation.length]!;
 }

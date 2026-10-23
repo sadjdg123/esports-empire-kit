@@ -75,11 +75,14 @@ describe('club base markers (furniture that needs the player)', () => {
     expect(markersFor(s, data).contracts).toBeUndefined();
   });
 
-  it('tired players make the training desks sweat, unless it is a rest week', () => {
+  it('tired players make the training desks sweat, unless it is a rest week or training is automatic', () => {
     const s = calm(club());
+    s.training = 'MECHANICS';
     s.players[s.club.roster[1]!]!.fatigue = TIRED_AT;
     expect(markersFor(s, data)).toEqual({ training: 'sweat' });
     s.training = 'REST';
+    expect(markersFor(s, data)).toEqual({});
+    s.training = 'AUTO'; // rests by itself
     expect(markersFor(s, data)).toEqual({});
   });
 });

@@ -45,4 +45,12 @@ async function playMatch(p) {
   return p.textContent('.report h2');
 }
 
-module.exports = { closeWindows, nav, playMatch, seasonOver };
+/** On the match-day window: get the result without watching (F1) and open the report. Returns the headline, or null. */
+async function quickMatch(p) {
+  try { await p.waitForSelector('.win button:has-text("直接看结果")', { timeout: 2500 }); } catch { return null; }
+  await p.click('.win button:has-text("直接看结果")');
+  await p.waitForSelector('text=关键原因');
+  return p.textContent('.report h2');
+}
+
+module.exports = { closeWindows, nav, playMatch, quickMatch, seasonOver };

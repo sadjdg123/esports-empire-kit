@@ -3,6 +3,9 @@
 
 import type { ClubId, ClubStyle, ManagementStyle, Player, PlayerId, Side, Tactic, TeamLineup, TrainingFocus } from '../core/types';
 
+/** The player's training choice: a fixed focus, or AUTO (rest when tired, otherwise rotate). */
+export type TrainingPlan = TrainingFocus | 'AUTO';
+
 export const PLAYER_CLUB_ID = 'player';
 
 export interface ClubState {
@@ -152,7 +155,7 @@ export interface GameState {
   rngState: number[];
   // P1
   calendar: Calendar;
-  training: TrainingFocus;
+  training: TrainingPlan; // the player's weekly training; AUTO decides each Monday (F1)
   inbox: InboxMessage[];
   nextMessageId: number;
   history: SeasonRecord[];

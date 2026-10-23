@@ -22,6 +22,7 @@ export function markersFor(g: GameState, data: GameData): Partial<Record<Hotspot
   const expiring = !over && expiringPlayers(g).some((p) => (negotiationFor(g, p.id)?.status ?? 'OPEN') === 'OPEN');
   if (offers || expiring) m.contracts = 'bang';
   if (!over && (!activeSponsor(g) || financeSummary(g, data).lowFunds)) m.finance = 'bang';
-  if (g.training !== 'REST' && rosterOf(g).some((p) => (p.fatigue ?? 0) >= TIRED_AT)) m.training = 'sweat';
+  // On AUTO the squad rests by itself, so tiredness needs no reminder.
+  if (g.training !== 'REST' && g.training !== 'AUTO' && rosterOf(g).some((p) => (p.fatigue ?? 0) >= TIRED_AT)) m.training = 'sweat';
   return m;
 }

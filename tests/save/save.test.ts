@@ -168,6 +168,7 @@ describe('P0 (v1) saves', () => {
     expect(g.week).toBe(3);
     expect(g.calendar).toEqual({ season: 1, phase: 'REGULAR', day: 14 + 3 * 7 });
     expect(g.inbox).toEqual([]);
+    expect(g.training).toBe('AUTO'); // an old save without a training choice gets the automatic plan (F1)
     expect(g.club.reputation).toBeGreaterThan(0);
     for (const c of g.aiClubs) expect(c.funds).toBeGreaterThan(0);
     for (const id of g.club.roster) {

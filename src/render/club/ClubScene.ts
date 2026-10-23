@@ -183,12 +183,22 @@ export class ClubScene {
     if (best) return { kind: 'player', id: best };
     this.build();
     const order = [...this.props].sort((a, b) => b.f - a.f || b.depth - a.depth);
-    for (const p of order) {
-      if (!p.hotspot) continue;
-      const px = Math.floor(x - p.x);
-      const py = Math.floor(y - p.y);
-      if (px < 0 || py < 0 || px >= p.img.width || py >= p.img.height) continue;
-      if (p.alpha[(py * p.img.width + px) * 4 + 3]! > 0) return { kind: 'hotspot', name: p.hotspot };
+    const at = (x: number, y: number): Hotspot | null => {
+      for (const p of order) {
+        if (!p.hotspot) continue;
+        const px = Math.floor(x - p.x);
+        const py = Math.floor(y - p.y);
+        if (px < 0 || py < 0 || px >= p.img.width || py >= p.img.height) continue;
+        if (p.alpha[(py * p.img.width + px) * 4 + 3]! > 0) return p.hotspot;
+      }
+      return null;
+    };
+    // Furniture is small on a phone: a tap that just misses still counts (closest ring first).
+    for (const r of [0, 2, 4, 6]) {
+      for (let k = 0; k < (r ? 8 : 1); k++) {
+        const name = at(x + Math.round(Math.cos((k * Math.PI) / 4) * r), y + Math.round(Math.sin((k * Math.PI) / 4) * r));
+        if (name) return { kind: 'hotspot', name };
+      }
     }
     return null;
   }

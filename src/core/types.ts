@@ -484,6 +484,8 @@ export interface GrowthConfig {
   moraleFormPer: number; // form target per morale point above neutral
   formPull: number; // weekly share of the gap between form and its morale target that closes
   aiFocusRotation: TrainingFocus[];
+  /** The player's automatic training rests the week the squad's average fatigue reaches this. */
+  autoRestFatigue: number;
 }
 
 /** How an AI club of one management style runs its business (T17). */

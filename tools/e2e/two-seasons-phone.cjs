@@ -61,7 +61,8 @@ const SHOTS = 'docs/reports/v1';
       if (await helpers.seasonOver(p)) return;
       if (i === 3) await reloadCheck(`season ${season} round 3`);
       await p.click('.hud button:has-text("下一场")');
-      const h = await playMatch();
+      // Season 1 watches (and skips) each match; season 2 takes the quick result from the match-day window.
+      const h = season === 1 ? await playMatch() : await helpers.quickMatch(p);
       if (!h) continue;
       log.push(h);
       if (h.includes('半决赛') || h.includes('总决赛')) await reloadCheck(`season ${season} ${h.slice(0, 3)}`);

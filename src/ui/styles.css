@@ -57,7 +57,8 @@ select, input { background: var(--panel-2); border: 1px solid var(--line); borde
 
 
 .notice { margin: 8px; padding: 10px 14px; border-radius: 8px; background: #fff3c4; border: 2px solid var(--warn); }
-.toast { position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%); background: #3a2a1acc; color: #fff; border: 2px solid var(--wood-dark); padding: 10px 18px; border-radius: 10px; z-index: 60; max-width: 90vw; }
+/* Near the top, below the status bar, and never in the way of a tap (windows have their buttons at the bottom). */
+.toast { position: fixed; top: 112px; left: 50%; pointer-events: none; transform: translateX(-50%); background: #3a2a1acc; color: #fff; border: 2px solid var(--wood-dark); padding: 10px 18px; border-radius: 10px; z-index: 60; max-width: 90vw; }
 
 .start { max-width: 520px; margin: 0 auto; padding: 60px 16px; text-align: center; }
 .start h1 { font-size: 36px; letter-spacing: 4px; }

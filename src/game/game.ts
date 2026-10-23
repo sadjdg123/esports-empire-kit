@@ -80,7 +80,7 @@ export function newGame(name: string, color: string, seed: number, data: GameDat
     reports: [],
     rngState: rng.state(),
     calendar: { season: 1, phase: 'PRESEASON', day: 0 },
-    training: 'MECHANICS',
+    training: 'AUTO',
     inbox: [],
     nextMessageId: 1,
     history: [],
