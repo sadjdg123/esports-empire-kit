@@ -75,6 +75,11 @@ describe('match result', () => {
     expect(snap.units.filter((u) => u.kind === 'TOWER')).toHaveLength(12);
     expect(snap.units.filter((u) => u.kind === 'BASE')).toHaveLength(2);
     expect(snap.units.some((u) => u.kind === 'CREEP')).toBe(true);
+    // Jungle camps (V3): six of them, alive after the first spawn, with the ids hero attacks use.
+    const camps = snap.units.filter((u) => u.kind === 'CAMP');
+    expect(camps).toHaveLength(data.match.map.nodes.filter((n) => n.type === 'JUNGLE').length);
+    expect(camps.some((c) => c.alive && c.hp > 0 && c.hp <= c.maxHp)).toBe(true);
+    for (const c of camps) expect(c.id).toMatch(/^CAMP:/);
     for (const u of snap.units) {
       expect(Number.isFinite(u.x) && Number.isFinite(u.y)).toBe(true);
     }

@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import type { GameData, MatchEvent, RenderSnapshot, SnapshotUnit } from '../core/types';
 import { heroPose, updateHeroAnims, type HeroAnim } from './heroAnim';
 import { HERO_H, heroPalette, heroRows, type HeroFrame } from './pixel/heroArt';
+import { MAP_PX, MAP_SPRITES, groundPixels, mapPalette, type MapSprite } from './pixel/mapArt';
 import { makeSprite } from './pixel/raster';
 import { lerpUnit, type MatchPlayer } from './player';
 
@@ -24,9 +25,29 @@ export interface SceneOptions {
 const HERO_SCALE = 2; // screen pixels per sprite pixel
 const HERO_TOP = (HERO_H - 3) * HERO_SCALE; // roughly the top of a hero's head above its feet
 const CHEST = 6 * HERO_SCALE;
+const MAP_SCALE = VIEW / MAP_PX; // the ground and map sprites use the same pixel size as heroes
+/** Glow colour of each objective's crystal and eyes. */
+const OBJECTIVE_GLOW: Record<string, string> = { WARDEN: '#7fd3ff', CORE: '#c99bff' };
+/** Map sprites stand a little below their node, so the node sits in the middle of the sprite. */
+const FOOT: Partial<Record<MapSprite, number>> = { tower: 5, towerRuin: 5, base: 8, baseRuin: 8, warden: 7, core: 7, pedestal: 7, beast: 4, bigBeast: 4 };
+const CREEPS_PER_WAVE = 3;
 
 function hex(c: string): number {
   return Number.parseInt(c.replace('#', ''), 16);
+}
+
+let ground: { map: GameData['match']['map']; url: string } | null = null;
+
+/** The painted ground as an image address, made once and reused by later matches. */
+function groundUrl(data: GameData): string {
+  if (ground?.map !== data.match.map) {
+    const c = document.createElement('canvas');
+    c.width = MAP_PX;
+    c.height = MAP_PX;
+    c.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(groundPixels(data.match.map)), MAP_PX, MAP_PX), 0, 0);
+    ground = { map: data.match.map, url: c.toDataURL('image/png') };
+  }
+  return ground.url;
 }
 
 interface HeroView {
@@ -49,6 +70,8 @@ export class MatchScene extends Phaser.Scene {
   private hud!: Phaser.GameObjects.Graphics;
   private fxLayer!: Phaser.GameObjects.Graphics;
   private heroes = new Map<string, HeroView>();
+  private props = new Map<string, Phaser.GameObjects.Image>(); // towers, bases, objectives, camps
+  private creeps = new Map<string, Phaser.GameObjects.Image[]>(); // one small squad per creep wave
   private heroAnims = new Map<string, HeroAnim>();
   private lastSnap!: RenderSnapshot;
   private fx: Fx[] = [];
@@ -75,35 +98,63 @@ export class MatchScene extends Phaser.Scene {
   }
 
   private drawMap(data: GameData): void {
-    const g = this.add.graphics();
-    g.fillStyle(0x1d3324, 1).fillRect(0, 0, VIEW, VIEW);
-    // river along y = x
-    g.lineStyle(46 * S * 2, 0x24506b, 1).lineBetween(sx(0), sy(0), sx(1000), sy(1000));
+    // The ground never changes, so it is the canvas's CSS background instead of something
+    // redrawn every frame (a full-screen picture per frame is slow on phones without a fast GPU).
+    const style = this.game.canvas.style;
+    style.backgroundImage = `url(${groundUrl(data)})`;
+    style.backgroundSize = '100% 100%';
+    style.imageRendering = 'pixelated';
     const nodes = new Map(data.match.map.nodes.map((n) => [n.id, n]));
-    // jungle paths
-    g.lineStyle(10 * S * 2, 0x2b4632, 1);
-    for (const [a, b] of data.match.map.edges) {
-      const na = nodes.get(a)!;
-      const nb = nodes.get(b)!;
-      g.lineBetween(sx(na.x), sy(na.y), sx(nb.x), sy(nb.y));
-    }
-    // lanes
-    g.lineStyle(30 * S * 2, 0x6b5a3c, 1);
-    for (const lane of Object.values(data.match.map.lanes)) {
-      for (let i = 1; i < lane.length; i++) {
-        const na = nodes.get(lane[i - 1]!)!;
-        const nb = nodes.get(lane[i]!)!;
-        g.lineBetween(sx(na.x), sy(na.y), sx(nb.x), sy(nb.y));
-      }
-    }
-    for (const n of data.match.map.nodes) {
-      if (n.type === 'JUNGLE') g.fillStyle(0x15261a, 1).fillCircle(sx(n.x), sy(n.y), 9);
-      if (n.type === 'OBJECTIVE') g.lineStyle(2, 0x9fd6ff, 0.8).strokeCircle(sx(n.x), sy(n.y), 14);
-    }
     for (const o of data.match.objectives) {
       const n = nodes.get(o.nodeId)!;
-      this.add.text(sx(n.x), sy(n.y) + 18, o.name, { fontSize: '11px', color: '#9fd6ff', fontFamily: 'sans-serif' }).setOrigin(0.5, 0);
+      this.add.text(sx(n.x), sy(n.y) + 26, o.name, { fontSize: '12px', color: OBJECTIVE_GLOW[o.id] ?? '#ffffff', fontFamily: 'sans-serif', fontStyle: 'bold', stroke: '#1d2a3a', strokeThickness: 3 }).setOrigin(0.5, 0).setDepth(0.5);
     }
+  }
+
+  /** The texture for a map sprite, made on first use. */
+  private mapTexture(name: MapSprite, side: 'BLUE' | 'RED' | null, glow?: string): string {
+    const key = `map:${name}:${side ?? '-'}:${glow ?? ''}`;
+    if (!this.textures.exists(key)) this.textures.addCanvas(key, makeSprite(MAP_SPRITES[name], mapPalette(side ? this.opts.colors[side] : null, glow)));
+    return key;
+  }
+
+  /** Shows (or hides, when `name` is null) the sprite standing for one structure, objective or camp. */
+  private prop(id: string, name: MapSprite | null, side: 'BLUE' | 'RED' | null, X: number, Y: number, glow?: string, lift = 0): Phaser.GameObjects.Image | null {
+    let img = this.props.get(id);
+    if (!name) { img?.setVisible(false); return null; }
+    const key = this.mapTexture(name, side, glow);
+    if (!img) {
+      img = this.add.image(X, Y, key).setOrigin(0.5, 1).setScale(MAP_SCALE);
+      this.props.set(id, img);
+    }
+    // Drawn just behind anyone standing on the same spot.
+    return img.setTexture(key).setVisible(true).setPosition(X, Y + (FOOT[name] ?? 0) * MAP_SCALE - lift).setDepth(1 + (Y - 6) / 1000);
+  }
+
+  /** Height of a map sprite on screen, for placing its health bar. */
+  private propTop(name: MapSprite): number {
+    return (MAP_SPRITES[name].length - (FOOT[name] ?? 0)) * MAP_SCALE;
+  }
+
+  /** A creep wave as a squad of small soldiers; fewer stay standing as the wave loses health. */
+  private creepSquad(u: SnapshotUnit, X: number, Y: number, now: number, seen: Set<string>): void {
+    seen.add(u.id);
+    let imgs = this.creeps.get(u.id);
+    if (!imgs) {
+      imgs = Array.from({ length: CREEPS_PER_WAVE }, () => this.add.image(X, Y, this.mapTexture('creepA', u.side)).setOrigin(0.5, 1).setScale(MAP_SCALE));
+      this.creeps.set(u.id, imgs);
+    }
+    const standing = u.alive ? Math.max(1, Math.ceil((CREEPS_PER_WAVE * u.hp) / u.maxHp)) : 0;
+    const step = Math.floor(now / 180) % 2 === 0;
+    imgs.forEach((img, i) => {
+      const dx = (i - 1) * 11;
+      const dy = i === 1 ? -5 : 2;
+      img.setVisible(i < standing)
+        .setTexture(this.mapTexture(step === (i % 2 === 0) ? 'creepA' : 'creepB', u.side))
+        .setFlipX(u.side === 'RED')
+        .setPosition(X + dx, Y + dy)
+        .setDepth(1 + (Y + dy) / 1000);
+    });
   }
 
   update(_time: number, deltaMs: number): void {
@@ -154,6 +205,7 @@ export class MatchScene extends Phaser.Scene {
     const now = this.time.now;
     const { colors } = this.opts;
     const teamColor = (side: 'BLUE' | 'RED' | null) => (side ? hex(colors[side]) : 0xcccccc);
+    const seenCreeps = new Set<string>();
 
     for (const u of cur.units) {
       const { x, y } = this.unitXY(prev, cur, u, alpha);
@@ -162,33 +214,27 @@ export class MatchScene extends Phaser.Scene {
       switch (u.kind) {
         case 'TOWER':
         case 'BASE': {
-          const size = u.kind === 'BASE' ? 26 : 16;
-          if (!u.alive) {
-            g.fillStyle(0x444444, 1).fillRect(X - size / 2, Y - size / 4, size, size / 2);
-            break;
-          }
-          g.fillStyle(0x111111, 1).fillRect(X - size / 2 - 2, Y - size / 2 - 2, size + 4, size + 4);
-          g.fillStyle(teamColor(u.side), 1).fillRect(X - size / 2, Y - size / 2, size, size);
-          g.fillStyle(0xffffff, 0.25).fillRect(X - size / 2 + 3, Y - size / 2 + 3, size - 6, 3);
-          this.hpBar(g, X, Y - size / 2 - 8, size + 8, u.hp / u.maxHp, 0x7cfc7c);
+          const name: MapSprite = u.kind === 'BASE' ? (u.alive ? 'base' : 'baseRuin') : u.alive ? 'tower' : 'towerRuin';
+          this.prop(u.id, name, u.side, X, Y);
+          if (u.alive && u.hp < u.maxHp) this.hpBar(hud, X, Y - this.propTop(name) - 4, u.kind === 'BASE' ? 40 : 26, u.hp / u.maxHp, 0x7cfc7c);
           break;
         }
-        case 'CREEP': {
-          if (!u.alive) break;
-          const c = teamColor(u.side);
-          g.fillStyle(c, 0.9);
-          g.fillRect(X - 6, Y - 3, 4, 4);
-          g.fillRect(X - 1, Y - 5, 4, 4);
-          g.fillRect(X + 3, Y - 1, 4, 4);
-          g.fillStyle(0x000000, 0.6).fillRect(X - 6, Y + 4, 12, 2);
-          g.fillStyle(c, 1).fillRect(X - 6, Y + 4, 12 * (u.hp / u.maxHp), 2);
+        case 'CREEP':
+          this.creepSquad(u, X, Y, now, seenCreeps);
           break;
-        }
         case 'OBJECTIVE': {
-          if (!u.alive) break;
-          g.fillStyle(0x9fd6ff, 1).fillCircle(X, Y, 8);
-          g.fillStyle(0x1d3324, 1).fillCircle(X, Y, 4);
-          this.hpBar(g, X, Y - 16, 26, u.hp / u.maxHp, 0x9fd6ff);
+          const glow = OBJECTIVE_GLOW[u.id] ?? '#ffffff';
+          const name: MapSprite | null = u.id === 'CORE' ? (u.alive ? 'core' : 'pedestal') : u.alive ? 'warden' : null;
+          // The crystal floats up and down a little.
+          const lift = name === 'core' ? Math.round((Math.sin(now / 400) + 1) * 1.5) * MAP_SCALE / 2 : 0;
+          this.prop(u.id, name, null, X, Y, glow, lift);
+          if (u.alive) this.hpBar(hud, X, Y - this.propTop(name ?? 'warden') - 4, 30, u.hp / u.maxHp, hex(glow));
+          break;
+        }
+        case 'CAMP': {
+          const name: MapSprite = u.id.endsWith('CORE') ? 'bigBeast' : 'beast';
+          this.prop(u.id, u.alive ? name : null, null, X, Y);
+          if (u.alive && u.hp < u.maxHp) this.hpBar(hud, X, Y - this.propTop(name) - 4, 20, u.hp / u.maxHp, 0xd9b3ff);
           break;
         }
         case 'HERO': {
@@ -231,6 +277,11 @@ export class MatchScene extends Phaser.Scene {
         }
       }
     }
+    for (const [id, imgs] of this.creeps) {
+      if (seenCreeps.has(id)) continue;
+      for (const img of imgs) img.destroy();
+      this.creeps.delete(id);
+    }
     // attack lines / skill flashes
     const f = this.fxLayer;
     f.clear();
@@ -261,8 +312,8 @@ export class MatchScene extends Phaser.Scene {
         this.fx.push({ until: now + life, life, draw: (g, k) => { g.lineStyle(3, 0xfff07a, k).strokeCircle(tx, ty, 10 + (1 - k) * 26); g.fillStyle(0xfff07a, 0.25 * k).fillCircle(tx, ty, 18); } });
       } else if (fromHero || from.kind === 'TOWER' || from.kind === 'BASE') {
         const life = 160;
-        // Heroes now stand taller than a dot: shoot from and at the chest.
-        const x1 = sx(from.x), y1 = sy(from.y) - (fromHero ? CHEST : 0), x2 = sx(to.x), y2 = sy(to.y) - (to.kind === 'HERO' ? CHEST : 0);
+        // Shoot from a hero's chest or a tower's window, at a hero's chest.
+        const x1 = sx(from.x), y1 = sy(from.y) - (fromHero ? CHEST : from.kind === 'TOWER' ? 26 : 22), x2 = sx(to.x), y2 = sy(to.y) - (to.kind === 'HERO' ? CHEST : 0);
         const color = from.kind === 'HERO' ? 0xffffff : 0xffa64d;
         this.fx.push({ until: now + life, life, draw: (g, k) => { g.lineStyle(fromHero ? 1.5 : 2.5, color, 0.8 * k).lineBetween(x1, y1, x2, y2); } });
       }
@@ -292,7 +343,7 @@ export function mountMatch(parent: HTMLElement, opts: SceneOptions): () => void 
     parent,
     width: VIEW,
     height: VIEW,
-    backgroundColor: '#12141a',
+    transparent: true, // the ground shows through (see drawMap)
     pixelArt: true,
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_HORIZONTALLY },
     scene: [],

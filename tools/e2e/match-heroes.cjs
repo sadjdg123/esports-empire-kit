@@ -1,9 +1,9 @@
-// Browser check: hero pixel sprites in the match view (V2). Watches part of a match at 1x and 4x,
+// Browser check: the match view with pixel heroes (V2) and the pixel map (V3). Watches part of a match at 1x and 4x,
 // takes screenshots, reads the frame rate (also with a 4x slower CPU on a phone) and checks that
 // watching still ends with a report. Screenshots go to docs/reports/v2/. Run as full-season-desktop.cjs.
 const { chromium } = require('playwright');
 const helpers = require('./helpers.cjs');
-const SHOTS = 'docs/reports/v2';
+const SHOTS = process.env.SHOTS ?? 'docs/reports/v2'; // SHOTS=docs/reports/v3 for later tasks
 
 async function newClub(p, shots = false) {
   await p.goto('http://localhost:4173/');
@@ -44,6 +44,8 @@ const fps = async (p) => Number((await p.textContent('.controls .dim'))?.match(/
   watch(desk);
   await newClub(desk, true);
   await desk.waitForTimeout(4000);
+  // V3: the painted ground is the canvas background (not redrawn every frame).
+  if (!(await desk.evaluate(() => document.querySelector('.canvas-host canvas').style.backgroundImage)).startsWith('url("data:image/png')) errs.push('map ground missing');
   await desk.locator('.canvas-host').screenshot({ path: `${SHOTS}/01-lanes.png` });
   await desk.click('.controls button:has-text("4×")');
   for (let i = 0; i < 5; i++) {

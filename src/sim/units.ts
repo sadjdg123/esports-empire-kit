@@ -113,6 +113,7 @@ export interface Camp {
   side: Side;
   alive: boolean;
   hp: number;
+  maxHp: number; // hp at the last spawn; only reported in snapshots
   nextSpawnAt: number;
   lastHitHero: number;
   tickHit: { BLUE: number; RED: number; dmgBLUE: number; dmgRED: number }; // per-side hitter and damage this tick

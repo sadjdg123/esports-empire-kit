@@ -90,7 +90,7 @@ export function createMatch(input: MatchInput, data: GameData, opts: MatchOption
   const camps: Camp[] = [];
   map.nodes.forEach((node, i) => {
     if (node.type === 'JUNGLE' && node.side) {
-      camps.push({ id: `CAMP:${node.id}`, node: i, side: node.side, alive: false, hp: 0, nextSpawnAt: cfg.jungle.firstSpawnSec, lastHitHero: -1, tickHit: { BLUE: -1, RED: -1, dmgBLUE: 0, dmgRED: 0 } });
+      camps.push({ id: `CAMP:${node.id}`, node: i, side: node.side, alive: false, hp: 0, maxHp: 0, nextSpawnAt: cfg.jungle.firstSpawnSec, lastHitHero: -1, tickHit: { BLUE: -1, RED: -1, dmgBLUE: 0, dmgRED: 0 } });
     }
   });
 
@@ -221,6 +221,7 @@ function spawnPhase(s: MatchState): void {
     if (!camp.alive && t >= camp.nextSpawnAt) {
       camp.alive = true;
       camp.hp = cfg.jungle.campHp * (1 + t / 900);
+      camp.maxHp = camp.hp;
     }
   }
   for (const ob of s.objectives) {
@@ -580,6 +581,10 @@ export function getSnapshot(s: MatchState): RenderSnapshot {
   for (const ob of s.objectives) {
     const [x, y] = nodeXY(s, ob.node);
     units.push({ id: ob.id, kind: 'OBJECTIVE', side: null, x, y, hp: ob.hp, maxHp: ob.maxHp, alive: ob.alive });
+  }
+  for (const camp of s.camps) {
+    const [x, y] = nodeXY(s, camp.node);
+    units.push({ id: camp.id, kind: 'CAMP', side: camp.side, x, y, hp: camp.hp, maxHp: camp.maxHp, alive: camp.alive });
   }
   return {
     t: s.t,

@@ -155,7 +155,7 @@ export interface MatchResult {
 // ---------------------------------------------------------------------------
 // Render snapshot: read-only view of a match tick for the render layer.
 
-export type SnapshotUnitKind = 'HERO' | 'CREEP' | 'TOWER' | 'BASE' | 'OBJECTIVE';
+export type SnapshotUnitKind = 'HERO' | 'CREEP' | 'TOWER' | 'BASE' | 'OBJECTIVE' | 'CAMP'; // CAMP: jungle monsters (V3)
 
 export interface SnapshotUnit {
   id: string;
