@@ -1,7 +1,8 @@
 // Simulation command line.
 //   npm run sim -- --one --seed 42 [--blue jinyu --red tianshu]   one match, zh-CN report
 //   npm run sim -- --n 1000 [--threads 4] [--only G4,G5] [--no-write]  balance report (GDD 16.1)
-//   npm run sim -- --economy [--n 100]                              economy calibration (T07)
+//   npm run sim -- --economy [--n 100]                              economy calibration (T07, T16)
+//   npm run sim -- --league [--seasons 20] [--seeds 8]              multi-season league health (T17, T20)
 import { loadGameData } from '../src/core/config';
 import type { Tactic } from '../src/core/types';
 import { runMatch } from '../src/sim';
@@ -111,6 +112,39 @@ async function economy(): Promise<void> {
   process.exitCode = inside >= 0.8 && bounded ? 0 : 1;
 }
 
+async function league(): Promise<void> {
+  const { availableParallelism } = await import('node:os');
+  const { Worker } = await import('node:worker_threads');
+  const seasons = Number(arg('seasons') ?? 20);
+  const seeds = Number(arg('seeds') ?? 8);
+  const threads = Math.min(seeds, Number(arg('threads') ?? availableParallelism()));
+  const chunk = Math.ceil(seeds / threads);
+  type Rec = import('./balance/worker').LeagueRecord;
+  const t0 = Date.now();
+  const rows = (await Promise.all(Array.from({ length: threads }, (_, k) => new Promise<Rec[]>((resolve, reject) => {
+    const w = new Worker(new URL('./balance/worker-boot.mjs', import.meta.url), { workerData: { mode: 'league', seasons, from: k * chunk, to: Math.min(seeds, (k + 1) * chunk) } });
+    w.once('message', resolve);
+    w.once('error', reject);
+  })))).flat();
+  console.log(`联赛长期健康：${rows.length} 局 × ${seasons} 个赛季（玩家用"普通经营"），用时 ${Math.round((Date.now() - t0) / 1000)} 秒`);
+  let ok = true;
+  for (const r of rows) {
+    const count = new Map<string, number>();
+    for (const c of r.champions) count.set(c, (count.get(c) ?? 0) + 1);
+    const top = Math.max(...count.values());
+    const pass = r.minAiRoster >= 5 && r.aiFundsRatio.min > -1 && r.aiFundsRatio.max < 5 && count.size >= 3 && top / r.champions.length <= 0.6;
+    ok &&= pass;
+    console.log(`  局 ${r.seed + 1}：冠军 ${[...count].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}${v}`).join(' ')} · AI 最少 ${r.minAiRoster} 人 · AI 资金/起始 ${r.aiFundsRatio.min.toFixed(2)}～${r.aiFundsRatio.max.toFixed(2)} ${pass ? '✅' : '❌'}`);
+  }
+  const last = rows.map((r) => r.talent[r.talent.length - 1]!);
+  const first = rows.map((r) => r.talent[0]!);
+  const m = (xs: number[]) => (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(1);
+  console.log(`  人才（第 1 → 第 ${seasons} 赛季平均）：首发均值 ${m(first.map((t) => t.starterAvg))} → ${m(last.map((t) => t.starterAvg))} · 全联盟均值 ${m(first.map((t) => t.leagueAvg))} → ${m(last.map((t) => t.leagueAvg))} · 最强选手 ${m(first.map((t) => t.best))} → ${m(last.map((t) => t.best))} · 平均年龄 ${m(first.map((t) => t.avgAge))} → ${m(last.map((t) => t.avgAge))} · 自由市场 ${m(first.map((t) => t.marketSize))} → ${m(last.map((t) => t.marketSize))} 人`);
+  console.log(`  标准：AI 始终 ≥5 人；AI 资金在起始的 −1 倍到 5 倍之间；至少 3 家不同冠军；没有一家拿走超过 60% 的冠军 → ${ok ? '✅ 全部通过' : '❌ 有未通过'}`);
+  process.exitCode = ok ? 0 : 1;
+}
+
 if (process.argv.includes('--one')) one();
+else if (process.argv.includes('--league')) void league();
 else if (process.argv.includes('--economy')) void economy();
 else void balance();

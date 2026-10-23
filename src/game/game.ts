@@ -136,6 +136,16 @@ export function weeklySalaries(state: GameState): number {
   return rosterOf(state).reduce((a, p) => a + p.salaryPerWeek, 0);
 }
 
+/**
+ * Highest salary a club short of a full team may sign on credit: the fixed
+ * cap, or the cheapest third of the free agents, whichever is higher.
+ */
+export function emergencySalaryCap(state: GameState, data: GameData): number {
+  const salaries = state.market.map((id) => state.players[id]!.salaryPerWeek).sort((a, b) => a - b);
+  const third = salaries[Math.max(0, Math.ceil(salaries.length / 3) - 1)] ?? 0;
+  return Math.max(data.economy.finance.emergencySigningMaxSalary, third);
+}
+
 /** The season a contract signed now starts in (signing after the final counts for the next season). */
 export function contractStartSeason(state: GameState): number {
   return state.calendar.phase === 'FINISHED' ? state.calendar.season + 1 : state.calendar.season;
@@ -149,7 +159,7 @@ export function signPlayer(state: GameState, data: GameData, playerId: PlayerId,
   if (!p || !state.market.includes(playerId)) return fail('这名选手不在自由市场');
   if (state.club.roster.length >= data.economy.maxRoster) return fail(`队伍已满（最多 ${data.economy.maxRoster} 人）`);
   // Short of a full team, cheap players can always be signed, even into debt, so the club can keep playing.
-  const emergency = state.club.roster.length < data.economy.minRoster && p.salaryPerWeek <= data.economy.finance.emergencySigningMaxSalary;
+  const emergency = state.club.roster.length < data.economy.minRoster && p.salaryPerWeek <= emergencySalaryCap(state, data);
   if (!emergency && state.funds < 0) return fail('资金为负，暂时不能签人');
   if (!emergency && state.funds < p.signingFee) return fail(`资金不足：签约费 ${p.signingFee}，当前资金 ${Math.round(state.funds)}`);
   state.market = state.market.filter((id) => id !== playerId);

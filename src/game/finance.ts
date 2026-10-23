@@ -58,6 +58,19 @@ export function autoSponsor(state: GameState, data: GameData): void {
 // ---------------------------------------------------------------------------
 // Weekly money
 
+/** What a club earns in a typical week of a season (sponsor, league share, merchandise, prizes), for budgeting. */
+export function expectedWeeklyIncome(state: GameState, data: GameData, clubId: ClubId = PLAYER_CLUB_ID): number {
+  const eco = data.economy;
+  const f = eco.finance;
+  const club = clubById(state, clubId);
+  const playoffWeeks = data.season.playoffTeams === 4 ? 2 : 1;
+  const weeks = data.season.preseasonWeeks + state.totalRounds + playoffWeeks;
+  const deal = clubId === PLAYER_CLUB_ID ? (activeSponsor(state) ?? bestSponsorFor(data, club.reputation)) : bestSponsorFor(data, club.reputation);
+  const perMatch = (eco.prizeWin + eco.prizeLoss) / 2 + deal.winBonus / 2;
+  return deal.weekly + (f.leagueShareWeekly * (state.totalRounds + playoffWeeks)) / weeks + f.merchBase + club.reputation * f.merchPerReputation
+    + (state.totalRounds * perMatch) / weeks;
+}
+
 function seasonWinRate(state: GameState, clubId: ClubId): number {
   const mine = state.results.filter((r) => r.blue === clubId || r.red === clubId);
   return mine.length === 0 ? 0.5 : mine.filter((r) => r.winner === clubId).length / mine.length;
@@ -141,6 +154,12 @@ export function applyPlayoffAwards(state: GameState, data: GameData): void {
     credit(state, club, 'PRIZE', prize, final?.winner === id ? '总冠军奖金' : final && (final.blue === id || final.red === id) ? '亚军奖金' : '季后赛奖金');
     addReputation(club, rep);
   }
+}
+
+/** New season: every club's reputation moves part of the way back toward the middle; it has to be earned again. */
+export function settleReputation(state: GameState, data: GameData): void {
+  const r = data.economy.finance.reputation;
+  for (const club of [state.club, ...state.aiClubs]) addReputation(club, (r.neutral - club.reputation) * r.seasonPull);
 }
 
 // ---------------------------------------------------------------------------

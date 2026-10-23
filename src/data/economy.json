@@ -86,14 +86,14 @@
           {
             "id": "s3a",
             "name": "曜石电子",
-            "weekly": 11000,
+            "weekly": 9000,
             "winBonus": 800,
             "signingBonus": 20000
           },
           {
             "id": "s3b",
             "name": "极光汽车",
-            "weekly": 9000,
+            "weekly": 7500,
             "winBonus": 2500,
             "signingBonus": 10000
           }
@@ -115,17 +115,19 @@
       "semi": 12000
     },
     "merchBase": 500,
-    "merchPerReputation": 40,
+    "merchPerReputation": 30,
     "merchWinRateEffect": 0.6,
     "trainingCostPerPlayer": 150,
     "reputation": {
-      "win": 0.6,
-      "loss": -0.3,
+      "win": 0.5,
+      "loss": -0.5,
       "streakLength": 3,
       "streakLoss": -1.0,
-      "playoffs": 3,
-      "final": 3,
-      "champion": 6
+      "playoffs": 2,
+      "final": 2,
+      "champion": 4,
+      "seasonPull": 0.2,
+      "neutral": 40
     },
     "forecastWeeks": 4,
     "emergencySigningMaxSalary": 1200

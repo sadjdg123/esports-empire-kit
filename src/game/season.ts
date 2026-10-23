@@ -3,8 +3,8 @@
 // Matches are settled in two steps so the render layer can play the
 // player's match first: prepareMatchDay -> (watch) -> commitMatchDay.
 
-import { createRng, hashString, rngFromState } from '../core/rng';
-import { TACTICS, type AutoPauseEvent, type ClubId, type GameData, type MatchInput, type MatchResult, type Tactic } from '../core/types';
+import { hashString, rngFromState } from '../core/rng';
+import type { AutoPauseEvent, ClubId, GameData, MatchInput, MatchResult } from '../core/types';
 import { runMatch } from '../sim';
 import { buildReport } from '../sim/report';
 import { autoLineup } from '../sim/scenario';
@@ -12,11 +12,13 @@ import {
   buildSchedule, clubById, readinessIssues, rosterOf, seasonOver, standings, type Result,
 } from './game';
 import {
-  PLAYER_CLUB_ID, type ClubState, type Fixture, type FixtureResult, type GameState, type InboxMessage,
+  PLAYER_CLUB_ID, type Fixture, type FixtureResult, type GameState, type InboxMessage,
   type LedgerEntry, type PlayoffMatch, type SeasonPhase, type StoredReport,
 } from './state';
+import { aiMatchSquad, aiPreseasonWeek, aiRenewals, aiSignFreeAgents, aiTactic } from './ai-clubs';
 import { remindExpiring, rollContracts } from './contracts';
-import { applyMatchFinance, applyPlayoffAwards, autoSponsor, financeSummary, rescueOptions, runPayDay } from './finance';
+import { refreshTalent } from './talent';
+import { applyMatchFinance, applyPlayoffAwards, autoSponsor, financeSummary, rescueOptions, runPayDay, settleReputation } from './finance';
 import { postMessage } from './messages';
 import { applyDailyRecovery, applyMatchEffects, applyTrainingWeek } from './training';
 import { expireOffers, generateAiOffers } from './transfers';
@@ -64,16 +66,11 @@ export function describeDate(state: GameState, data: GameData): string {
 // ---------------------------------------------------------------------------
 // Today's matches
 
-function aiTactic(club: ClubState, fixtureSeed: number): Tactic {
-  if (club.style !== 'RANDOM' && club.style !== 'PLAYER') return club.style;
-  return createRng(fixtureSeed).fork(`tactic:${club.id}`).pick(TACTICS);
-}
-
 function teamFor(state: GameState, data: GameData, clubId: ClubId, fixtureSeed: number) {
+  if (clubId === PLAYER_CLUB_ID) return { lineup: structuredClone(state.lineup!), players: rosterOf(state, clubId).map((p) => structuredClone(p)) };
   const club = clubById(state, clubId);
-  const players = rosterOf(state, clubId).map((p) => structuredClone(p));
-  const lineup = clubId === PLAYER_CLUB_ID ? structuredClone(state.lineup!) : autoLineup(data, clubId, players, aiTactic(club, fixtureSeed));
-  return { lineup, players };
+  const players = aiMatchSquad(state, data, club).map((p) => structuredClone(p));
+  return { lineup: autoLineup(data, clubId, players, aiTactic(state, data, club, fixtureSeed)), players };
 }
 
 export function matchInputFor(state: GameState, data: GameData, fixture: { blue: ClubId; red: ClubId; seed: number }): MatchInput {
@@ -172,6 +169,7 @@ function finishSeason(state: GameState, data: GameData): void {
 /** Starts the next season: new schedule, clean table, everyone one year older. */
 /** Returns true when the player has contracts ending in the new season (a reminder was posted). */
 export function startNewSeason(state: GameState, data: GameData): boolean {
+  aiRenewals(state, data, state.calendar.season);
   const rng = rngFromState(state.rngState);
   state.calendar = { season: state.calendar.season + 1, phase: 'PRESEASON', day: 0 };
   state.schedule = buildSchedule([PLAYER_CLUB_ID, ...state.aiClubs.map((c) => c.id)], state.seed, rng, state.calendar.season);
@@ -184,7 +182,12 @@ export function startNewSeason(state: GameState, data: GameData): boolean {
   state.offers = state.offers.filter((o) => o.status === 'PENDING');
   for (const id of Object.keys(state.players).sort()) state.players[id]!.age++;
   postMessage(state, 'SEASON', `第 ${state.calendar.season} 赛季开始`, `休赛期 ${data.season.preseasonWeeks} 周，可以签人、买卖选手、调整阵容。常规赛 ${state.totalRounds} 轮之后是前 ${data.season.playoffTeams} 名的季后赛。`);
-  return rollContracts(state, data);
+  rollContracts(state, data);
+  settleReputation(state, data);
+  const talent = refreshTalent(state, data);
+  postMessage(state, 'SEASON', '自由市场更新', `${talent.joined} 名新秀进入自由市场${talent.left > 0 ? `，${talent.left} 名年龄较大的自由球员离开了联赛` : ''}。`);
+  aiSignFreeAgents(state, data);
+  return remindExpiring(state);
 }
 
 /**
@@ -220,6 +223,7 @@ export function advanceDay(state: GameState, data: GameData): DayResult {
   if (day % cfg.daysPerWeek === cfg.payWeekday) {
     runPayDay(state, data); // before training: this week's training is paid for
     applyTrainingWeek(state, data);
+    if (state.calendar.phase === 'PRESEASON') aiPreseasonWeek(state, data);
     if (generateAiOffers(state, data).length > 0) pause ??= 'OFFER';
     const f = financeSummary(state, data);
     if (f.lowFunds && f.weeklySalaries > 0) {

@@ -6,3 +6,5 @@ export * from './training';
 export * from './contracts';
 export * from './transfers';
 export * from './finance';
+export * from './ai-clubs';
+export * from './talent';

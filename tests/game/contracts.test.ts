@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../../src/core/config';
 import {
-  PLAYER_CLUB_ID, acceptRenewal, advanceDay, aiFillRosters, autoManage, askingPrice, bidForPlayer, commitMatchDay, counterRenewal, declineRenewal,
+  PLAYER_CLUB_ID, acceptRenewal, advanceDay, aiRosterTarget, aiSignFreeAgents, autoManage, emergencySalaryCap, askingPrice, bidForPlayer, commitMatchDay, counterRenewal, declineRenewal,
   expiringPlayers, fairSalary, generateAiOffers, marketValue, newGame, openNegotiation, playerOverall, releaseFeeFor,
   releasePlayer, respondToOffer, signPlayer, signValueSquad, type GameState,
 } from '../../src/game';
@@ -118,18 +118,21 @@ describe('contracts', () => {
     expect(expiringPlayers(s).every((p) => p.contractUntil === s.calendar.season)).toBe(true);
   }, 120_000);
 
-  it('AI clubs never sign players they cannot pay for', () => {
+  it('AI clubs never sign players they cannot pay for, except cheap ones to field a team (the player\'s rule)', () => {
     const s = newGame('t', '#fff', 8, data);
     const club = s.aiClubs[0]!;
     const out = club.roster.splice(0, club.roster.length - 3);
     for (const id of out) { s.players[id]!.clubId = null; s.market.push(id); }
     club.funds = 0;
-    aiFillRosters(s, data);
-    expect(club.roster.length).toBe(3);
-    expect(club.funds).toBe(0);
+    const cap = emergencySalaryCap(s, data);
+    aiSignFreeAgents(s, data);
+    expect(club.roster.length).toBe(data.economy.minRoster); // only up to a playable team
+    for (const id of club.roster.slice(3)) expect(s.players[id]!.salaryPerWeek).toBeLessThanOrEqual(cap);
     club.funds = 1_000_000;
-    aiFillRosters(s, data);
-    expect(club.roster.length).toBeGreaterThanOrEqual(data.economy.minRoster);
+    aiSignFreeAgents(s, data);
+    expect(club.roster.length).toBe(aiRosterTarget(s, data, club));
+    expect(club.roster.length).toBeGreaterThanOrEqual(data.ai.styles[club.management as 'STEADY'].rosterTarget);
+    expect(club.funds).toBeGreaterThan(0);
   });
 });
 

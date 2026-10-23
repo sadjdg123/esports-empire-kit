@@ -4,8 +4,8 @@
 import type { GameData, Player, Role } from '../core/types';
 import { ROLES } from '../core/types';
 import { acceptRenewal, expiringPlayers, negotiationFor, renewalAsk } from './contracts';
-import { activeSponsor, bestSponsorFor, signSponsor } from './finance';
-import { marketPlayers, playerOverall, recommendLineup, rosterOf, setLineup, signPlayer, type Result } from './game';
+import { activeSponsor, bestSponsorFor, expectedWeeklyIncome, signSponsor } from './finance';
+import { emergencySalaryCap, marketPlayers, playerOverall, recommendLineup, rosterOf, setLineup, signPlayer, type Result } from './game';
 import type { GameState } from './state';
 
 /** Ability per unit of salary, with diminishing returns on cost. */
@@ -36,19 +36,13 @@ export type ManageStyle = 'value' | 'balanced' | 'star';
 
 /** Weekly salary a 'balanced' manager allows per player: a fifth of what the club earns in a typical week. */
 export function balancedSalaryCap(state: GameState, data: GameData): number {
-  const f = data.economy.finance;
-  const weeks = data.season.preseasonWeeks + state.totalRounds + 2;
-  const prizes = (state.totalRounds * (data.economy.prizeWin + data.economy.prizeLoss)) / 2 / weeks;
-  const income = bestSponsorFor(data, state.club.reputation).weekly + f.leagueShareWeekly * ((state.totalRounds + 2) / weeks)
-    + f.merchBase + state.club.reputation * f.merchPerReputation + prizes;
-  return income / data.economy.minRoster;
+  return expectedWeeklyIncome(state, data) / data.economy.minRoster;
 }
 
 export function autoManage(state: GameState, data: GameData, style: ManageStyle = 'value'): Result {
   const cap = style === 'balanced' ? balancedSalaryCap(state, data) : Infinity;
   const score = style === 'value' ? valueScore : (p: Player) => (p.salaryPerWeek <= cap ? playerOverall(p) : playerOverall(p) - 1000);
-  const emergencyCap = data.economy.finance.emergencySigningMaxSalary;
-  const canSign = (p: Player) => p.signingFee <= state.funds || (state.club.roster.length < data.economy.minRoster && p.salaryPerWeek <= emergencyCap);
+  const canSign = (p: Player) => p.signingFee <= state.funds || (state.club.roster.length < data.economy.minRoster && p.salaryPerWeek <= emergencySalaryCap(state, data));
   if (state.calendar.phase !== 'FINISHED') {
     for (const p of expiringPlayers(state)) {
       if (negotiationFor(state, p.id)) continue;

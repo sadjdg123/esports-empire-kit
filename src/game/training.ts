@@ -40,9 +40,11 @@ function addMastery(p: Player, heroId: string, v: number): void {
 export function trainingFocusOf(state: GameState, data: GameData, clubId: ClubId): TrainingFocus {
   if (clubId === PLAYER_CLUB_ID) return state.training;
   const g = data.growth;
-  const roster = clubById(state, clubId).roster.map((id) => state.players[id]!);
+  const club = clubById(state, clubId);
+  const roster = club.roster.map((id) => state.players[id]!);
   const avgFatigue = roster.reduce((a, p) => a + (p.fatigue ?? 0), 0) / Math.max(1, roster.length);
-  if (avgFatigue >= g.aiRestFatigue) return 'REST';
+  const restAt = club.management === 'PLAYER' ? 100 : data.ai.styles[club.management].restFatigue;
+  if (avgFatigue >= restAt) return 'REST';
   return g.aiFocusRotation[weekOfSeason(state) % g.aiFocusRotation.length]!;
 }
 

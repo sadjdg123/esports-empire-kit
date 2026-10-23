@@ -1,10 +1,20 @@
 {
   "trainingFocus": {
-    "MECHANICS": { "mechanics": 1.0 },
-    "AWARENESS": { "awareness": 1.0 },
-    "TEAMWORK": { "teamwork": 1.0 },
-    "MENTAL": { "mental": 1.0 },
-    "MASTERY": { "mastery": 1.0 },
+    "MECHANICS": {
+      "mechanics": 1.0
+    },
+    "AWARENESS": {
+      "awareness": 1.0
+    },
+    "TEAMWORK": {
+      "teamwork": 1.0
+    },
+    "MENTAL": {
+      "mental": 1.0
+    },
+    "MASTERY": {
+      "mastery": 1.0
+    },
     "REST": {}
   },
   "weeklyGrowthBase": 0.4,
@@ -13,12 +23,30 @@
   "masteryFocusGain": 3,
   "masteryPerMatch": 0.5,
   "ageCurve": [
-    { "age": 16, "rate": 1.5 },
-    { "age": 20, "rate": 1.2 },
-    { "age": 24, "rate": 0.8 },
-    { "age": 27, "rate": 0.2 },
-    { "age": 30, "rate": -0.4 },
-    { "age": 34, "rate": -1.0 }
+    {
+      "age": 16,
+      "rate": 1.5
+    },
+    {
+      "age": 20,
+      "rate": 1.2
+    },
+    {
+      "age": 24,
+      "rate": 0.8
+    },
+    {
+      "age": 27,
+      "rate": 0.2
+    },
+    {
+      "age": 30,
+      "rate": -0.4
+    },
+    {
+      "age": 34,
+      "rate": -1.0
+    }
   ],
   "matchExperience": 0.15,
   "potentialSoftCap": 3,
@@ -33,6 +61,11 @@
   "moraleNeutral": 60,
   "moraleFormPer": 0.08,
   "formPull": 0.5,
-  "aiRestFatigue": 55,
-  "aiFocusRotation": ["MECHANICS", "AWARENESS", "TEAMWORK", "MENTAL", "MASTERY"]
+  "aiFocusRotation": [
+    "MECHANICS",
+    "AWARENESS",
+    "TEAMWORK",
+    "MENTAL",
+    "MASTERY"
+  ]
 }

@@ -8,9 +8,10 @@ import economyJson from '../data/economy.json';
 import matchJson from '../data/match.json';
 import seasonJson from '../data/season.json';
 import growthJson from '../data/growth.json';
+import aiJson from '../data/ai.json';
 import {
   ARCHETYPES, LANES, MANAGEMENT_STYLES, ROLES, TACTICS, TRAINING_FOCI,
-  type ClubDef, type EconomyConfig, type GameData, type GrowthConfig, type HeroDef, type MatchConfig,
+  type AiConfig, type ClubDef, type EconomyConfig, type GameData, type GrowthConfig, type HeroDef, type MatchConfig,
   type Player, type Role, type SeasonConfig, type TeamLineup, type TrainingFocus,
 } from './types';
 
@@ -22,6 +23,7 @@ export interface RawGameData {
   match: unknown;
   season: unknown;
   growth: unknown;
+  ai: unknown;
 }
 
 export class DataValidationError extends Error {
@@ -272,7 +274,7 @@ function checkFinance(c: Checker, raw: unknown, p: string): void {
   if (first && first.minReputation !== 0) c.fail(`${p}.sponsorTiers[0].minReputation`, 'the first tier must be open to everyone (0)');
   checkSponsor(c, o.emergencySponsor, `${p}.emergencySponsor`, ids);
   checkNumbers(c, o.playoffPrize, `${p}.playoffPrize`, ['champion', 'final', 'semi']);
-  checkNumbers(c, o.reputation, `${p}.reputation`, ['win', 'streakLength', 'playoffs', 'final', 'champion']);
+  checkNumbers(c, o.reputation, `${p}.reputation`, ['win', 'streakLength', 'playoffs', 'final', 'champion', 'seasonPull', 'neutral']);
   const rep = c.obj(o.reputation, `${p}.reputation`);
   if (rep) for (const k of ['loss', 'streakLoss']) c.num(rep, k, `${p}.reputation`, -100, 0);
 }
@@ -429,7 +431,7 @@ function checkGrowth(c: Checker, raw: unknown): void {
   const o = checkNumbers(c, raw, p, [
     'weeklyGrowthBase', 'offFocusShare', 'masteryFocusHeroes', 'masteryFocusGain', 'masteryPerMatch', 'matchExperience', 'potentialSoftCap',
     'fatiguePerMatch', 'fatiguePerTrainingWeek', 'fatigueRestRecovery', 'fatigueDailyRecovery', 'moraleNeutral', 'moraleDailyDrift', 'moraleFormPer',
-    'formPull', 'aiRestFatigue',
+    'formPull',
   ]);
   if (!o) return;
   for (const k of ['moraleWin', 'moraleLoss', 'moraleBench']) c.num(o, k, p, -100, 100);
@@ -439,6 +441,31 @@ function checkGrowth(c: Checker, raw: unknown): void {
   rotation.forEach((f, i) => { if (!TRAINING_FOCI.includes(f as TrainingFocus)) c.fail(`${p}.aiFocusRotation[${i}]`, `unknown focus ${String(f)}`); });
   const curve = c.arr(o.ageCurve, `${p}.ageCurve`, 2) ?? [];
   curve.forEach((pt, i) => { const po = c.obj(pt, `${p}.ageCurve[${i}]`); if (po) { c.num(po, 'age', `${p}.ageCurve[${i}]`, 10, 60); c.num(po, 'rate', `${p}.ageCurve[${i}]`, -10, 10); } });
+}
+
+function checkAi(c: Checker, raw: unknown): void {
+  const p = 'ai.json';
+  const o = checkNumbers(c, raw, p, ['slumpLosses']);
+  if (!o) return;
+  const styles = c.obj(o.styles, `${p}.styles`);
+  if (styles) {
+    for (const st of MANAGEMENT_STYLES) {
+      if (!styles[st]) { c.fail(`${p}.styles`, `missing style ${st}`); continue; }
+      checkNumbers(c, styles[st], `${p}.styles.${st}`, ['wageShare', 'reserveWeeks', 'rosterTarget', 'youthWeight', 'ageWeight', 'upgradeMargin', 'restFatigue', 'rotateFatigue']);
+      const target = (styles[st] as Obj).rosterTarget;
+      if (typeof target === 'number' && (target < 5 || target > 8)) c.fail(`${p}.styles.${st}.rosterTarget`, 'must be between 5 and 8');
+    }
+  }
+  const t = checkNumbers(c, o.talent, `${p}.talent`, ['intakePerRole', 'ageMin', 'ageMax', 'overallMin', 'overallMax', 'potentialMin', 'potentialMax', 'freeAgentLeaveAge', 'marketCap']);
+  if (t) {
+    for (const k of ['namePrefixes', 'nameSuffixes']) {
+      const list = c.arr(t[k], `${p}.talent.${k}`, 4) ?? [];
+      if (list.some((x) => typeof x !== 'string' || !x)) c.fail(`${p}.talent.${k}`, 'must be non-empty strings');
+    }
+    if ((t.ageMin as number) > (t.ageMax as number)) c.fail(`${p}.talent.ageMax`, 'must be >= ageMin');
+    if ((t.overallMin as number) > (t.overallMax as number)) c.fail(`${p}.talent.overallMax`, 'must be >= overallMin');
+    if ((t.potentialMin as number) > (t.potentialMax as number)) c.fail(`${p}.talent.potentialMax`, 'must be >= potentialMin');
+  }
 }
 
 /** Validates raw JSON values; returns a list of human-readable issues (empty = valid). */
@@ -453,6 +480,7 @@ export function validateRawData(raw: RawGameData): string[] {
   checkMatch(c, raw.match, heroIds);
   checkSeason(c, raw.season);
   checkGrowth(c, raw.growth);
+  checkAi(c, raw.ai);
   return c.issues;
 }
 
@@ -471,13 +499,14 @@ export function loadGameData(raw: RawGameData = defaultRawData()): GameData {
     match: raw.match as MatchConfig,
     season: raw.season as SeasonConfig,
     growth: raw.growth as GrowthConfig,
+    ai: raw.ai as AiConfig,
     heroById,
   };
 }
 
 /** Fresh deep copy of the bundled JSON, safe to mutate (e.g. in tests). */
 export function defaultRawData(): RawGameData {
-  return structuredClone({ heroes: heroesJson, players: playersJson, clubs: clubsJson, economy: economyJson, match: matchJson, season: seasonJson, growth: growthJson });
+  return structuredClone({ heroes: heroesJson, players: playersJson, clubs: clubsJson, economy: economyJson, match: matchJson, season: seasonJson, growth: growthJson, ai: aiJson });
 }
 
 /** Checks a lineup against the provided roster. Returns issues (empty = valid). */

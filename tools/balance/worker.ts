@@ -5,10 +5,18 @@ import { hashString } from '../../src/core/rng';
 import { runMatch } from '../../src/sim';
 import { buildReport } from '../../src/sim/report';
 import { buildCase, type ScenarioId } from './scenarios';
-import { PLAYER_CLUB_ID, type ManageStyle, advanceDay, autoManage, autoTraining, commitMatchDay, newGame, standings, weeklySalaries } from '../../src/game';
+import { PLAYER_CLUB_ID, type ManageStyle, advanceDay, autoManage, autoTraining, commitMatchDay, newGame, playerOverall, rosterOf, standings, weeklySalaries } from '../../src/game';
 
 export interface EconomySeason { ratio: number; wins: number; rank: number; salaries: number; afterSigning: number; reputation: number; playoff: string }
 export interface EconomyRecord { seed: number; seasons: EconomySeason[] }
+export interface LeagueRecord {
+  seed: number;
+  champions: string[]; // club short names, per season
+  minAiRoster: number;
+  aiFundsRatio: { min: number; max: number }; // funds / starting funds, worst over all clubs and seasons
+  talent: { season: number; marketSize: number; leagueAvg: number; starterAvg: number; best: number; avgAge: number }[];
+  playerFunds: number[];
+}
 
 export interface MatchRecord {
   i: number;
@@ -36,10 +44,42 @@ function goldAt(tl: { t: number; diff: number }[], t: number): number {
   return v;
 }
 
-const { scenario, from, to, repeat, mode } = workerData as { scenario: ScenarioId; from: number; to: number; repeat: boolean; mode?: 'economy'; strategy?: string; seasons?: number };
+const { scenario, from, to, repeat, mode } = workerData as { scenario: ScenarioId; from: number; to: number; repeat: boolean; mode?: 'economy' | 'league'; strategy?: string; seasons?: number };
 const data = loadGameData();
 const out: MatchRecord[] = [];
-if (mode === 'economy') {
+if (mode === 'league') {
+  const rows: LeagueRecord[] = [];
+  for (let seed = from; seed < to; seed++) {
+    const s = newGame('多赛季', '#3a7bd5', 20_000 + seed, data);
+    const start = Object.fromEntries(s.aiClubs.map((c) => [c.id, c.funds]));
+    const rec: LeagueRecord = { seed, champions: [], minAiRoster: 99, aiFundsRatio: { min: Infinity, max: -Infinity }, talent: [], playerFunds: [] };
+    for (let k = 0; k < (workerData.seasons as number); k++) {
+      autoManage(s, data, 'balanced');
+      for (let guard = 0; guard < 400 && s.calendar.phase !== 'FINISHED'; guard++) {
+        autoTraining(s);
+        for (const c of s.aiClubs) rec.minAiRoster = Math.min(rec.minAiRoster, c.roster.length);
+        if (advanceDay(s, data).pause !== 'MATCH_DAY') continue;
+        let c = commitMatchDay(s, data);
+        if (!c.ok) { autoManage(s, data, 'balanced'); c = commitMatchDay(s, data); }
+        if (!c.ok) throw new Error(c.error);
+      }
+      const h = s.history[s.history.length - 1]!;
+      rec.champions.push(h.champion === PLAYER_CLUB_ID ? '玩家' : s.aiClubs.find((c) => c.id === h.champion)!.shortName);
+      for (const c of s.aiClubs) {
+        rec.aiFundsRatio.min = Math.min(rec.aiFundsRatio.min, c.funds / start[c.id]!);
+        rec.aiFundsRatio.max = Math.max(rec.aiFundsRatio.max, c.funds / start[c.id]!);
+      }
+      const all = Object.values(s.players);
+      const starters = [s.club, ...s.aiClubs].flatMap((c) => rosterOf(s, c.id).map(playerOverall).sort((a, b) => b - a).slice(0, 5));
+      const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
+      rec.talent.push({ season: h.season, marketSize: s.market.length, leagueAvg: mean(all.map(playerOverall)), starterAvg: mean(starters), best: Math.max(...all.map(playerOverall)), avgAge: mean(all.map((p) => p.age)) });
+      rec.playerFunds.push(s.funds);
+      advanceDay(s, data);
+    }
+    rows.push(rec);
+  }
+  parentPort!.postMessage(rows);
+} else if (mode === 'economy') {
   const rows: EconomyRecord[] = [];
   for (let seed = from; seed < to; seed++) {
     const s = newGame('校准', '#3a7bd5', 10_000 + seed, data);

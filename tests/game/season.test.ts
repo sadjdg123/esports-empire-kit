@@ -112,7 +112,10 @@ describe('a full season', () => {
     expect(s.calendar).toEqual({ season: 4, phase: 'PRESEASON', day: 0 });
     expect(s.history.map((h) => h.season)).toEqual([1, 2, 3]);
     expect(new Set(schedules).size).toBe(3);
-    for (const p of Object.values(s.players)) expect(p.age).toBe(ages[p.id]! + 3);
+    const veterans = Object.values(s.players).filter((p) => ages[p.id] !== undefined);
+    expect(veterans.length).toBeGreaterThan(30);
+    for (const p of veterans) expect(p.age).toBe(ages[p.id]! + 3);
+    expect(Object.values(s.players).filter((p) => p.id.startsWith('yt_s')).length).toBeGreaterThan(0); // new classes joined
     expect(s.results).toHaveLength(0);
     expect(s.inbox.some((m) => m.title === '第 4 赛季开始')).toBe(true);
   }, 120_000);

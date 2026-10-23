@@ -2,10 +2,9 @@
 // release fees. A contract runs to the end of season `contractUntil`.
 
 import type { ClubId, GameData, Player, PlayerId } from '../core/types';
-import { autoLineup } from '../sim/scenario';
 import { addLedger, playerOverall, rosterOf, weekOfSeason, type Result } from './game';
 import { postMessage } from './messages';
-import { PLAYER_CLUB_ID, type ClubState, type GameState, type Negotiation } from './state';
+import { PLAYER_CLUB_ID, type GameState, type Negotiation } from './state';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (error: string): Result<never> => ({ ok: false, error });
@@ -130,28 +129,6 @@ export function declineRenewal(state: GameState, data: GameData, playerId: Playe
 // ---------------------------------------------------------------------------
 // Season rollover
 
-function aiPayroll(state: GameState, club: ClubState): number {
-  return club.roster.reduce((a, id) => a + state.players[id]!.salaryPerWeek, 0);
-}
-
-/** AI clubs keep their starters if they can afford them (T17 makes this smarter). */
-function aiRenewals(state: GameState, data: GameData, endedSeason: number): void {
-  const k = data.economy.contracts;
-  for (const club of state.aiClubs) {
-    const roster = rosterOf(state, club.id);
-    if (roster.length < 5) continue;
-    const starters = new Set(autoLineup(data, club.id, roster, 'STEADY_MACRO').picks.map((pk) => pk.playerId));
-    for (const p of expiringPlayers(state, club.id, endedSeason)) {
-      if (!starters.has(p.id)) continue;
-      const salary = fairSalary(data, p);
-      if (club.funds < (aiPayroll(state, club) - p.salaryPerWeek + salary) * k.aiReserveWeeks) continue;
-      p.salaryPerWeek = salary;
-      p.signingFee = salary * data.economy.signingFeeWeeks;
-      p.contractUntil = endedSeason + k.defaultYears;
-    }
-  }
-}
-
 /** Free agents re-price themselves each season. */
 function repriceMarket(state: GameState, data: GameData): void {
   for (const id of state.market) {
@@ -161,30 +138,11 @@ function repriceMarket(state: GameState, data: GameData): void {
   }
 }
 
-/** AI clubs below the minimum roster sign the best free agent they can afford, missing roles first. Never overdraws. */
-export function aiFillRosters(state: GameState, data: GameData): void {
-  for (const club of state.aiClubs) {
-    while (club.roster.length < data.economy.minRoster) {
-      const roles = new Set(rosterOf(state, club.id).map((p) => p.primaryRole));
-      const pick = state.market.map((id) => state.players[id]!).filter((p) => p.signingFee <= club.funds)
-        .sort((a, b) => Number(roles.has(a.primaryRole)) - Number(roles.has(b.primaryRole)) || playerOverall(b) - playerOverall(a) || a.id.localeCompare(b.id))[0];
-      if (!pick) break; // T17: AI budgets must keep this from happening
-      state.market = state.market.filter((id) => id !== pick.id);
-      club.roster.push(pick.id);
-      pick.clubId = club.id;
-      pick.contractUntil = state.calendar.season + data.economy.contracts.defaultYears - 1;
-      club.funds -= pick.signingFee;
-    }
-  }
-}
-
 /**
- * Called when a new season starts (calendar.season already incremented):
- * AI renewals, expired contracts leave, the market re-prices, AI clubs refill,
- * and the player hears about contracts that end this season.
+ * Called when a new season starts (calendar.season already incremented, AI
+ * renewals already decided): expired contracts leave and the market re-prices.
  */
-export function rollContracts(state: GameState, data: GameData): boolean {
-  aiRenewals(state, data, state.calendar.season - 1);
+export function rollContracts(state: GameState, data: GameData): void {
   for (const club of [state.club, ...state.aiClubs]) {
     for (const p of rosterOf(state, club.id)) {
       if (p.contractUntil === undefined || p.contractUntil >= state.calendar.season) continue;
@@ -200,8 +158,6 @@ export function rollContracts(state: GameState, data: GameData): boolean {
   }
   state.negotiations = state.negotiations.filter((n) => n.season >= state.calendar.season);
   repriceMarket(state, data);
-  aiFillRosters(state, data);
-  return remindExpiring(state);
 }
 
 /** Inbox reminder for the player's contracts ending this season. Returns true if there were any. */

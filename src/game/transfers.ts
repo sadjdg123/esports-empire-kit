@@ -35,7 +35,7 @@ export function askingPrice(state: GameState, data: GameData, playerId: PlayerId
 }
 
 /** Moves a player and the fee. The contract (salary, length) goes with the player. */
-function completeTransfer(state: GameState, playerId: PlayerId, seller: ClubState, buyer: ClubState, fee: number): void {
+export function completeTransfer(state: GameState, playerId: PlayerId, seller: ClubState, buyer: ClubState, fee: number): void {
   const p = state.players[playerId]!;
   seller.roster = seller.roster.filter((id) => id !== playerId);
   buyer.roster.push(playerId);

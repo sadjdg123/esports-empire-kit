@@ -1,0 +1,110 @@
+{
+  "styles": {
+    "RICH": {
+      "wageShare": 1.15,
+      "reserveWeeks": 6,
+      "rosterTarget": 7,
+      "youthWeight": 0.2,
+      "ageWeight": 0.8,
+      "upgradeMargin": 4,
+      "restFatigue": 60,
+      "rotateFatigue": 70
+    },
+    "YOUTH": {
+      "wageShare": 0.9,
+      "reserveWeeks": 8,
+      "rosterTarget": 7,
+      "youthWeight": 0.8,
+      "ageWeight": 1.5,
+      "upgradeMargin": 5,
+      "restFatigue": 50,
+      "rotateFatigue": 65
+    },
+    "STEADY": {
+      "wageShare": 0.9,
+      "reserveWeeks": 10,
+      "rosterTarget": 6,
+      "youthWeight": 0.3,
+      "ageWeight": 0.8,
+      "upgradeMargin": 6,
+      "restFatigue": 55,
+      "rotateFatigue": 70
+    },
+    "AGGRESSIVE": {
+      "wageShare": 1.05,
+      "reserveWeeks": 4,
+      "rosterTarget": 6,
+      "youthWeight": 0.3,
+      "ageWeight": 0.5,
+      "upgradeMargin": 3,
+      "restFatigue": 65,
+      "rotateFatigue": 80
+    },
+    "FALLEN": {
+      "wageShare": 1.2,
+      "reserveWeeks": 3,
+      "rosterTarget": 6,
+      "youthWeight": 0.1,
+      "ageWeight": 0.3,
+      "upgradeMargin": 4,
+      "restFatigue": 60,
+      "rotateFatigue": 75
+    }
+  },
+  "slumpLosses": 3,
+  "talent": {
+    "intakePerRole": 2,
+    "ageMin": 16,
+    "ageMax": 18,
+    "overallMin": 34,
+    "overallMax": 56,
+    "potentialMin": 50,
+    "potentialMax": 90,
+    "freeAgentLeaveAge": 31,
+    "namePrefixes": [
+      "小",
+      "阿",
+      "老",
+      "夜",
+      "风",
+      "白",
+      "青",
+      "云",
+      "星",
+      "雪",
+      "北",
+      "南",
+      "墨",
+      "岚",
+      "霜",
+      "苍",
+      "暮",
+      "晨",
+      "野",
+      "孤"
+    ],
+    "nameSuffixes": [
+      "川",
+      "凛",
+      "舟",
+      "禾",
+      "溪",
+      "鸣",
+      "砚",
+      "澜",
+      "迟",
+      "烛",
+      "隼",
+      "棠",
+      "渡",
+      "弦",
+      "朔",
+      "砾",
+      "汀",
+      "曜",
+      "垣",
+      "苇"
+    ],
+    "marketCap": 40
+  }
+}

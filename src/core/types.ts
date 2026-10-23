@@ -241,9 +241,9 @@ export interface FinanceConfig {
   merchPerReputation: number;
   merchWinRateEffect: number; // factor = 1 + (season win rate - 0.5) * effect
   trainingCostPerPlayer: number; // per rostered player per training (non-rest) week
-  reputation: { win: number; loss: number; streakLength: number; streakLoss: number; playoffs: number; final: number; champion: number };
+  reputation: { win: number; loss: number; streakLength: number; streakLoss: number; playoffs: number; final: number; champion: number; seasonPull: number; neutral: number };
   forecastWeeks: number;
-  emergencySigningMaxSalary: number; // with fewer than minRoster players, these may be signed even without money
+  emergencySigningMaxSalary: number; // short of minRoster players, a club may sign on credit up to this salary (or the cheapest third of the market)
 }
 
 /** Salaries, market values, renewals and transfers (P1). */
@@ -482,8 +482,39 @@ export interface GrowthConfig {
   moraleNeutral: number;
   moraleFormPer: number; // form target per morale point above neutral
   formPull: number; // weekly share of the gap between form and its morale target that closes
-  aiRestFatigue: number; // AI clubs rest when their average fatigue reaches this
   aiFocusRotation: TrainingFocus[];
+}
+
+/** How an AI club of one management style runs its business (T17). */
+export interface AiStyleConfig {
+  wageShare: number; // payroll budget = expected weekly income * this
+  reserveWeeks: number; // keeps this many weeks of payroll in the bank before spending
+  rosterTarget: number;
+  youthWeight: number; // value of (potential - overall) for players up to 22
+  ageWeight: number; // penalty per year above 27
+  upgradeMargin: number; // signs or buys only players this much better than the current starter
+  restFatigue: number; // whole team rests at this average fatigue
+  rotateFatigue: number; // a starter this tired sits out if a same-role substitute exists
+}
+
+export interface TalentConfig {
+  intakePerRole: number; // new young free agents per role each season
+  ageMin: number;
+  ageMax: number;
+  overallMin: number;
+  overallMax: number;
+  potentialMin: number;
+  potentialMax: number;
+  freeAgentLeaveAge: number; // unsigned free agents this old leave the league at the new season
+  marketCap: number; // after the new class joins, the weakest older free agents leave beyond this many
+  namePrefixes: string[];
+  nameSuffixes: string[];
+}
+
+export interface AiConfig {
+  styles: Record<ManagementStyle, AiStyleConfig>;
+  slumpLosses: number; // after this many league losses in a row, an AI club tries another tactic
+  talent: TalentConfig;
 }
 
 export interface GameData {
@@ -494,5 +525,6 @@ export interface GameData {
   match: MatchConfig;
   season: SeasonConfig;
   growth: GrowthConfig;
+  ai: AiConfig;
   heroById: Record<HeroId, HeroDef>;
 }
