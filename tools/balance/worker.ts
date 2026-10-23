@@ -5,9 +5,10 @@ import { hashString } from '../../src/core/rng';
 import { runMatch } from '../../src/sim';
 import { buildReport } from '../../src/sim/report';
 import { buildCase, type ScenarioId } from './scenarios';
-import { PLAYER_CLUB_ID, advanceWeek, newGame, signValueSquad, standings, weeklySalaries } from '../../src/game';
+import { PLAYER_CLUB_ID, type ManageStyle, advanceDay, autoManage, autoTraining, commitMatchDay, newGame, standings, weeklySalaries } from '../../src/game';
 
-export interface EconomyRecord { seed: number; ratio: number; wins: number; salaries: number; afterSigning: number; rank: number }
+export interface EconomySeason { ratio: number; wins: number; rank: number; salaries: number; afterSigning: number; reputation: number; playoff: string }
+export interface EconomyRecord { seed: number; seasons: EconomySeason[] }
 
 export interface MatchRecord {
   i: number;
@@ -35,24 +36,33 @@ function goldAt(tl: { t: number; diff: number }[], t: number): number {
   return v;
 }
 
-const { scenario, from, to, repeat, mode } = workerData as { scenario: ScenarioId; from: number; to: number; repeat: boolean; mode?: 'economy' };
+const { scenario, from, to, repeat, mode } = workerData as { scenario: ScenarioId; from: number; to: number; repeat: boolean; mode?: 'economy'; strategy?: string; seasons?: number };
 const data = loadGameData();
 const out: MatchRecord[] = [];
 if (mode === 'economy') {
   const rows: EconomyRecord[] = [];
   for (let seed = from; seed < to; seed++) {
     const s = newGame('校准', '#3a7bd5', 10_000 + seed, data);
-    const signed = signValueSquad(s, data);
-    if (!signed.ok) throw new Error(signed.error);
-    const salaries = weeklySalaries(s);
-    const afterSigning = s.funds;
-    let wins = 0;
-    for (let w = 0; w < s.totalRounds; w++) {
-      const r = advanceWeek(s, data);
-      if (!r.ok) throw new Error(r.error);
-      if (r.value.playerResult?.winner === PLAYER_CLUB_ID) wins++;
+    const seasons: EconomySeason[] = [];
+    for (let k = 0; k < (workerData.seasons as number); k++) {
+      const managed = autoManage(s, data, workerData.strategy as ManageStyle);
+      if (!managed.ok) throw new Error(managed.error);
+      const salaries = weeklySalaries(s);
+      const afterSigning = s.funds;
+      let wins = 0;
+      for (let guard = 0; guard < 400 && s.calendar.phase !== 'FINISHED'; guard++) {
+        autoTraining(s);
+        if (advanceDay(s, data).pause !== 'MATCH_DAY') continue;
+        let c = commitMatchDay(s, data);
+        if (!c.ok) { autoManage(s, data, workerData.strategy as ManageStyle); c = commitMatchDay(s, data); }
+        if (!c.ok) throw new Error(c.error);
+        if (c.value.playerResult?.winner === PLAYER_CLUB_ID) wins++;
+      }
+      const h = s.history[s.history.length - 1]!;
+      seasons.push({ ratio: s.funds / s.startingFunds, wins, rank: standings(s).findIndex((x) => x.clubId === PLAYER_CLUB_ID) + 1, salaries, afterSigning, reputation: s.club.reputation, playoff: h.playerPlayoff });
+      advanceDay(s, data); // into the next season
     }
-    rows.push({ seed, ratio: s.funds / s.startingFunds, wins, salaries, afterSigning, rank: standings(s).findIndex((x) => x.clubId === PLAYER_CLUB_ID) + 1 });
+    rows.push({ seed, seasons });
   }
   parentPort!.postMessage(rows);
 } else {

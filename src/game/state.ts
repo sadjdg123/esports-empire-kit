@@ -58,6 +58,15 @@ export interface PlayoffMatch {
   day: number; // day of the season the game is played
 }
 
+/** The player club's main sponsor deal. */
+export interface SponsorContract {
+  sponsorId: string;
+  name: string;
+  weekly: number;
+  winBonus: number;
+  untilSeason: number; // last season of the deal
+}
+
 /** A transfer bid. Player bids are answered at once; AI bids for the player's players wait in the inbox. */
 export interface TransferOffer {
   id: number;
@@ -101,7 +110,7 @@ export interface FixtureResult {
   checksum: string;
 }
 
-export type LedgerKind = 'SALARY' | 'SPONSOR' | 'PRIZE' | 'SIGNING' | 'RELEASE' | 'TRANSFER';
+export type LedgerKind = 'SALARY' | 'SPONSOR' | 'PRIZE' | 'SIGNING' | 'RELEASE' | 'TRANSFER' | 'LEAGUE' | 'MERCH' | 'TRAINING';
 
 export interface LedgerEntry {
   week: number; // round index the entry belongs to (0-based); -1 = before the season
@@ -150,4 +159,5 @@ export interface GameState {
   playoffs: PlayoffMatch[];
   offers: TransferOffer[];
   negotiations: Negotiation[];
+  sponsor: SponsorContract | null;
 }

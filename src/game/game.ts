@@ -87,6 +87,7 @@ export function newGame(name: string, color: string, seed: number, data: GameDat
     playoffs: [],
     offers: [],
     negotiations: [],
+    sponsor: null,
   };
 }
 
@@ -147,8 +148,10 @@ export function signPlayer(state: GameState, data: GameData, playerId: PlayerId,
   const p = state.players[playerId];
   if (!p || !state.market.includes(playerId)) return fail('这名选手不在自由市场');
   if (state.club.roster.length >= data.economy.maxRoster) return fail(`队伍已满（最多 ${data.economy.maxRoster} 人）`);
-  if (state.funds < 0) return fail('资金为负，暂时不能签人');
-  if (state.funds < p.signingFee) return fail(`资金不足：签约费 ${p.signingFee}，当前资金 ${Math.round(state.funds)}`);
+  // Short of a full team, cheap players can always be signed, even into debt, so the club can keep playing.
+  const emergency = state.club.roster.length < data.economy.minRoster && p.salaryPerWeek <= data.economy.finance.emergencySigningMaxSalary;
+  if (!emergency && state.funds < 0) return fail('资金为负，暂时不能签人');
+  if (!emergency && state.funds < p.signingFee) return fail(`资金不足：签约费 ${p.signingFee}，当前资金 ${Math.round(state.funds)}`);
   state.market = state.market.filter((id) => id !== playerId);
   state.club.roster.push(playerId);
   p.clubId = PLAYER_CLUB_ID;
@@ -207,31 +210,6 @@ export function standings(state: GameState): StandingRow[] {
     if (r.winner === r.blue) { b.wins++; d.losses++; } else { d.wins++; b.losses++; }
   }
   return [...rows.values()].sort((x, y) => y.wins - x.wins || y.killDiff - x.killDiff || x.clubId.localeCompare(y.clubId));
-}
-
-export interface FinanceSummary {
-  funds: number;
-  weeklySalaries: number;
-  weeklySponsor: number;
-  weeklyNet: number; // sponsor - salaries (prizes excluded)
-  runwayWeeks: number; // weeks until funds run out at the current burn; Infinity if not burning
-  lowFunds: boolean;
-  canSign: boolean;
-}
-
-export function financeSummary(state: GameState, data: GameData): FinanceSummary {
-  const salaries = weeklySalaries(state);
-  const sponsor = data.economy.weeklySponsor;
-  const net = sponsor - salaries;
-  return {
-    funds: state.funds,
-    weeklySalaries: salaries,
-    weeklySponsor: sponsor,
-    weeklyNet: net,
-    runwayWeeks: net >= 0 ? Infinity : Math.max(0, state.funds / -net),
-    lowFunds: state.funds < salaries * data.economy.lowFundsWarningWeeks,
-    canSign: state.funds >= 0,
-  };
 }
 
 /** Income and expenses grouped per week (week -1 = pre-season signings). */

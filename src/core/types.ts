@@ -211,7 +211,6 @@ export interface ClubDef {
 
 export interface EconomyConfig {
   startingFunds: number;
-  weeklySponsor: number;
   prizeWin: number;
   prizeLoss: number;
   signingFeeWeeks: number; // signing fee = salary * weeks (informational; players carry signingFee)
@@ -220,6 +219,31 @@ export interface EconomyConfig {
   maxRoster: number;
   formWeeklyDelta: number; // max weekly random change of form
   contracts: ContractConfig;
+  finance: FinanceConfig;
+}
+
+export interface SponsorDef {
+  id: string;
+  name: string;
+  weekly: number;
+  winBonus: number; // per match won
+  signingBonus: number; // paid once on signing
+}
+
+/** Income sources, running costs and reputation (P1). */
+export interface FinanceConfig {
+  sponsorTiers: { tier: number; minReputation: number; sponsors: SponsorDef[] }[];
+  sponsorMaxYears: number;
+  emergencySponsor: SponsorDef; // offered whenever funds are below the warning line
+  leagueShareWeekly: number; // every club, regular season and playoffs
+  playoffPrize: { champion: number; final: number; semi: number };
+  merchBase: number; // weekly merchandise = (base + reputation * perReputation) * win-rate factor
+  merchPerReputation: number;
+  merchWinRateEffect: number; // factor = 1 + (season win rate - 0.5) * effect
+  trainingCostPerPlayer: number; // per rostered player per training (non-rest) week
+  reputation: { win: number; loss: number; streakLength: number; streakLoss: number; playoffs: number; final: number; champion: number };
+  forecastWeeks: number;
+  emergencySigningMaxSalary: number; // with fewer than minRoster players, these may be signed even without money
 }
 
 /** Salaries, market values, renewals and transfers (P1). */

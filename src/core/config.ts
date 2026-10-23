@@ -234,7 +234,7 @@ function checkEconomy(c: Checker, raw: unknown): void {
   const o = c.obj(raw, 'economy.json');
   if (!o) return;
   const p = 'economy.json';
-  for (const k of ['startingFunds', 'weeklySponsor', 'prizeWin', 'prizeLoss', 'signingFeeWeeks', 'lowFundsWarningWeeks', 'formWeeklyDelta']) c.num(o, k, p, 0);
+  for (const k of ['startingFunds', 'prizeWin', 'prizeLoss', 'signingFeeWeeks', 'lowFundsWarningWeeks', 'formWeeklyDelta']) c.num(o, k, p, 0);
   const min = c.num(o, 'minRoster', p, 5, 20, true);
   const max = c.num(o, 'maxRoster', p, 5, 20, true);
   if (max < min) c.fail(`${p}.maxRoster`, 'must be >= minRoster');
@@ -246,6 +246,35 @@ function checkEconomy(c: Checker, raw: unknown): void {
   ]);
   if (k && typeof k.minYears === 'number' && typeof k.maxYears === 'number' && typeof k.defaultYears === 'number'
     && !(k.minYears <= k.defaultYears && k.defaultYears <= k.maxYears)) c.fail(`${p}.contracts.defaultYears`, 'must be between minYears and maxYears');
+  checkFinance(c, o.finance, `${p}.finance`);
+}
+
+function checkSponsor(c: Checker, raw: unknown, path: string, ids: Set<string>): void {
+  const o = checkNumbers(c, raw, path, ['weekly', 'winBonus', 'signingBonus']);
+  if (!o) return;
+  if (typeof o.id !== 'string' || !o.id) c.fail(`${path}.id`, 'missing id');
+  else if (ids.has(o.id)) c.fail(`${path}.id`, `duplicate sponsor ${o.id}`);
+  else ids.add(o.id);
+  if (typeof o.name !== 'string' || !o.name) c.fail(`${path}.name`, 'missing name');
+}
+
+function checkFinance(c: Checker, raw: unknown, p: string): void {
+  const o = checkNumbers(c, raw, p, ['sponsorMaxYears', 'leagueShareWeekly', 'merchBase', 'merchPerReputation', 'merchWinRateEffect', 'trainingCostPerPlayer', 'forecastWeeks', 'emergencySigningMaxSalary']);
+  if (!o) return;
+  const ids = new Set<string>();
+  const tiers = c.arr(o.sponsorTiers, `${p}.sponsorTiers`, 1) ?? [];
+  tiers.forEach((t, i) => {
+    const to = checkNumbers(c, t, `${p}.sponsorTiers[${i}]`, ['tier', 'minReputation']);
+    if (!to) return;
+    (c.arr(to.sponsors, `${p}.sponsorTiers[${i}].sponsors`, 1) ?? []).forEach((sp, j) => checkSponsor(c, sp, `${p}.sponsorTiers[${i}].sponsors[${j}]`, ids));
+  });
+  const first = tiers[0] as Obj | undefined;
+  if (first && first.minReputation !== 0) c.fail(`${p}.sponsorTiers[0].minReputation`, 'the first tier must be open to everyone (0)');
+  checkSponsor(c, o.emergencySponsor, `${p}.emergencySponsor`, ids);
+  checkNumbers(c, o.playoffPrize, `${p}.playoffPrize`, ['champion', 'final', 'semi']);
+  checkNumbers(c, o.reputation, `${p}.reputation`, ['win', 'streakLength', 'playoffs', 'final', 'champion']);
+  const rep = c.obj(o.reputation, `${p}.reputation`);
+  if (rep) for (const k of ['loss', 'streakLoss']) c.num(rep, k, `${p}.reputation`, -100, 0);
 }
 
 function checkNumbers(c: Checker, raw: unknown, path: string, keys: string[], min = 0): Obj | null {

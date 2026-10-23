@@ -69,24 +69,46 @@ async function balance(): Promise<void> {
 async function economy(): Promise<void> {
   const { availableParallelism } = await import('node:os');
   const { Worker } = await import('node:worker_threads');
-  const n = Number(arg('n') ?? 100);
   const threads = Number(arg('threads') ?? availableParallelism());
-  const chunk = Math.ceil(n / threads);
-  const parts = await Promise.all(Array.from({ length: threads }, (_, k) => new Promise<import('./balance/worker').EconomyRecord[]>((resolve, reject) => {
-    const w = new Worker(new URL('./balance/worker-boot.mjs', import.meta.url), { workerData: { mode: 'economy', from: k * chunk, to: Math.min(n, (k + 1) * chunk) } });
-    w.once('message', resolve);
-    w.once('error', reject);
-  })));
-  const rows = parts.flat();
-  const inside = rows.filter((r) => r.ratio >= 0.6 && r.ratio <= 1.5).length / rows.length;
-  const ratios = rows.map((r) => r.ratio).sort((a, b) => a - b);
-  const q = (f: number) => ratios[Math.min(ratios.length - 1, Math.floor(f * ratios.length))]!;
-  const avg = (f: (r: (typeof rows)[number]) => number) => rows.reduce((a, r) => a + f(r), 0) / rows.length;
-  console.log(`经济校准：${rows.length} 个赛季，策略 = 每个位置签性价比最高的选手 + 一键推荐阵容`);
-  console.log(`赛季末资金 / 起始资金：10% ${q(0.1).toFixed(2)} · 中位数 ${q(0.5).toFixed(2)} · 90% ${q(0.9).toFixed(2)}`);
-  console.log(`落在 60%–150% 的比例：${(inside * 100).toFixed(0)}%（标准 ≥80%） ${inside >= 0.8 ? '✅' : '❌'}`);
-  console.log(`平均胜场 ${avg((r) => r.wins).toFixed(1)}/10 · 平均排名 ${avg((r) => r.rank).toFixed(1)} · 平均周薪 ${avg((r) => r.salaries).toFixed(0)} · 签约后资金 ${avg((r) => r.afterSigning).toFixed(0)}`);
-  process.exitCode = inside >= 0.8 ? 0 : 1;
+  type Rec = import('./balance/worker').EconomyRecord;
+  const run = (strategy: 'value' | 'balanced' | 'star', n: number, seasons: number) => {
+    const chunk = Math.ceil(n / threads);
+    return Promise.all(Array.from({ length: threads }, (_, k) => new Promise<Rec[]>((resolve, reject) => {
+      const w = new Worker(new URL('./balance/worker-boot.mjs', import.meta.url), { workerData: { mode: 'economy', strategy, seasons, from: k * chunk, to: Math.min(n, (k + 1) * chunk) } });
+      w.once('message', resolve);
+      w.once('error', reject);
+    }))).then((parts) => parts.flat());
+  };
+  const quant = (xs: number[]) => { const v = [...xs].sort((a, b) => a - b); return (f: number) => v[Math.min(v.length - 1, Math.floor(f * v.length))]!; };
+
+  // 1) Normal management: one season from a new game, many seeds (GDD 8 calibration).
+  const n = Number(arg('n') ?? 100);
+  const normal = (await run('balanced', n, 1)).map((r) => r.seasons[0]!);
+  const ratios = normal.map((r) => r.ratio);
+  const q = quant(ratios);
+  const inside = ratios.filter((x) => x >= 0.6 && x <= 1.5).length / ratios.length;
+  const avg = (f: (r: (typeof normal)[number]) => number) => normal.reduce((a, r) => a + f(r), 0) / normal.length;
+  console.log(`经济校准 1：普通经营（每个位置签周薪不超过每周收入五分之一的最强选手、签最好的赞助、每三周休息一周），${normal.length} 个赛季`);
+  console.log(`  赛季末资金 / 起始资金：10% ${q(0.1).toFixed(2)} · 中位数 ${q(0.5).toFixed(2)} · 90% ${q(0.9).toFixed(2)}`);
+  console.log(`  落在 60%–150% 的比例：${(inside * 100).toFixed(0)}%（标准 ≥80%） ${inside >= 0.8 ? '✅' : '❌'}`);
+  console.log(`  平均胜场 ${avg((r) => r.wins).toFixed(1)}/10 · 平均排名 ${avg((r) => r.rank).toFixed(1)} · 平均周薪 ${avg((r) => r.salaries).toFixed(0)} · 签约后资金 ${avg((r) => r.afterSigning).toFixed(0)} · 赛季末声望 ${avg((r) => r.reputation).toFixed(0)}`);
+
+  // 2) Big-spender management over several seasons: must neither run away nor sink without limit.
+  const seasons = Number(arg('seasons') ?? 6);
+  const rich = await run('star', Number(arg('rich') ?? 20), seasons);
+  console.log(`经济校准 2：豪门经营（每个位置签买得起的最强选手），${rich.length} 局 × ${seasons} 个赛季，资金 / 起始资金的中位数：`);
+  const medians: number[] = [];
+  for (let k = 0; k < seasons; k++) {
+    const qk = quant(rich.map((r) => r.seasons[k]!.ratio));
+    const rep = rich.reduce((a, r) => a + r.seasons[k]!.reputation, 0) / rich.length;
+    const champs = rich.filter((r) => r.seasons[k]!.playoff === 'CHAMPION').length;
+    medians.push(qk(0.5));
+    console.log(`  第 ${k + 1} 赛季末：中位数 ${qk(0.5).toFixed(2)}（10% ${qk(0.1).toFixed(2)} · 90% ${qk(0.9).toFixed(2)}） · 平均声望 ${rep.toFixed(0)} · 夺冠 ${champs}/${rich.length}`);
+  }
+  const lastSteps = medians.slice(-3).map((m, i, a) => (i === 0 ? 0 : m - a[i - 1]!)).slice(1);
+  const bounded = medians.every((m) => m > -2 && m < 5) && lastSteps.every((d) => Math.abs(d) <= 0.5);
+  console.log(`  有界（每个赛季中位数在 −2 到 5 倍之间，最后两个赛季每季变化不超过 ±0.5 倍）：${bounded ? '✅' : '❌'}`);
+  process.exitCode = inside >= 0.8 && bounded ? 0 : 1;
 }
 
 if (process.argv.includes('--one')) one();

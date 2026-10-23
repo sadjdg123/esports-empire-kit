@@ -54,6 +54,7 @@ function migrateV1toV2(save: Obj): Obj {
   g.playoffs ??= [];
   g.offers ??= [];
   g.negotiations ??= [];
+  g.sponsor ??= null;
   const club = g.club as Obj;
   club.reputation ??= 15;
   club.management ??= 'PLAYER';
@@ -129,6 +130,7 @@ export function checkSave(save: SaveFile): string | null {
   // Fields added during P1 development, after v2 was defined.
   g.offers ??= [];
   g.negotiations ??= [];
+  g.sponsor ??= null;
   for (const k of ['inbox', 'history', 'playoffs', 'offers', 'negotiations']) if (!Array.isArray(g[k])) return `游戏数据缺少 ${k}`;
   return null;
 }

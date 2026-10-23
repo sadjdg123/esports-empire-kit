@@ -5,3 +5,4 @@ export * from './strategy';
 export * from './training';
 export * from './contracts';
 export * from './transfers';
+export * from './finance';

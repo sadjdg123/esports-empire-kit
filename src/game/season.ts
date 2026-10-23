@@ -9,13 +9,14 @@ import { runMatch } from '../sim';
 import { buildReport } from '../sim/report';
 import { autoLineup } from '../sim/scenario';
 import {
-  addLedger, buildSchedule, clubById, financeSummary, readinessIssues, rosterOf, seasonOver, standings, weekOfSeason, weeklySalaries, type Result,
+  buildSchedule, clubById, readinessIssues, rosterOf, seasonOver, standings, type Result,
 } from './game';
 import {
   PLAYER_CLUB_ID, type ClubState, type Fixture, type FixtureResult, type GameState, type InboxMessage,
   type LedgerEntry, type PlayoffMatch, type SeasonPhase, type StoredReport,
 } from './state';
 import { remindExpiring, rollContracts } from './contracts';
+import { applyMatchFinance, applyPlayoffAwards, autoSponsor, financeSummary, rescueOptions, runPayDay } from './finance';
 import { postMessage } from './messages';
 import { applyDailyRecovery, applyMatchEffects, applyTrainingWeek } from './training';
 import { expireOffers, generateAiOffers } from './transfers';
@@ -126,12 +127,6 @@ export interface DayResult {
   messages: InboxMessage[];
 }
 
-function paySalaries(state: GameState, data: GameData): void {
-  const week = weekOfSeason(state);
-  addLedger(state, { week, kind: 'SALARY', amount: -weeklySalaries(state), note: '选手周薪' });
-  addLedger(state, { week, kind: 'SPONSOR', amount: data.economy.weeklySponsor, note: '基础赞助' });
-}
-
 function startPlayoffs(state: GameState, data: GameData): void {
   const L = seasonLayout(state, data);
   const table = standings(state);
@@ -154,6 +149,7 @@ function startPlayoffs(state: GameState, data: GameData): void {
 
 function finishSeason(state: GameState, data: GameData): void {
   state.calendar.phase = 'FINISHED';
+  applyPlayoffAwards(state, data);
   const table = standings(state);
   const final = state.playoffs.find((m) => m.stage === 'FINAL');
   const champion = final?.winner ?? null;
@@ -212,6 +208,7 @@ export function advanceDay(state: GameState, data: GameData): DayResult {
   if (state.calendar.phase === 'PRESEASON' && day >= L.regularStart) {
     state.calendar.phase = 'REGULAR';
     expireOffers(state);
+    autoSponsor(state, data);
     postMessage(state, 'SEASON', '常规赛开始', `本赛季 ${state.totalRounds} 轮，每周${WEEKDAY[cfg.matchWeekday]}比赛。`);
   }
   if (state.calendar.phase === 'REGULAR' && state.week >= state.totalRounds && day >= L.playoffStart) {
@@ -221,12 +218,12 @@ export function advanceDay(state: GameState, data: GameData): DayResult {
   }
   applyDailyRecovery(state, data);
   if (day % cfg.daysPerWeek === cfg.payWeekday) {
-    paySalaries(state, data);
+    runPayDay(state, data); // before training: this week's training is paid for
     applyTrainingWeek(state, data);
     if (generateAiOffers(state, data).length > 0) pause ??= 'OFFER';
     const f = financeSummary(state, data);
     if (f.lowFunds && f.weeklySalaries > 0) {
-      postMessage(state, 'FINANCE', '资金偏低', `现在资金 ${Math.round(state.funds)}，低于 ${data.economy.lowFundsWarningWeeks} 周工资。可以考虑解约高薪选手。`);
+      postMessage(state, 'FINANCE', '资金偏低', `现在资金 ${Math.round(state.funds)}，低于 ${data.economy.lowFundsWarningWeeks} 周工资。${rescueOptions(state, data).join('；')}。`);
       pause = 'LOW_FUNDS';
     }
   }
@@ -311,7 +308,6 @@ export function commitMatchDay(state: GameState, data: GameData, playerMatchResu
     const issues = readinessIssues(state, data);
     if (issues.length > 0) return fail(issues.join('；'));
   }
-  const eco = data.economy;
   const stage = today[0]!.kind;
   const round = stage === 'LEAGUE' ? state.week : state.totalRounds + (stage === 'SEMI' ? 0 : 1);
   const fundsBefore = state.funds;
@@ -337,7 +333,6 @@ export function commitMatchDay(state: GameState, data: GameData, playerMatchResu
     const won = fr.winner === PLAYER_CLUB_ID;
     const mySide = f.blue === PLAYER_CLUB_ID ? 'BLUE' : 'RED';
     const label = stage === 'LEAGUE' ? '比赛' : stage === 'SEMI' ? '季后赛半决赛' : '总决赛';
-    addLedger(state, { week: weekOfSeason(state), kind: 'PRIZE', amount: won ? eco.prizeWin : eco.prizeLoss, note: won ? `${label}胜利奖金` : `${label}出场奖金` });
     const rep = buildReport(r, input, data, names);
     report = {
       round, stage, season: state.calendar.season, opponent: mySide === 'BLUE' ? f.red : f.blue, won,
@@ -349,8 +344,9 @@ export function commitMatchDay(state: GameState, data: GameData, playerMatchResu
     postMessage(state, 'MATCH', `${label}${won ? '胜利' : '失利'}：对阵 ${clubById(state, report.opponent).name}`, rep.headline, { round });
   }
 
+  if (stage === 'LEAGUE') state.results.push(...results);
+  for (const fr of results) applyMatchFinance(state, data, fr, stage);
   if (stage === 'LEAGUE') {
-    state.results.push(...results);
     state.week++;
   } else if (stage === 'SEMI') {
     const [s0, s1] = [state.playoffs.find((m) => m.stage === 'SEMI' && m.index === 0)!, state.playoffs.find((m) => m.stage === 'SEMI' && m.index === 1)!];

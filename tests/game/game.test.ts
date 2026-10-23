@@ -66,9 +66,18 @@ describe('market', () => {
   it('refuses to sign without money or beyond the roster limit, with a reason', () => {
     const s = newGame('x', '#000000', 1, data);
     s.funds = 10;
-    const r = signPlayer(s, data, marketPlayers(s)[0]!.id);
+    const cap = data.economy.finance.emergencySigningMaxSalary;
+    const r = signPlayer(s, data, marketPlayers(s).find((p) => p.salaryPerWeek > cap)!.id);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toContain('资金不足');
+    // Short of 5 players, a cheap player can still be signed into debt so the club can play.
+    const cheap = marketPlayers(s).find((p) => p.salaryPerWeek <= cap)!;
+    expect(signPlayer(s, data, cheap.id).ok).toBe(true);
+    expect(s.funds).toBe(10 - cheap.signingFee);
+    expect(releasePlayer(s, data, cheap.id).ok).toBe(false); // cannot pay the release fee
+    s.club.roster = [];
+    cheap.clubId = null;
+    s.market.push(cheap.id);
     s.funds = 1e9;
     const ids = marketPlayers(s).map((p) => p.id);
     for (let i = 0; i < data.economy.maxRoster; i++) expect(signPlayer(s, data, ids[i]!).ok).toBe(true);

@@ -1,6 +1,5 @@
 {
   "startingFunds": 100000,
-  "weeklySponsor": 5000,
   "prizeWin": 8000,
   "prizeLoss": 2000,
   "signingFeeWeeks": 4,
@@ -37,5 +36,98 @@
     "aiOfferMax": 1.3,
     "aiOfferMinGain": 3,
     "aiReserveWeeks": 8
+  },
+  "finance": {
+    "sponsorTiers": [
+      {
+        "tier": 1,
+        "minReputation": 0,
+        "sponsors": [
+          {
+            "id": "s1a",
+            "name": "街角网咖",
+            "weekly": 4000,
+            "winBonus": 400,
+            "signingBonus": 0
+          },
+          {
+            "id": "s1b",
+            "name": "老城奶茶",
+            "weekly": 3000,
+            "winBonus": 1200,
+            "signingBonus": 5000
+          }
+        ]
+      },
+      {
+        "tier": 2,
+        "minReputation": 35,
+        "sponsors": [
+          {
+            "id": "s2a",
+            "name": "星河外设",
+            "weekly": 7000,
+            "winBonus": 600,
+            "signingBonus": 10000
+          },
+          {
+            "id": "s2b",
+            "name": "云帆饮料",
+            "weekly": 5500,
+            "winBonus": 1800,
+            "signingBonus": 0
+          }
+        ]
+      },
+      {
+        "tier": 3,
+        "minReputation": 65,
+        "sponsors": [
+          {
+            "id": "s3a",
+            "name": "曜石电子",
+            "weekly": 11000,
+            "winBonus": 800,
+            "signingBonus": 20000
+          },
+          {
+            "id": "s3b",
+            "name": "极光汽车",
+            "weekly": 9000,
+            "winBonus": 2500,
+            "signingBonus": 10000
+          }
+        ]
+      }
+    ],
+    "sponsorMaxYears": 2,
+    "emergencySponsor": {
+      "id": "rescue",
+      "name": "速到金融（应急）",
+      "weekly": 1500,
+      "winBonus": 0,
+      "signingBonus": 40000
+    },
+    "leagueShareWeekly": 2000,
+    "playoffPrize": {
+      "champion": 60000,
+      "final": 30000,
+      "semi": 12000
+    },
+    "merchBase": 500,
+    "merchPerReputation": 40,
+    "merchWinRateEffect": 0.6,
+    "trainingCostPerPlayer": 150,
+    "reputation": {
+      "win": 0.6,
+      "loss": -0.3,
+      "streakLength": 3,
+      "streakLoss": -1.0,
+      "playoffs": 3,
+      "final": 3,
+      "champion": 6
+    },
+    "forecastWeeks": 4,
+    "emergencySigningMaxSalary": 1200
   }
 }
