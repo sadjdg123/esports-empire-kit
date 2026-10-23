@@ -180,6 +180,7 @@ export function startNewSeason(state: GameState, data: GameData): boolean {
   state.reports = [];
   state.playoffs = [];
   state.offers = state.offers.filter((o) => o.status === 'PENDING');
+  state.ledger = []; // one season of detail; the season's closing funds stay in the history
   for (const id of Object.keys(state.players).sort()) state.players[id]!.age++;
   postMessage(state, 'SEASON', `第 ${state.calendar.season} 赛季开始`, `休赛期 ${data.season.preseasonWeeks} 周，可以签人、买卖选手、调整阵容。常规赛 ${state.totalRounds} 轮之后是前 ${data.season.playoffTeams} 名的季后赛。`);
   rollContracts(state, data);

@@ -90,7 +90,13 @@ export function applyTrainingWeek(state: GameState, data: GameData): void {
   const rng = rngFromState(state.rngState);
   for (const id of Object.keys(state.players).sort()) updateForm(state.players[id]!, g, rng, data.economy.formWeeklyDelta);
   state.rngState = rng.state();
+  for (const id of state.club.roster) {
+    const p = state.players[id]!;
+    p.ovrHistory = [...(p.ovrHistory ?? []), Math.round(playerOverall(p) * 10) / 10].slice(-OVR_HISTORY);
+  }
 }
+
+const OVR_HISTORY = 40;
 
 /** Daily recovery: fatigue goes down, morale drifts back toward neutral. */
 export function applyDailyRecovery(state: GameState, data: GameData): void {

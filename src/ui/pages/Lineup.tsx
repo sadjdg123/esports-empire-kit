@@ -3,7 +3,7 @@ import { validateLineup } from '../../core/config';
 import { DEFAULT_MASTERY, ROLES, TACTICS, type Pick, type Role, type Tactic, type TeamLineup } from '../../core/types';
 import { PLAYER_CLUB_ID, recommendLineup, rosterOf, setLineup } from '../../game';
 import type { PageProps } from '../App';
-import { Form, Ovr } from '../components/PlayerBits';
+import { Fatigue, Form, Ovr } from '../components/PlayerBits';
 import { ARCHETYPE_NAME, ROLE_NAME } from '../labels';
 
 export function LineupPage({ game, data, act, go, flash }: PageProps) {
@@ -72,11 +72,12 @@ export function LineupPage({ game, data, act, go, flash }: PageProps) {
                   <option value="">选择选手</option>
                   {roster.map((p) => (
                     <option key={p.id} value={p.id} disabled={usedPlayers.has(p.id) && pick?.playerId !== p.id}>
-                      {p.name}（{ROLE_NAME[p.primaryRole]}{p.primaryRole === role ? ' ✓' : p.secondaryRole === role ? ' 副' : ''}）
+                      {p.name}（{ROLE_NAME[p.primaryRole]}{p.primaryRole === role ? ' ✓' : p.secondaryRole === role ? ' 副' : ''}）{(p.fatigue ?? 0) >= 50 ? ` 疲劳${Math.round(p.fatigue!)}` : ''}
                     </option>
                   ))}
                 </select>
-                {player && <div className="dim"><Ovr p={player} /> <Form p={player} /></div>}
+                {player && <div className="dim"><Ovr p={player} /> <Form p={player} /> <Fatigue p={player} /></div>}
+                {player && (player.fatigue ?? 0) >= 50 && <div className="hint">比较累：疲劳超过 50 后发挥下降</div>}
                 {fit === 'secondary' && <div className="hint">副位置：发挥略打折</div>}
                 {fit === 'off' && <div className="hint bad">不擅长这个位置：发挥明显下降</div>}
                 <select value={pick?.heroId ?? ''} onChange={(e) => setPick(role, { heroId: e.target.value })} disabled={!player}>

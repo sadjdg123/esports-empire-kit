@@ -42,6 +42,7 @@ export interface Player {
   morale?: number; // 0-100
   contractUntil?: number; // last season (1-based) of the current contract; absent for free agents
   stats?: CareerStats;
+  ovrHistory?: number[]; // weekly overall while on the player's club (latest last, capped), for the player card
   // Reserved for P2+:
   traits?: string[];
 }

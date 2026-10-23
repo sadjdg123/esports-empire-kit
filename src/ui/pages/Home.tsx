@@ -1,8 +1,12 @@
-import { PLAYER_CLUB_ID, advanceDay, advanceToNextMatch, clubById, describeDate, nextPlayerFixture, readinessIssues, seasonOver, standings, type WeekSummary } from '../../game';
+import {
+  PLAYER_CLUB_ID, activeSponsor, advanceDay, clubById, describeDate, expiringPlayers, negotiationFor, nextPlayerFixture, readinessIssues, rosterOf, seasonOver,
+  standings, transferWindowOpen, type WeekSummary,
+} from '../../game';
+import type { Page } from '../App';
 import type { PageProps } from '../App';
 import { STYLE_NAME, money } from '../labels';
 
-export function HomePage({ game, data, go, act, flash, lastWeek }: PageProps & { lastWeek: WeekSummary | null }) {
+export function HomePage({ game, data, go, act, flash, toNextMatch, lastWeek }: PageProps & { lastWeek: WeekSummary | null }) {
   const table = standings(game);
   const myRank = table.findIndex((r) => r.clubId === PLAYER_CLUB_ID) + 1;
   const next = nextPlayerFixture(game, data);
@@ -14,12 +18,19 @@ export function HomePage({ game, data, go, act, flash, lastWeek }: PageProps & {
   const headline = next ? stageName : awaitingPlayoffs ? '常规赛结束，季后赛下周开打' : '本赛季没有你的比赛了';
   const buttonText = next ? '前进到下一场比赛 ▶' : awaitingPlayoffs ? '前进到季后赛 ▶' : '前进到赛季结束 ▶';
   const record = game.history[game.history.length - 1];
-  const toMatch = () => {
-    let pause: string | null = null;
-    act((d) => { pause = advanceToNextMatch(d, data).pause; return { ok: true, value: undefined }; });
-    if (pause === 'MATCH_DAY') go('match');
-    else flash('本赛季你已经没有比赛了');
-  };
+  const today = next?.day === game.calendar.day;
+  const toMatch = () => (today ? go('match') : toNextMatch());
+  const todo: { text: string; page: Page; button: string }[] = [];
+  const unread = game.inbox.filter((m) => !m.read).length;
+  if (unread > 0) todo.push({ text: `${unread} 条未读消息`, page: 'inbox', button: '看收件箱' });
+  const offers = game.offers.filter((o) => o.seller === PLAYER_CLUB_ID && o.status === 'PENDING').length;
+  if (offers > 0) todo.push({ text: `${offers} 个俱乐部想买你的选手`, page: 'contracts', button: '去处理' });
+  const expiring = expiringPlayers(game).filter((p) => !negotiationFor(game, p.id) || negotiationFor(game, p.id)!.status === 'OPEN');
+  if (!over && expiring.length > 0) todo.push({ text: `${expiring.map((p) => p.name).join('、')} 的合同本赛季到期`, page: 'contracts', button: '谈续约' });
+  if (!over && !activeSponsor(game)) todo.push({ text: '还没有赞助商', page: 'finance', button: '选赞助' });
+  const tired = rosterOf(game).filter((p) => (p.fatigue ?? 0) >= 70);
+  if (tired.length > 0 && game.training !== 'REST') todo.push({ text: `${tired.length} 名选手很累（疲劳 ≥70）`, page: 'training', button: '安排休息' });
+  if (transferWindowOpen(game)) todo.push({ text: '转会窗口开放中，可以买卖选手', page: 'contracts', button: '看转会' });
   const newSeason = () => {
     act((d) => { advanceDay(d, data); return { ok: true, value: undefined }; });
     flash('新赛季开始了：休赛期可以签人、调整阵容');
@@ -58,14 +69,23 @@ export function HomePage({ game, data, go, act, flash, lastWeek }: PageProps & {
               </div>
             ) : (
               <>
-                <p>首发和战术已就绪：<b>{data.match.tactics[game.lineup!.tactic].name}</b>。时间会一天天走到比赛日，途中每周一发工资和赞助。</p>
-                <button className="primary big" onClick={toMatch}>{buttonText}</button>
+                <p>首发和战术已就绪：<b>{data.match.tactics[game.lineup!.tactic].name}</b>。点上方“▶ 开始”让时间一天天走，或直接跳到比赛日。</p>
+                <button className="primary big" onClick={toMatch}>{today ? '开始比赛 ▶' : buttonText}</button>
                 <button className="link" onClick={() => go('lineup')}>调整阵容</button>
               </>
             )}
           </>
         )}
       </section>
+
+      {todo.length > 0 && (
+        <section className="card todo-card">
+          <h3>待处理</h3>
+          <ul className="plain">
+            {todo.map((t) => <li key={t.text} className="row between"><span>{t.text}</span><button className="small" onClick={() => go(t.page)}>{t.button}</button></li>)}
+          </ul>
+        </section>
+      )}
 
       <section className="card">
         <h3>积分榜</h3>

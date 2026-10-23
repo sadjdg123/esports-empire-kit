@@ -16,7 +16,7 @@ export function Heroes({ p, data }: { p: Player; data: GameData }) {
   const list = Object.entries(p.heroMastery).sort((a, b) => b[1] - a[1]);
   return (
     <span className="heroes">
-      {list.map(([id, m]) => <span key={id} className="hero-tag">{data.heroById[id]?.name ?? id} <b>{m}</b></span>)}
+      {list.map(([id, m]) => <span key={id} className="hero-tag">{data.heroById[id]?.name ?? id} <b>{Math.round(m)}</b></span>)}
     </span>
   );
 }
@@ -29,4 +29,25 @@ export function Attrs({ p }: { p: Player }) {
 export function Form({ p }: { p: Player }) {
   if (p.form === 0) return <span className="dim">状态平稳</span>;
   return <span className={p.form > 0 ? 'good' : 'bad'}>状态 {p.form > 0 ? '+' : ''}{p.form}</span>;
+}
+
+export function Fatigue({ p }: { p: Player }) {
+  const f = Math.round(p.fatigue ?? 0);
+  const cls = f >= 70 ? 'bad' : f >= 50 ? 'warn-text' : 'good';
+  return (
+    <span className="meter" title="疲劳：超过 50 后比赛发挥下降">
+      <span className="meter-bar"><span className={`meter-fill ${cls}`} style={{ width: `${f}%` }} /></span>
+      <span className={cls}>{f}</span>
+    </span>
+  );
+}
+
+export function Morale({ p }: { p: Player }) {
+  const m = Math.round(p.morale ?? 60);
+  return <span className={m >= 70 ? 'good' : m < 45 ? 'bad' : ''} title="士气：影响状态">{m >= 70 ? '😊' : m < 45 ? '😟' : '😐'} {m}</span>;
+}
+
+/** A player's name that opens the player card. */
+export function PlayerName({ p, show }: { p: Player; show: (id: string) => void }) {
+  return <button className="link name" onClick={() => show(p.id)}>{p.name}</button>;
 }

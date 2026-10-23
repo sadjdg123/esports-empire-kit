@@ -1,4 +1,4 @@
-import type { Archetype, ClubStyle, Role } from '../core/types';
+import type { Archetype, ClubStyle, Role, TrainingFocus } from '../core/types';
 
 export const ROLE_NAME: Record<Role, string> = { TOP: '上单', JUNGLE: '打野', MID: '中单', ADC: '射手', SUPPORT: '辅助' };
 export const ARCHETYPE_NAME: Record<Archetype, string> = { TANK: '坦克', ASSASSIN: '刺客', MAGE: '法师', MARKSMAN: '射手', SUPPORT: '辅助' };
@@ -15,3 +15,26 @@ export function money(n: number): string {
 export function minutes(sec: number): string {
   return `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
 }
+
+export const FOCUS_NAME: Record<TrainingFocus, string> = {
+  MECHANICS: '操作', AWARENESS: '意识', TEAMWORK: '配合', MENTAL: '心态', MASTERY: '英雄熟练度', REST: '休息',
+};
+
+export const FOCUS_HINT: Record<TrainingFocus, string> = {
+  MECHANICS: '伤害、技能命中、补刀',
+  AWARENESS: '撤退时机、察觉抓人、决策',
+  TEAMWORK: '集合速度、集火目标',
+  MENTAL: '落后时不崩',
+  MASTERY: '每人最拿手的几个英雄更熟练',
+  REST: '不涨能力，但能大幅恢复疲劳，也不花训练费',
+};
+
+/** Hidden potential shown only as a rough scouting word. */
+export function growthRoom(potential: number | undefined, overall: number): string {
+  const room = (potential ?? overall) - overall;
+  return room >= 15 ? '很大' : room >= 8 ? '较大' : room >= 3 ? '一般' : '接近上限';
+}
+
+export const PLAYOFF_NAME: Record<'CHAMPION' | 'FINAL' | 'SEMI' | 'NONE', string> = {
+  CHAMPION: '🏆 总冠军', FINAL: '亚军', SEMI: '半决赛', NONE: '未进季后赛',
+};
