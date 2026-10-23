@@ -8,7 +8,8 @@ import type { GameData, Player } from '../core/types';
 import { seasonWeeks } from './contracts';
 import { playerOverall, weekOfSeason } from './game';
 import { postMessage } from './messages';
-import { PLAYER_CLUB_ID, type GameState } from './state';
+import { clubById } from './game';
+import { PLAYER_CLUB_ID, type GameState, type HallOfFameEntry } from './state';
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 const NEWS_NAMES = 5;
@@ -45,6 +46,7 @@ export function announceRetirements(state: GameState, data: GameData): Player[] 
     const c = retirementChance(data, p);
     if (c <= 0 || !rng.chance(c)) continue;
     if (freeAgents.has(id)) {
+      remember(state, data, p);
       delete state.players[id]; // nobody is waiting for an unsigned player
       continue;
     }
@@ -63,7 +65,7 @@ export function announceRetirements(state: GameState, data: GameData): Player[] 
 }
 
 /** At the start of a new season (before anyone ages): players who announced it leave the game. */
-export function retirePlayers(state: GameState): Player[] {
+export function retirePlayers(state: GameState, data: GameData): Player[] {
   const gone = Object.values(state.players).filter((p) => p.retiring).sort((a, b) => careerPeak(b) - careerPeak(a) || a.id.localeCompare(b.id));
   if (gone.length === 0) return [];
   const ids = new Set(gone.map((p) => p.id));
@@ -79,10 +81,64 @@ export function retirePlayers(state: GameState): Player[] {
   const names = gone.slice(0, NEWS_NAMES).map((p) => `${p.name}（${p.age} 岁，巅峰 ${Math.round(careerPeak(p))}）`);
   postMessage(state, 'SEASON', `${gone.length} 名选手退役`, `${names.join('、')}${gone.length > NEWS_NAMES ? ` 等 ${gone.length} 人` : ''}告别了赛场。`);
   for (const p of gone) {
+    remember(state, data, p);
     p.retired = true;
     p.retiring = false;
     p.clubId = null;
     delete state.players[p.id];
   }
   return gone;
+}
+
+// ---------------------------------------------------------------------------
+// Season MVP and hall of fame (T27)
+
+/** Picks the season's MVP among players who played enough this season (call after the careers are recorded). */
+export function awardSeasonMvp(state: GameState, data: GameData): Player | null {
+  const a = data.season.awards;
+  const season = state.calendar.season;
+  let best: { p: Player; score: number; clubId: string } | null = null;
+  for (const club of [state.club, ...state.aiClubs]) {
+    for (const id of [...club.roster].sort()) {
+      const p = state.players[id]!;
+      const c = p.career?.at(-1);
+      if (!c || c.season !== season || c.played < a.mvpMinPlayed) continue;
+      const score = c.ovr + (c.wins / c.played) * a.mvpWinRateWeight + (c.champion ? a.mvpChampionBonus : 0);
+      if (!best || score > best.score || (score === best.score && p.id < best.p.id)) best = { p, score, clubId: club.id };
+    }
+  }
+  if (!best) return null;
+  const club = clubById(state, best.clubId);
+  state.awards.push({ season, mvpId: best.p.id, mvpName: best.p.name, clubId: club.id, clubName: club.name });
+  postMessage(state, 'SEASON', `第 ${season} 赛季 MVP：${best.p.name}`, `${club.name}的 ${best.p.name}（能力 ${Math.round(playerOverall(best.p))}）当选本赛季最有价值选手${best.clubId === PLAYER_CLUB_ID ? '，是你的选手！' : '。'}`, { playerId: best.p.id });
+  return best.p;
+}
+
+/** Whether a retiring player's career earns a place in the hall of fame, and the entry if so. */
+export function hallOfFameEntry(state: GameState, data: GameData, p: Player): HallOfFameEntry | null {
+  const r = data.season.awards.hallOfFame;
+  const career = p.career ?? [];
+  // Titles count only from seasons the player was a regular, not from the bench of a champion.
+  const regulars = career.filter((c) => c.played >= r.regularMinPlayed);
+  const titles = regulars.filter((c) => c.champion).length;
+  const mvps = state.awards.filter((w) => w.mvpId === p.id).length;
+  const regular = regulars.length;
+  if (titles < r.titles && mvps < r.mvps && regular < r.regularSeasons) return null;
+  const byClub = new Map<string, number>();
+  for (const c of career) byClub.set(c.clubName, (byClub.get(c.clubName) ?? 0) + 1);
+  const mainClub = [...byClub].sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0]))[0]?.[0] ?? '';
+  return {
+    // Old free agents leave once the next season has begun: their last season is the one before.
+    playerId: p.id, name: p.name, retiredSeason: state.calendar.phase === 'PRESEASON' ? state.calendar.season - 1 : state.calendar.season, seasons: career.length, titles, mvps,
+    played: p.stats?.played ?? 0, peakOvr: Math.round(careerPeak(p)), mainClub,
+  };
+}
+
+/** Called for every player who stops: the great ones go into the hall of fame. */
+export function remember(state: GameState, data: GameData, p: Player): void {
+  const e = hallOfFameEntry(state, data, p);
+  if (!e || state.hallOfFame.some((h) => h.playerId === p.id)) return;
+  state.hallOfFame.push(e);
+  const why = [e.titles ? `${e.titles} 个冠军` : '', e.mvps ? `${e.mvps} 次 MVP` : '', `${e.seasons} 个赛季`].filter(Boolean).join('、');
+  postMessage(state, 'SEASON', `${p.name} 入选名人堂`, `${p.name}（主要效力${e.mainClub || '—'}）退役，职业生涯 ${why}，巅峰能力 ${e.peakOvr}。可以在"历史"里看到。`);
 }

@@ -57,6 +57,19 @@ export function PlayerCard({ game, data, playerId, close }: PageProps & { player
         </dl>
         <h3>英雄熟练度</h3>
         <Heroes p={p} data={data} />
+        {(p.career?.length ?? 0) > 0 && (
+          <>
+            <h3>职业生涯</h3>
+            <table className="table compact career">
+              <thead><tr><th>赛季</th><th>球队</th><th>场次</th><th>胜</th><th>能力</th></tr></thead>
+              <tbody>
+                {[...p.career!].reverse().map((c) => (
+                  <tr key={c.season}><td>第 {c.season} 季</td><td>{c.clubName}{c.champion ? ' 🏆' : ''}{game.awards.some((a) => a.season === c.season && a.mvpId === p.id) ? ' ⭐' : ''}</td><td>{c.played}</td><td>{c.wins}</td><td>{Math.round(c.ovr)}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
         <h3>能力变化</h3>
         <Sparkline points={p.ovrHistory ?? []} />
         <p className="dim small-text">主位置 {ROLE_NAME[p.primaryRole]}。成长空间只是大概判断，真实潜力是隐藏的。</p>

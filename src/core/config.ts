@@ -263,6 +263,15 @@ function checkSponsor(c: Checker, raw: unknown, path: string, ids: Set<string>):
   else if (ids.has(o.id)) c.fail(`${path}.id`, `duplicate sponsor ${o.id}`);
   else ids.add(o.id);
   if (typeof o.name !== 'string' || !o.name) c.fail(`${path}.name`, 'missing name');
+  const goals = (o.goals as unknown[] | undefined) ?? [];
+  if (!Array.isArray(goals)) c.fail(`${path}.goals`, 'expected a list');
+  else goals.forEach((g, i) => {
+    const go = c.obj(g, `${path}.goals[${i}]`);
+    if (!go) return;
+    if (!['PLAYOFFS', 'TOP2', 'FINAL', 'CHAMPION', 'WINS'].includes(go.kind as string)) c.fail(`${path}.goals[${i}].kind`, 'unknown goal');
+    c.num(go, 'bonus', `${path}.goals[${i}]`, 0);
+    if (go.kind === 'WINS') c.num(go, 'value', `${path}.goals[${i}]`, 1, 100, true);
+  });
 }
 
 function checkFinance(c: Checker, raw: unknown, p: string): void {
@@ -423,6 +432,8 @@ function checkSeason(c: Checker, raw: unknown): void {
   const p = 'season.json';
   const o = checkNumbers(c, raw, p, ['preseasonWeeks', 'daysPerWeek', 'matchWeekday', 'payWeekday', 'playoffTeams', 'secondsPerDayAt1x', 'startReputation', 'maxSeasonsHistory']);
   if (!o) return;
+  const aw = checkNumbers(c, o.awards, `${p}.awards`, ['mvpMinPlayed', 'mvpWinRateWeight', 'mvpChampionBonus']);
+  if (aw) checkNumbers(c, aw.hallOfFame, `${p}.awards.hallOfFame`, ['titles', 'mvps', 'regularSeasons', 'regularMinPlayed']);
   if (typeof o.daysPerWeek === 'number') {
     for (const k of ['matchWeekday', 'payWeekday']) if (typeof o[k] === 'number' && (o[k] as number) >= (o.daysPerWeek as number)) c.fail(`${p}.${k}`, 'must be less than daysPerWeek');
   }

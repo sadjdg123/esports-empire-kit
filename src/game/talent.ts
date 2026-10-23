@@ -7,6 +7,7 @@ import { ROLES, type GameData, type Player, type Role } from '../core/types';
 import { fairSalary } from './contracts';
 import { playerOverall, withP1Defaults, withP2Defaults } from './game';
 import type { GameState } from './state';
+import { remember } from './career';
 
 function uniqueName(state: GameState, data: GameData, rng: Rng): string {
   const t = data.ai.talent;
@@ -58,7 +59,10 @@ function youngPlayer(state: GameState, data: GameData, rng: Rng, role: Role, ind
 export function refreshTalent(state: GameState, data: GameData): { retired: number; left: number; joined: number } {
   const t = data.ai.talent;
   const leaving = state.market.filter((id) => state.players[id]!.age >= t.freeAgentLeaveAge);
-  for (const id of leaving) delete state.players[id];
+  for (const id of leaving) {
+    remember(state, data, state.players[id]!);
+    delete state.players[id];
+  }
   state.market = state.market.filter((id) => state.players[id]);
   const rng = rngFromState(state.rngState);
   let joined = 0;

@@ -1,7 +1,7 @@
 // Management game state (P0): one player club, 5 AI clubs, a 10-round league.
 // Everything here is plain JSON so it can be saved as-is.
 
-import type { ClubId, ClubStyle, FacilityId, ManagementStyle, Player, PlayerId, Side, Tactic, TeamLineup, TrainingFocus } from '../core/types';
+import type { ClubId, ClubStyle, FacilityId, ManagementStyle, Player, PlayerId, Side, SponsorGoal, Tactic, TeamLineup, TrainingFocus } from '../core/types';
 
 /** The player's training choice: a fixed focus, or AUTO (rest when tired, otherwise rotate). */
 export type TrainingPlan = TrainingFocus | 'AUTO';
@@ -69,6 +69,7 @@ export interface SponsorContract {
   weekly: number;
   winBonus: number;
   untilSeason: number; // last season of the deal
+  goals?: SponsorGoal[]; // T27
 }
 
 /** A transfer bid. Player bids are answered at once; AI bids for the player's players wait in the inbox. */
@@ -180,6 +181,7 @@ export interface HallOfFameEntry {
   played: number;
   peakOvr: number;
   mainClub: string; // the club the player played most seasons for
+  mvps?: number; // season MVP awards
 }
 
 /** The best player of a season (T27). */

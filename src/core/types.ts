@@ -248,6 +248,22 @@ export interface SponsorDef {
   weekly: number;
   winBonus: number; // per match won
   signingBonus: number; // paid once on signing
+  goals?: SponsorGoal[]; // season targets with a bonus, paid when the season ends (T27)
+}
+
+/** A sponsor's season target (T27): reach the playoffs, finish top 2, reach the final, win it all, or win N league games. */
+export interface SponsorGoal {
+  kind: 'PLAYOFFS' | 'TOP2' | 'FINAL' | 'CHAMPION' | 'WINS';
+  value?: number; // WINS: league wins needed
+  bonus: number;
+}
+
+/** Season MVP and hall of fame rules (T27, season.json awards). */
+export interface AwardsConfig {
+  mvpMinPlayed: number; // games in the season to be considered
+  mvpWinRateWeight: number; // MVP score = overall + win rate x this (+ champion bonus)
+  mvpChampionBonus: number;
+  hallOfFame: { titles: number; mvps: number; regularSeasons: number; regularMinPlayed: number };
 }
 
 /** Income sources, running costs and reputation (P1). */
@@ -478,6 +494,7 @@ export interface SeasonConfig {
   autoPause: AutoPauseEvent[];
   startReputation: number;
   maxSeasonsHistory: number;
+  awards: AwardsConfig;
 }
 
 export type TrainingFocus = 'MECHANICS' | 'AWARENESS' | 'TEAMWORK' | 'MENTAL' | 'MASTERY' | 'REST';

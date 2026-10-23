@@ -18,5 +18,16 @@
     "SEASON_END"
   ],
   "startReputation": 15,
-  "maxSeasonsHistory": 50
+  "maxSeasonsHistory": 50,
+  "awards": {
+    "mvpMinPlayed": 6,
+    "mvpWinRateWeight": 20,
+    "mvpChampionBonus": 5,
+    "hallOfFame": {
+      "titles": 3,
+      "mvps": 1,
+      "regularSeasons": 10,
+      "regularMinPlayed": 6
+    }
+  }
 }

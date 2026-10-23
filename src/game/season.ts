@@ -18,9 +18,9 @@ import {
 import { aiMatchSquad, aiPreseasonWeek, aiRenewals, aiSignFreeAgents, aiTactic } from './ai-clubs';
 import { remindExpiring, rollContracts } from './contracts';
 import { refreshTalent } from './talent';
-import { applyMatchFinance, applyPlayoffAwards, autoSponsor, financeSummary, rescueOptions, runPayDay, settleReputation } from './finance';
+import { applyMatchFinance, applyPlayoffAwards, autoSponsor, financeSummary, payAiSponsorGoals, paySponsorGoals, rescueOptions, runPayDay, settleReputation } from './finance';
 import { aiUpgradeFacilities } from './facilities';
-import { announceRetirements, retirePlayers, retirementNoticeDue } from './career';
+import { announceRetirements, awardSeasonMvp, retirePlayers, retirementNoticeDue } from './career';
 import { chemistryFromMatch, chemistryNewSeason, groupChemistry } from './chemistry';
 import { postMessage } from './messages';
 import { applyDailyRecovery, applyMatchEffects, applyTrainingWeek } from './training';
@@ -157,16 +157,24 @@ function finishSeason(state: GameState, data: GameData): void {
   const rank = table.findIndex((r) => r.clubId === PLAYER_CLUB_ID) + 1;
   const reachedFinal = !!final && involvesPlayer(final);
   const reachedSemi = state.playoffs.some((m) => m.stage === 'SEMI' && involvesPlayer(m));
+  const playerPlayoff = champion === PLAYER_CLUB_ID ? 'CHAMPION' : reachedFinal ? 'FINAL' : reachedSemi ? 'SEMI' : 'NONE';
+  paySponsorGoals(state, data, { rank, wins: table[rank - 1]?.wins ?? 0, playoff: playerPlayoff });
+  payAiSponsorGoals(state, data, (id) => {
+    const i = table.findIndex((r) => r.clubId === id);
+    const inStage = (stage: string) => state.playoffs.some((m) => m.stage === stage && (m.blue === id || m.red === id));
+    return { rank: i + 1, wins: table[i]?.wins ?? 0, playoff: champion === id ? 'CHAMPION' : inStage('FINAL') ? 'FINAL' : inStage('SEMI') ? 'SEMI' : 'NONE' };
+  });
   state.history.push({
     season: state.calendar.season,
     table: table.map((r) => ({ clubId: r.clubId, name: r.name, wins: r.wins, losses: r.losses })),
     champion,
     playerRank: rank,
-    playerPlayoff: champion === PLAYER_CLUB_ID ? 'CHAMPION' : reachedFinal ? 'FINAL' : reachedSemi ? 'SEMI' : 'NONE',
+    playerPlayoff,
     fundsEnd: state.funds,
   });
   if (state.history.length > data.season.maxSeasonsHistory) state.history = state.history.slice(-data.season.maxSeasonsHistory);
   recordCareers(state, champion);
+  awardSeasonMvp(state, data);
   postMessage(state, 'SEASON', `第 ${state.calendar.season} 赛季结束`,
     `${champion ? `冠军：${clubById(state, champion).name}。` : ''}你的常规赛排名第 ${rank}${champion === PLAYER_CLUB_ID ? '，并拿下了总冠军！' : '。'}继续前进就会进入新赛季的休赛期。`);
 }
@@ -191,7 +199,7 @@ function recordCareers(state: GameState, champion: ClubId | null): void {
 /** Starts the next season: retirees leave, new schedule, clean table, everyone one year older. */
 /** Returns true when the player has contracts ending in the new season (a reminder was posted). */
 export function startNewSeason(state: GameState, data: GameData): boolean {
-  retirePlayers(state);
+  retirePlayers(state, data);
   aiRenewals(state, data, state.calendar.season);
   aiUpgradeFacilities(state, data, (club) => (club.management === 'PLAYER' ? 0 : data.ai.styles[club.management].reserveWeeks));
   const rng = rngFromState(state.rngState);

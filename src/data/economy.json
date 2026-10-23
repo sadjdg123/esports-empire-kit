@@ -46,16 +46,29 @@
           {
             "id": "s1a",
             "name": "街角网咖",
-            "weekly": 5500,
+            "weekly": 5200,
             "winBonus": 400,
-            "signingBonus": 0
+            "signingBonus": 0,
+            "goals": [
+              {
+                "kind": "PLAYOFFS",
+                "bonus": 8000
+              }
+            ]
           },
           {
             "id": "s1b",
             "name": "老城奶茶",
-            "weekly": 4200,
+            "weekly": 4000,
             "winBonus": 1200,
-            "signingBonus": 5000
+            "signingBonus": 5000,
+            "goals": [
+              {
+                "kind": "WINS",
+                "value": 6,
+                "bonus": 6000
+              }
+            ]
           }
         ]
       },
@@ -66,16 +79,32 @@
           {
             "id": "s2a",
             "name": "星河外设",
-            "weekly": 7000,
+            "weekly": 6600,
             "winBonus": 600,
-            "signingBonus": 10000
+            "signingBonus": 10000,
+            "goals": [
+              {
+                "kind": "PLAYOFFS",
+                "bonus": 10000
+              },
+              {
+                "kind": "TOP2",
+                "bonus": 10000
+              }
+            ]
           },
           {
             "id": "s2b",
             "name": "云帆饮料",
-            "weekly": 5500,
+            "weekly": 5200,
             "winBonus": 1800,
-            "signingBonus": 0
+            "signingBonus": 0,
+            "goals": [
+              {
+                "kind": "FINAL",
+                "bonus": 20000
+              }
+            ]
           }
         ]
       },
@@ -86,16 +115,32 @@
           {
             "id": "s3a",
             "name": "曜石电子",
-            "weekly": 9000,
+            "weekly": 8500,
             "winBonus": 800,
-            "signingBonus": 20000
+            "signingBonus": 20000,
+            "goals": [
+              {
+                "kind": "TOP2",
+                "bonus": 15000
+              },
+              {
+                "kind": "CHAMPION",
+                "bonus": 20000
+              }
+            ]
           },
           {
             "id": "s3b",
             "name": "极光汽车",
-            "weekly": 7500,
+            "weekly": 7000,
             "winBonus": 2500,
-            "signingBonus": 10000
+            "signingBonus": 10000,
+            "goals": [
+              {
+                "kind": "CHAMPION",
+                "bonus": 40000
+              }
+            ]
           }
         ]
       }

@@ -2,7 +2,7 @@
 // prizes, running costs and reputation. The player's money moves through
 // the ledger; AI clubs follow the same rules but only keep a balance.
 
-import type { ClubId, GameData, SponsorDef } from '../core/types';
+import type { ClubId, GameData, SponsorDef, SponsorGoal } from '../core/types';
 import { addLedger, clubById, contractStartSeason, rosterOf, weekOfSeason, weeklySalaries, type Result } from './game';
 import { postMessage } from './messages';
 import { PLAYER_CLUB_ID, type ClubState, type FixtureResult, type GameState, type LedgerKind } from './state';
@@ -27,11 +27,59 @@ export function sponsorOffers(state: GameState, data: GameData): SponsorDef[] {
 }
 
 /** Expected weekly value of a deal, for the AI and the automatic choice. */
-const sponsorScore = (s: SponsorDef) => s.weekly + s.winBonus * 0.5;
+// Season goals count at a fraction of their bonus spread over a season (roughly how often they are reached).
+const sponsorScore = (s: SponsorDef) => s.weekly + s.winBonus * 0.5 + (s.goals ?? []).reduce((a, g) => a + g.bonus, 0) * 0.03;
 
 export function bestSponsorFor(data: GameData, reputation: number): SponsorDef {
   const open = data.economy.finance.sponsorTiers.filter((t) => t.minReputation <= reputation).flatMap((t) => t.sponsors);
   return [...open].sort((a, b) => sponsorScore(b) - sponsorScore(a) || a.id.localeCompare(b.id))[0]!;
+}
+
+/** How the player's season went, for sponsor goals (T27). */
+export interface SeasonOutcome { rank: number; wins: number; playoff: 'CHAMPION' | 'FINAL' | 'SEMI' | 'NONE' }
+
+export function sponsorGoalMet(data: GameData, g: SponsorGoal, r: SeasonOutcome): boolean {
+  switch (g.kind) {
+    case 'PLAYOFFS': return r.rank <= data.season.playoffTeams;
+    case 'TOP2': return r.rank <= 2;
+    case 'FINAL': return r.playoff === 'FINAL' || r.playoff === 'CHAMPION';
+    case 'CHAMPION': return r.playoff === 'CHAMPION';
+    case 'WINS': return r.wins >= (g.value ?? 0);
+  }
+}
+
+/** Season end: the current sponsor pays the bonus of every goal reached. Returns the total paid. */
+export function paySponsorGoals(state: GameState, data: GameData, r: SeasonOutcome): number {
+  const deal = activeSponsor(state);
+  if (!deal?.goals?.length) return 0;
+  const met = deal.goals.filter((g) => sponsorGoalMet(data, g, r));
+  const total = met.reduce((a, g) => a + g.bonus, 0);
+  for (const g of met) addLedger(state, { week: weekOfSeason(state), kind: 'SPONSOR', amount: g.bonus, note: `${deal.name} 目标奖金：${sponsorGoalText(g)}` });
+  if (met.length) postMessage(state, 'FINANCE', '赞助目标达成', `${deal.name} 发来目标奖金 ${total}：${met.map(sponsorGoalText).join('、')}。`);
+  return total;
+}
+
+/**
+ * Season end for AI clubs: they run on the best deal their standing allows (as for the weekly money)
+ * and collect that deal's goal bonuses by the same rules as the player.
+ */
+export function payAiSponsorGoals(state: GameState, data: GameData, outcome: (clubId: ClubId) => SeasonOutcome): void {
+  for (const club of state.aiClubs) {
+    const deal = bestSponsorFor(data, sponsorStanding(state, data, club.id));
+    const r = outcome(club.id);
+    club.funds += (deal.goals ?? []).filter((g) => sponsorGoalMet(data, g, r)).reduce((a, g) => a + g.bonus, 0);
+  }
+}
+
+/** A goal in a few words. */
+export function sponsorGoalText(g: SponsorGoal): string {
+  switch (g.kind) {
+    case 'PLAYOFFS': return '进季后赛';
+    case 'TOP2': return '常规赛前 2';
+    case 'FINAL': return '打进总决赛';
+    case 'CHAMPION': return '拿总冠军';
+    case 'WINS': return `常规赛 ${g.value ?? 0} 胜`;
+  }
 }
 
 /** Signs a sponsor deal. Only when the current deal is over, except the emergency deal, which replaces it. */
@@ -43,7 +91,10 @@ export function signSponsor(state: GameState, data: GameData, sponsorId: string,
   const current = activeSponsor(state);
   const emergency = sponsorId === f.emergencySponsor.id;
   if (current && !emergency) return fail(`当前赞助（${current.name}）到第 ${current.untilSeason} 赛季，到期后才能换`);
-  state.sponsor = { sponsorId, name: offer.name, weekly: offer.weekly, winBonus: offer.winBonus, untilSeason: contractStartSeason(state) + (emergency ? 0 : years - 1) };
+  state.sponsor = {
+    sponsorId, name: offer.name, weekly: offer.weekly, winBonus: offer.winBonus, untilSeason: contractStartSeason(state) + (emergency ? 0 : years - 1),
+    ...(offer.goals?.length ? { goals: offer.goals.map((g) => ({ ...g })) } : {}),
+  };
   if (offer.signingBonus > 0) addLedger(state, { week: weekOfSeason(state), kind: 'SPONSOR', amount: offer.signingBonus, note: `${offer.name} 签约金` });
   return ok(undefined);
 }

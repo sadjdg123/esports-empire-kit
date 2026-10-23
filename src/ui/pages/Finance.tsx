@@ -1,9 +1,16 @@
 import { useState } from 'react';
 import {
-  activeSponsor, cashForecast, financeSummary, ledgerByWeek, rescueOptions, rosterOf, signSponsor, sponsorOffers, sponsorStanding, weeklyMoney,
+  activeSponsor, cashForecast, financeSummary, ledgerByWeek, rescueOptions, rosterOf, signSponsor, sponsorGoalText, sponsorOffers, sponsorStanding, weeklyMoney,
 } from '../../game';
 import type { PageProps } from '../App';
+import type { SponsorGoal } from '../../core/types';
 import { money } from '../labels';
+
+/** A sponsor's season goals as one line (T27). */
+function Goals({ goals }: { goals?: SponsorGoal[] }) {
+  if (!goals?.length) return null;
+  return <div className="goals small-text">🎯 赛季目标：{goals.map((g) => `${sponsorGoalText(g)} +${money(g.bonus)}`).join('；')}</div>;
+}
 
 function tierOf(rep: number, tiers: { tier: number; minReputation: number }[]): number {
   return tiers.filter((t) => t.minReputation <= rep).reduce((a, t) => Math.max(a, t.tier), 1);
@@ -61,7 +68,7 @@ export function FinancePage({ game, data, act, flash, ask }: PageProps) {
       <section className="card">
         <h2>赞助</h2>
         {current ? (
-          <p>当前：<b>{current.name}</b>，每周 {money(current.weekly)}，每赢一场 +{money(current.winBonus)}，到第 {current.untilSeason} 赛季。</p>
+          <><p>当前：<b>{current.name}</b>，每周 {money(current.weekly)}，每赢一场 +{money(current.winBonus)}，到第 {current.untilSeason} 赛季。</p><Goals goals={current.goals} /></>
         ) : (
           <p className="warn-text">还没有赞助商。常规赛开始时如果还没选，会自动签能签到的最好一家（1 个赛季）。</p>
         )}
@@ -75,13 +82,13 @@ export function FinancePage({ game, data, act, flash, ask }: PageProps) {
             const emergency = s.id === fin.emergencySponsor.id;
             return (
               <li key={s.id} className={emergency ? 'emergency' : ''}>
-                <div><b>{s.name}</b> 每周 {money(s.weekly)} · 每胜 +{money(s.winBonus)}{s.signingBonus > 0 ? ` · 签约金 ${money(s.signingBonus)}` : ''}</div>
+                <div><b>{s.name}</b> 每周 {money(s.weekly)} · 每胜 +{money(s.winBonus)}{s.signingBonus > 0 ? ` · 签约金 ${money(s.signingBonus)}` : ''}<Goals goals={s.goals} /></div>
                 <button className={emergency ? 'small' : 'primary small'} disabled={!!current && !emergency} onClick={() => sign(s.id, s.name, emergency)}>{emergency ? '接受应急赞助' : '签约'}</button>
               </li>
             );
           })}
         </ul>
-        {current && <p className="dim small-text">合同到期后才能换赞助（应急赞助除外）。声望越高，能签的赞助越好。</p>}
+        {current && <p className="dim small-text">合同到期后才能换赞助（应急赞助除外）。声望越高，能签的赞助越好。赛季目标每个赛季结束时结算，达成就发奖金。</p>}
       </section>
 
       <section className="card">
