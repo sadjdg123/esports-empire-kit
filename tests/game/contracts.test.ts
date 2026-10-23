@@ -113,7 +113,8 @@ describe('contracts', () => {
     }
     for (const c of s.aiClubs) {
       expect(c.roster.length).toBeGreaterThanOrEqual(data.economy.minRoster);
-      expect(c.funds).toBeGreaterThanOrEqual(0);
+      // AI clubs pay wages (T16) and may sign cheap players on credit to field a team (T17), like the player.
+      expect(c.funds).toBeGreaterThan(-data.clubs.find((d) => d.id === c.id)!.funds);
     }
     expect(expiringPlayers(s).every((p) => p.contractUntil === s.calendar.season)).toBe(true);
   }, 120_000);

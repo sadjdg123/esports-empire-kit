@@ -46,14 +46,14 @@
           {
             "id": "s1a",
             "name": "街角网咖",
-            "weekly": 4000,
+            "weekly": 5500,
             "winBonus": 400,
             "signingBonus": 0
           },
           {
             "id": "s1b",
             "name": "老城奶茶",
-            "weekly": 3000,
+            "weekly": 4200,
             "winBonus": 1200,
             "signingBonus": 5000
           }
@@ -108,7 +108,7 @@
       "winBonus": 0,
       "signingBonus": 40000
     },
-    "leagueShareWeekly": 2000,
+    "leagueShareWeekly": 2500,
     "playoffPrize": {
       "champion": 60000,
       "final": 30000,

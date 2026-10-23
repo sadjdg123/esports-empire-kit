@@ -5,7 +5,7 @@
 import { createRng } from '../core/rng';
 import { ROLES, TACTICS, type AiStyleConfig, type GameData, type Player, type Role, type Tactic } from '../core/types';
 import { autoLineup } from '../sim/scenario';
-import { expiringPlayers, releaseFeeFor, remainingContractWeeks, renewalAsk, seasonWeeks } from './contracts';
+import { expiringPlayers, marketValue, releaseFeeFor, remainingContractWeeks, renewalAsk, seasonWeeks } from './contracts';
 import { expectedWeeklyIncome } from './finance';
 import { contractStartSeason, emergencySalaryCap, playerOverall, rosterOf } from './game';
 import { type ClubState, type GameState } from './state';
@@ -86,8 +86,10 @@ export function aiRenewals(state: GameState, data: GameData, endedSeason: number
     for (const p of expiringPlayers(state, club.id, endedSeason).sort((a, b) => aiEval(style, b) - aiEval(style, a) || a.id.localeCompare(b.id))) {
       if (!keep.has(p.id) || p.age >= data.ai.talent.freeAgentLeaveAge) continue;
       const ask = renewalAsk(data, p);
-      const fits = payroll(state, club) - p.salaryPerWeek + ask <= budget;
-      if (!fits && !(starters.has(p.id) && club.funds > 0)) continue;
+      const after = payroll(state, club) - p.salaryPerWeek + ask;
+      // Starters may stretch the budget a little, never far beyond what the club earns.
+      const limit = starters.has(p.id) && club.funds > 0 ? Math.max(budget, expectedWeeklyIncome(state, data, club.id)) * 1.1 : budget;
+      if (after > limit) continue;
       p.salaryPerWeek = ask;
       p.signingFee = ask * data.economy.signingFeeWeeks;
       p.contractUntil = endedSeason + contractYears(data, p);
@@ -160,11 +162,23 @@ export function aiUpgrades(state: GameState, data: GameData): void {
   }
 }
 
-/** Clubs in debt release their most expensive bench player when that saves money. */
+/**
+ * Clubs in debt raise money: first a distress sale of their most expensive
+ * player to another AI club that can afford him (at plain market value), else
+ * they release their most expensive bench player when that saves money.
+ */
 export function aiCutCosts(state: GameState, data: GameData): void {
   if (!transferWindowOpen(state)) return;
   for (const club of state.aiClubs) {
-    if (club.funds >= 0 || club.roster.length <= data.economy.minRoster) continue;
+    if (club.funds >= 0 || club.roster.length < data.economy.minRoster) continue;
+    const priciest = rosterOf(state, club.id).sort((a, b) => b.salaryPerWeek - a.salaryPerWeek || a.id.localeCompare(b.id))[0]!;
+    const fee = marketValue(data, priciest);
+    const buyer = state.aiClubs
+      .filter((c) => c.id !== club.id && c.roster.length < data.economy.maxRoster
+        && payroll(state, c) + priciest.salaryPerWeek <= aiWageBudget(state, data, c) && fee <= spendable(state, data, c, priciest.salaryPerWeek))
+      .sort((a, b) => spendable(state, data, b) - spendable(state, data, a) || a.id.localeCompare(b.id))[0];
+    if (buyer) { completeTransfer(state, priciest.id, club, buyer, fee); continue; } // a cheap replacement is signed right after
+    if (club.roster.length <= data.economy.minRoster) continue;
     const starters = starterIds(state, data, club);
     const bench = rosterOf(state, club.id).filter((p) => !starters.has(p.id))
       .map((p) => ({ p, saving: p.salaryPerWeek * remainingContractWeeks(state, data, p) - releaseFeeFor(state, data, p) }))
