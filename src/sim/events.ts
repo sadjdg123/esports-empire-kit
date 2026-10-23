@@ -61,11 +61,16 @@ export function reasonName(reason: string | undefined): string {
 }
 
 /** One-line zh-CN description of an event, for logs. */
-export function describeEvent(ev: MatchEvent, book: NameBook): string {
-  const side = ev.side ? SIDE_NAME[ev.side] : '';
+/** Reason tags worth showing on a kill line; the rest are kept for reports only. */
+const KILL_REASONS_SHOWN = new Set(['gank', 'offrole', 'executed']);
+
+/** `sideNames` replaces 蓝方/红方 with club names when given. */
+export function describeEvent(ev: MatchEvent, book: NameBook, sideNames: Record<Side, string> = SIDE_NAME): string {
+  const side = ev.side ? sideNames[ev.side] : '';
   const actors = who(book, ev.actors);
   const targets = who(book, ev.targets);
-  const why = ev.reason ? `〔${reasonName(ev.reason)}〕` : '';
+  const reason = ev.type === 'KILL' ? (ev.reason ?? '').split('|').filter((r) => KILL_REASONS_SHOWN.has(r)).join('|') : ev.reason;
+  const why = reason ? `〔${reasonName(reason)}〕` : '';
   const d = ev.detail ?? {};
   let text: string;
   switch (ev.type) {
@@ -75,10 +80,10 @@ export function describeEvent(ev: MatchEvent, book: NameBook): string {
     case 'DEATH': text = `${targets} 阵亡`; break;
     case 'GANK': text = `${side} ${actors} 来到 ${targets} 身边抓人`; break;
     case 'TEAMFIGHT_START': text = `${side ? side + ' ' : ''}团战爆发（${d.blue ?? '?'} 对 ${d.red ?? '?'}）`; break;
-    case 'TEAMFIGHT_END': text = `团战结束：蓝方击杀 ${d.blueKills}，红方击杀 ${d.redKills}${d.winner ? `，${SIDE_NAME[d.winner as Side]}获胜` : '，不分胜负'}`; break;
-    case 'TOWER_DESTROYED': text = `${side} 摧毁了 ${d.towerName}`; break;
+    case 'TEAMFIGHT_END': text = `团战结束：${sideNames.BLUE}击杀 ${d.blueKills}，${sideNames.RED}击杀 ${d.redKills}${d.winner ? `，${sideNames[d.winner as Side]}获胜` : '，不分胜负'}`; break;
+    case 'TOWER_DESTROYED': text = `${side} 摧毁了 ${String(d.towerName).replace(/^蓝方/, sideNames.BLUE).replace(/^红方/, sideNames.RED)}`; break;
     case 'OBJECTIVE_TAKEN': text = `${side} 拿下了 ${d.objectiveName}`; break;
-    case 'BASE_DAMAGED': text = `${side === '蓝方' ? '红方' : '蓝方'}基地受到攻击，剩余 ${d.hpPercent}%`; break;
+    case 'BASE_DAMAGED': text = `${ev.side === 'BLUE' ? sideNames.RED : sideNames.BLUE}基地受到攻击，剩余 ${d.hpPercent}%`; break;
     case 'BASE_DESTROYED': text = `${side} 摧毁了对方基地`; break;
     case 'SKILL_KEY': text = `${actors} 的「${d.skillName}」命中 ${d.hits} 人${d.kills ? `，击杀 ${d.kills} 人` : ''}`; break;
     case 'SPLIT_PUSH': text = `${side} ${actors} 前往${d.laneName}单带`; break;
