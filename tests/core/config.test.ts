@@ -9,11 +9,13 @@ describe('bundled data', () => {
     expect(validateRawData(defaultRawData())).toEqual([]);
   });
 
-  it('has 10 heroes, two per archetype', () => {
-    expect(data.heroes).toHaveLength(10);
+  it('has 16 heroes (T26): at least three per archetype, at least three for every role', () => {
+    expect(data.heroes).toHaveLength(16);
     const counts: Record<string, number> = {};
     for (const h of data.heroes) counts[h.archetype] = (counts[h.archetype] ?? 0) + 1;
-    expect(Object.values(counts)).toEqual([2, 2, 2, 2, 2]);
+    expect(Object.keys(counts)).toHaveLength(5);
+    for (const n of Object.values(counts)) expect(n).toBeGreaterThanOrEqual(3);
+    for (const role of ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT']) expect(data.heroes.filter((h) => h.preferredRoles.includes(role as never)).length).toBeGreaterThanOrEqual(3);
   });
 
   it('has 30 free agents, six per role, ability 40-80', () => {

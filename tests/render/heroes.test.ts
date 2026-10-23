@@ -5,6 +5,7 @@ import { CAST_MS, COMBAT_MS, DOWN_MS, heroPose, updateHeroAnims, type HeroAnim }
 import { HERO_ART_IDS, HERO_FRAMES, HERO_H, HERO_W, heroPalette, heroRows, rotateCW } from '../../src/render/pixel/heroArt';
 import { MatchPlayer } from '../../src/render/player';
 import { clubTeam } from '../../src/sim/scenario';
+import { skillStyle } from '../../src/render/matchFx';
 
 const data = loadGameData();
 
@@ -126,4 +127,16 @@ describe('hero animation', () => {
     expect(seen).toEqual(new Set(HERO_FRAMES));
     expect(anims.size).toBe(10);
   }, 60_000);
+});
+
+describe('the full hero pool (T26)', () => {
+  it('every hero has its own drawing and its own skill effect', () => {
+    const d = loadGameData();
+    expect(d.heroes).toHaveLength(16);
+    const frames = new Set(d.heroes.map((h) => heroRows(h.id, 'stand', h.archetype).join('\n')));
+    expect(frames.size).toBe(d.heroes.length);
+    for (const h of d.heroes) expect(HERO_ART_IDS).toContain(h.id);
+    const looks = new Set(d.heroes.map((h) => skillStyle(h)));
+    expect(looks.size).toBe(d.heroes.length);
+  });
 });

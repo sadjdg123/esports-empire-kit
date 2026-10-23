@@ -209,6 +209,92 @@ export class FxPainter {
         this.ring(b, color, 26, 600, 2);
         this.ring(b, color, 40, 600, 2, 200);
         break;
+      // --- T26 ---
+      case 'charge':
+        // A dust trail behind the charge, then stars circling the stunned target.
+        this.add(360, (g, t) => {
+          const end = b();
+          for (let i = 0; i < 5; i++) {
+            const p = lerp(fromXY, end, i / 5);
+            g.fillStyle(0xc2b49a, (1 - t) * 0.5).fillCircle(p.x, p.y + 6, 5 - i * 0.6);
+          }
+          g.lineStyle(3, 0x8a8f96, 1 - t).lineBetween(fromXY.x, fromXY.y, end.x, end.y);
+        });
+        this.add(700, (g, t) => {
+          const p = b();
+          for (let i = 0; i < 3; i++) {
+            const ang = t * 6 + (i * Math.PI * 2) / 3;
+            const x = p.x + Math.cos(ang) * 10;
+            const y = p.y - 22 + Math.sin(ang) * 3;
+            g.fillStyle(0xffe08a, 1 - t).fillRect(x - 2, y - 2, 4, 4);
+          }
+        }, 200);
+        break;
+      case 'feathers':
+        this.add(520, (g, t) => {
+          const p = a();
+          const r = R * (0.4 + 0.6 * ease(t));
+          for (let i = 0; i < 8; i++) {
+            const ang = t * 5 + (i * Math.PI * 2) / 8;
+            const x = p.x + Math.cos(ang) * r;
+            const y = p.y + Math.sin(ang) * r * 0.6;
+            g.fillStyle(i % 2 ? 0x24242e : 0x6a6aa0, 1 - t);
+            g.fillTriangle(x - 4, y, x + 4, y - 2, x + 1, y + 3);
+          }
+        });
+        this.ring(a, 0x9a7aff, R, 420, 2);
+        break;
+      case 'brand':
+        this.add(650, (g, t) => {
+          const p = b();
+          g.lineStyle(2, 0xffb347, 1 - t);
+          g.strokeCircle(p.x, p.y - 4, 9);
+          g.lineBetween(p.x - 6, p.y - 4, p.x + 6, p.y - 4);
+          g.lineBetween(p.x, p.y - 10, p.x, p.y + 2);
+          for (let i = 0; i < 5; i++) {
+            const x = p.x - 8 + i * 4;
+            const y = p.y - 6 - ((t * 30 + i * 7) % 18);
+            g.fillStyle(i % 2 ? 0xf08a3a : 0xffe27a, 1 - t).fillRect(x - 1.5, y - 1.5, 3, 3);
+          }
+        });
+        this.flash(b, 0xf08a3a, 16, 250);
+        break;
+      case 'thunder':
+        this.add(300, (g, t) => {
+          const e = b();
+          const pts: Pt[] = [];
+          for (let i = 0; i <= 5; i++) pts.push({ x: e.x + (i % 2 ? 7 : -5) * (i < 5 ? 1 : 0), y: e.y - 120 + i * 24 });
+          g.lineStyle(4, 0xffe066, 1 - t);
+          for (let i = 1; i < pts.length; i++) g.lineBetween(pts[i - 1]!.x, pts[i - 1]!.y, pts[i]!.x, pts[i]!.y);
+          g.lineStyle(1.5, 0xffffff, 1 - t);
+          for (let i = 1; i < pts.length; i++) g.lineBetween(pts[i - 1]!.x, pts[i - 1]!.y, pts[i]!.x, pts[i]!.y);
+        });
+        this.ring(b, 0xffe066, R, 420, 3, 80);
+        this.flash(b, 0xffffff, R * 0.6, 200, 80);
+        break;
+      case 'ripple':
+        for (let i = 0; i < 3; i++) this.ring(a, i % 2 ? 0xe6f6ff : 0x4f9fd0, R * (0.5 + i * 0.25), 700, 2, i * 140);
+        this.add(700, (g, t) => {
+          const p = a();
+          for (let i = 0; i < 6; i++) {
+            const ang = (i * Math.PI * 2) / 6;
+            const x = p.x + Math.cos(ang) * R * 0.5;
+            const y = p.y + Math.sin(ang) * R * 0.35 - t * 20;
+            g.fillStyle(0xbff0ff, 1 - t).fillCircle(x, y, 2);
+          }
+        });
+        break;
+      case 'bulwark':
+        this.add(700, (g, t) => {
+          const p = b();
+          const x = p.x;
+          const y = p.y - 6;
+          g.fillStyle(0xb07a3a, 0.75 * (1 - t)).fillRect(x - 8, y - 10, 16, 18);
+          g.lineStyle(2, 0xffe08a, 1 - t).strokeRect(x - 8, y - 10, 16, 18);
+          g.fillStyle(0xffe08a, 1 - t).fillRect(x - 2, y - 6, 4, 10);
+        });
+        this.ring(a, 0xe0b070, R, 600, 2);
+        break;
       default:
         this.ring(b, color, R, 500, 3);
         this.flash(b, color, R, 300);

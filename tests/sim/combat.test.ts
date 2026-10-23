@@ -28,7 +28,7 @@ describe('basic attacks', () => {
 
 describe('skills', () => {
   it('go on cooldown scaled by mastery after casting', () => {
-    const s = duel('RIV_TOP', [2], [2]); // MID heroes
+    const s = duel('RIV_TOP', [2], [2], 'simple', { heroes: { MID: 'xingzhu' } }); // MID heroes with an attack skill
     const blue = s.heroes[2]!;
     blue.skillReadyAt = 0;
     step(s);

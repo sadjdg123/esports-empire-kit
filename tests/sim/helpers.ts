@@ -16,8 +16,8 @@ export function mirrorInput(seed: number, tactic: Tactic = 'STEADY_MACRO', extra
 }
 
 /** A match where only the given heroes are alive, standing on `nodeId`. */
-export function duel(nodeId: string, blueRoles: number[], redRoles: number[], brain: BrainKind = 'simple'): MatchState {
-  const s = createMatch(mirrorInput(1), data, { brain });
+export function duel(nodeId: string, blueRoles: number[], redRoles: number[], brain: BrainKind = 'simple', extra: Partial<SyntheticOptions> = {}): MatchState {
+  const s = createMatch(mirrorInput(1, 'STEADY_MACRO', extra), data, { brain });
   const node = nodeIndex(s.map, nodeId);
   for (const h of s.heroes) {
     const keep = h.side === 'BLUE' ? blueRoles.includes(h.idx) : redRoles.includes(h.idx - 5);

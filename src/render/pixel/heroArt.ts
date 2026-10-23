@@ -73,6 +73,17 @@ const CROSSBOW: Weapon = {
   rest: { rows: ['..d..', '..d..', 'DDDDw', '..d..', '..d..'], grip: [0, 2] },
   aim: { rows: ['..d...', '..d...', 'DDDDwy', '..d...', '..d...'], grip: [0, 2] },
 };
+const HORN_LANCE: Weapon = { rows: ['.x.', 'xxx', 'oxo', '.D.', '.D.', '.D.', '.D.', '.D.', '.D.'], grip: [1, 6], lean: 0.6 };
+const FEATHER_BLADE: Weapon = { rows: ['.g.', 'gxg', 'owo', 'owo', 'yyy', '.D.'], grip: [1, 5], lean: 1 };
+const EMBER_STAFF: Weapon = { rows: ['x.x', 'xyx', 'oxo', '.D.', '.D.', '.D.', '.D.', '.D.', '.D.'], grip: [1, 7], lean: 0.5 };
+const STORM_BOW: Weapon = {
+  rows: ['.dd', 'dxf', 'd.f', 'D.f', 'd.f', 'dxf', '.dd'], grip: [0, 3],
+  rest: { rows: ['.dd', 'dxf', 'd.f', 'D.f', 'd.f', 'dxf', '.dd'], grip: [0, 3] },
+  aim: { rows: ['dd....', '.xd...', '..dDyx', '.xd...', 'dd....'], grip: [2, 2] },
+};
+const DROP_STAFF: Weapon = { rows: ['.o.', 'oxo', 'xgx', 'oxo', '.D.', '.D.', '.D.', '.D.', '.D.'], grip: [1, 7], lean: 0.5 };
+const TOWER_SHIELD: Weapon = { rows: ['oooooo', 'oaaaao', 'oayyao', 'oaaaao', 'oayyao', 'oaaaao', 'oaaaao', '.oooo.'], grip: [2, 3] };
+const SHORT_SWORD: Weapon = { rows: ['.o.', 'owo', 'owo', 'yyy', '.D.'], grip: [1, 4], lean: 0.8 };
 const SQUARE_SHIELD: Weapon = { rows: ['oooooo', 'oaaaao', 'oaccao', 'oaccao', 'oaaaao', '.oaao.', '..oo..'], grip: [2, 3] };
 const THORN_SHIELD: Weapon = { rows: ['.o..o.', 'oooooo', 'oaaaao', 'oaxxao', 'oaaaao', 'oooooo', '.o..o.'], grip: [2, 3] };
 
@@ -121,7 +132,7 @@ const ROBE_LEGS: Record<'stand' | 'walkA' | 'walkB', Grid> = {
   walkB: ['...oCCCCCCo...', '....b....bb...'],
 };
 
-// --- the ten heroes ------------------------------------------------------
+// --- the heroes ------------------------------------------------------------
 
 const ART: Record<string, HeroArt> = {
   panyue: {
@@ -173,6 +184,37 @@ const ART: Record<string, HeroArt> = {
     head: ['.....oo.....', '....oaao....', '...oaaaao...', '..oaaaaaao..', '.oaaggaaaao.', 'oAAAAAAAAAAAAo', '.ohhhhhhhho.', '.ohhhhhhhho.', '.ohsshhssho.'],
     face: 'plain', body: 'robe', weapon: BELL_STAFF,
     colors: { h: '#3b2a20', H: '#5a4030', s: '#eec19c', a: '#c8a45a', A: '#8a6e34', g: '#ead39a', x: '#fff3b0' },
+  },
+  // --- T26: six more ---
+  yanxi: {
+    head: ['.....o......', '....oxo.....', '....oxxo....', '...ooxxoo...', '..oaaaaaao..', '.oaaggaaaao.', '.oaaaaaaaao.', '.oAAAAAAAAo.', '.oAssssssAo.'],
+    face: 'plain', body: 'armor', weapon: HORN_LANCE, offhand: SQUARE_SHIELD,
+    colors: { h: '#3b3b44', s: '#d9a57c', a: '#8a8f96', A: '#5b6068', g: '#c2c7cc', x: '#f0ead8' },
+  },
+  moya: {
+    head: ['.....oo.....', '....oxxo....', '...oaxxao...', '..oaaaaaao..', '.oaaaaaaaao.', 'oaaaAAAAaaao', 'oaaAhhhhAaao', 'oaAhhhhhhAao', 'oaAsshhssAao'],
+    face: 'mask', body: 'light', weapon: FEATHER_BLADE, offhand: { rows: ['.D.', 'yyy', 'owo', 'gxg', '.g.'], grip: [1, 0] },
+    colors: { h: '#15151c', s: '#e6c2a0', a: '#24242e', A: '#3e3e56', g: '#6a6aa0', x: '#9a7aff', k: '#101018', p: '#1c1c24' },
+  },
+  yanwen: {
+    head: ['...o.o..o...', '..oxoxooxo..', '..oxxxxxxo..', '...oaaaao...', '..oaaaaaao..', '.oaaggggaao.', 'oAAAAAAAAAAo', '.ohhhhhhhho.', '.ohsshhssho.'],
+    face: 'plain', body: 'robe', weapon: EMBER_STAFF,
+    colors: { h: '#2a1a14', s: '#f6d3b3', a: '#b8402a', A: '#7a2618', g: '#f08a3a', x: '#ffb347' },
+  },
+  leixian: {
+    head: ['...oooooo...', '..ohhhhhho..', '.ohHhhhhhho.', '.oxxyxxyxxo.', '.ohhhhhhhho.', '.ohhhhhhhho.', '.ohsshhssho.'],
+    face: 'plain', body: 'light', weapon: STORM_BOW,
+    colors: { h: '#e8e0c8', H: '#ffffff', s: '#eec19c', a: '#5a3a8a', A: '#3a2460', x: '#ffe066', p: '#3a2a4a' },
+  },
+  quanyin: {
+    head: ['..oxo..oxo..', '...oooooo...', '..ohhhhhho..', '.ohHhhhhhho.', 'ohhHhhhhhhho', 'ohhhhhhhhhho', 'ohhsshhsshho'],
+    face: 'wide', body: 'robe', weapon: DROP_STAFF,
+    colors: { h: '#2f6fa8', H: '#5a9fd8', s: '#f6d3b3', a: '#4f9fd0', A: '#2f6f9a', g: '#e6f6ff', x: '#bff0ff' },
+  },
+  tongwei: {
+    head: ['.....oo.....', '....oyyo....', '....oyyo....', '..oooooooo..', '.oaaaaaaaao.', 'oaayaaaayaao', 'oaaaaaaaaaao', 'oAooooooooAo', '.oAssssssAo.'],
+    face: 'plain', body: 'armor', weapon: SHORT_SWORD, offhand: TOWER_SHIELD,
+    colors: { h: '#3b2a20', s: '#e0b48c', a: '#b07a3a', A: '#7a5226', g: '#e0b070', x: '#ffe08a' },
   },
 };
 

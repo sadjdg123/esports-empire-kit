@@ -49,9 +49,9 @@
       "TOP"
     ],
     "base": {
-      "hp": 800,
-      "attack": 40,
-      "armor": 30,
+      "hp": 840,
+      "attack": 42,
+      "armor": 33,
       "attackRange": 100,
       "attackInterval": 1.1,
       "moveSpeed": 38
@@ -72,7 +72,7 @@
       "effects": [
         {
           "type": "SHIELD",
-          "value": 8.0
+          "value": 9.0
         },
         {
           "type": "SLOW",
@@ -116,7 +116,7 @@
         },
         {
           "type": "DAMAGE",
-          "value": 3.9
+          "value": 3.5
         }
       ]
     }
@@ -131,9 +131,9 @@
       "TOP"
     ],
     "base": {
-      "hp": 720,
+      "hp": 780,
       "attack": 64,
-      "armor": 26,
+      "armor": 28,
       "attackRange": 100,
       "attackInterval": 0.9,
       "moveSpeed": 46
@@ -153,7 +153,7 @@
       "effects": [
         {
           "type": "DAMAGE",
-          "value": 2.2
+          "value": 2.5
         },
         {
           "type": "SLOW",
@@ -232,7 +232,7 @@
       "effects": [
         {
           "type": "DAMAGE",
-          "value": 1.4
+          "value": 1.3
         },
         {
           "type": "SLOW",
@@ -386,11 +386,252 @@
       "effects": [
         {
           "type": "SHIELD",
-          "value": 5.5
+          "value": 5.0
         },
         {
           "type": "STUN",
           "value": 1.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "yanxi",
+    "name": "岩犀",
+    "title": "撞城的巨角",
+    "archetype": "TANK",
+    "preferredRoles": [
+      "TOP",
+      "SUPPORT"
+    ],
+    "base": {
+      "hp": 860,
+      "attack": 42,
+      "armor": 32,
+      "attackRange": 100,
+      "attackInterval": 1.1,
+      "moveSpeed": 40
+    },
+    "perLevel": {
+      "hp": 100,
+      "attack": 3.5,
+      "armor": 3
+    },
+    "skill": {
+      "id": "xijiao",
+      "name": "犀角冲锋",
+      "description": "低头冲向一名敌人，撞晕对方并造成伤害。",
+      "cooldown": 13,
+      "range": 240,
+      "target": "ENEMY_SINGLE",
+      "effects": [
+        {
+          "type": "DASH",
+          "value": 180
+        },
+        {
+          "type": "STUN",
+          "value": 1.3
+        },
+        {
+          "type": "DAMAGE",
+          "value": 2.4
+        }
+      ]
+    }
+  },
+  {
+    "id": "moya",
+    "name": "墨鸦",
+    "title": "夜色里的羽刃",
+    "archetype": "ASSASSIN",
+    "preferredRoles": [
+      "JUNGLE",
+      "MID"
+    ],
+    "base": {
+      "hp": 740,
+      "attack": 62,
+      "armor": 24,
+      "attackRange": 100,
+      "attackInterval": 0.9,
+      "moveSpeed": 46
+    },
+    "perLevel": {
+      "hp": 85,
+      "attack": 6,
+      "armor": 2
+    },
+    "skill": {
+      "id": "yuxuan",
+      "name": "鸦羽回旋",
+      "description": "甩出一圈黑羽，伤害落点周围的所有敌人。",
+      "cooldown": 8,
+      "range": 200,
+      "target": "ENEMY_AREA",
+      "areaRadius": 110,
+      "effects": [
+        {
+          "type": "DAMAGE",
+          "value": 2.6
+        }
+      ]
+    }
+  },
+  {
+    "id": "yanwen",
+    "name": "炎纹",
+    "title": "烙火术士",
+    "archetype": "MAGE",
+    "preferredRoles": [
+      "MID"
+    ],
+    "base": {
+      "hp": 500,
+      "attack": 46,
+      "armor": 14,
+      "attackRange": 250,
+      "attackInterval": 1.1,
+      "moveSpeed": 38
+    },
+    "perLevel": {
+      "hp": 65,
+      "attack": 4.5,
+      "armor": 1.5
+    },
+    "skill": {
+      "id": "fenwen",
+      "name": "焚纹烙印",
+      "description": "在一名敌人身上烙下火纹，造成大量伤害。",
+      "cooldown": 11,
+      "range": 300,
+      "target": "ENEMY_SINGLE",
+      "effects": [
+        {
+          "type": "DAMAGE",
+          "value": 3.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "leixian",
+    "name": "雷弦",
+    "title": "引雷的弓手",
+    "archetype": "MARKSMAN",
+    "preferredRoles": [
+      "ADC",
+      "MID"
+    ],
+    "base": {
+      "hp": 520,
+      "attack": 52,
+      "armor": 14,
+      "attackRange": 260,
+      "attackInterval": 0.9,
+      "moveSpeed": 38
+    },
+    "perLevel": {
+      "hp": 65,
+      "attack": 6,
+      "armor": 1.5
+    },
+    "skill": {
+      "id": "jinglei",
+      "name": "惊雷弦",
+      "description": "射出一道雷箭，伤害落点周围的敌人并短暂震晕。",
+      "cooldown": 10,
+      "range": 330,
+      "target": "ENEMY_AREA",
+      "areaRadius": 100,
+      "effects": [
+        {
+          "type": "DAMAGE",
+          "value": 1.2
+        },
+        {
+          "type": "STUN",
+          "value": 0.6
+        }
+      ]
+    }
+  },
+  {
+    "id": "quanyin",
+    "name": "泉音",
+    "title": "山泉的歌者",
+    "archetype": "SUPPORT",
+    "preferredRoles": [
+      "SUPPORT",
+      "MID"
+    ],
+    "base": {
+      "hp": 600,
+      "attack": 34,
+      "armor": 20,
+      "attackRange": 220,
+      "attackInterval": 1.1,
+      "moveSpeed": 38
+    },
+    "perLevel": {
+      "hp": 80,
+      "attack": 3,
+      "armor": 2
+    },
+    "skill": {
+      "id": "qingquan",
+      "name": "清泉幕",
+      "description": "唤起一道水幕，为身边受伤的队友都套上护盾。",
+      "cooldown": 11,
+      "range": 0,
+      "target": "ALLY_AREA",
+      "areaRadius": 220,
+      "effects": [
+        {
+          "type": "SHIELD",
+          "value": 5.0
+        }
+      ]
+    }
+  },
+  {
+    "id": "tongwei",
+    "name": "铜卫",
+    "title": "铜城的守门人",
+    "archetype": "TANK",
+    "preferredRoles": [
+      "SUPPORT",
+      "TOP"
+    ],
+    "base": {
+      "hp": 820,
+      "attack": 42,
+      "armor": 30,
+      "attackRange": 100,
+      "attackInterval": 1.1,
+      "moveSpeed": 38
+    },
+    "perLevel": {
+      "hp": 100,
+      "attack": 3,
+      "armor": 3
+    },
+    "skill": {
+      "id": "tiebi",
+      "name": "铁壁挺身",
+      "description": "举盾挡在一名受伤队友身前，给他护盾，并减速自己身边的敌人。",
+      "cooldown": 12,
+      "range": 260,
+      "target": "ALLY_SINGLE",
+      "areaRadius": 140,
+      "effects": [
+        {
+          "type": "SHIELD",
+          "value": 6.0
+        },
+        {
+          "type": "SLOW",
+          "value": 1.5
         }
       ]
     }

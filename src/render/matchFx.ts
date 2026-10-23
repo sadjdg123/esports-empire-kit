@@ -5,7 +5,8 @@
 import type { GameData, HeroDef, RenderSnapshot, SnapshotUnit } from '../core/types';
 
 export type ShotStyle = 'arrow' | 'bolt' | 'orb' | 'fire';
-export type SkillStyle = 'quake' | 'thorns' | 'dash' | 'multi' | 'meteor' | 'frost' | 'pierce' | 'volley' | 'bloom' | 'bell' | 'burst';
+export type SkillStyle = 'quake' | 'thorns' | 'dash' | 'multi' | 'meteor' | 'frost' | 'pierce' | 'volley' | 'bloom' | 'bell' | 'burst'
+  | 'charge' | 'feathers' | 'brand' | 'thunder' | 'ripple' | 'bulwark';
 
 export type MatchFx =
   | { kind: 'shot'; style: ShotStyle; from: string; to: string; heroId?: string }
@@ -20,8 +21,10 @@ export type MatchFx =
 const SKILL_STYLE: Record<string, SkillStyle> = {
   zhenshanyin: 'quake', jijiafanzhen: 'thorns', yingxi: 'dash', duanzui: 'multi', zhuixing: 'meteor',
   hanchaoqu: 'frost', chuanyunjian: 'pierce', yingyan: 'volley', chuntengyu: 'bloom', chenzhong: 'bell',
+  // T26
+  xijiao: 'charge', yuxuan: 'feathers', fenwen: 'brand', jinglei: 'thunder', qingquan: 'ripple', tiebi: 'bulwark',
 };
-const SHOT_STYLE: Record<string, ShotStyle> = { zhufeng: 'arrow', chisun: 'bolt' };
+const SHOT_STYLE: Record<string, ShotStyle> = { zhufeng: 'arrow', chisun: 'bolt', yanwen: 'fire' };
 /** Basic attacks from at least this far are thrown or shot; closer ones are swings. */
 export const RANGED_FROM = 180;
 
