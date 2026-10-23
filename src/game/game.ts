@@ -3,12 +3,10 @@
 // the previous state (e.g. React) should structuredClone it first.
 
 import { validateLineup } from '../core/config';
-import { createRng, hashString, rngFromState, type Rng } from '../core/rng';
-import { TACTICS, type ClubId, type GameData, type MatchInput, type MatchResult, type Player, type PlayerId, type Tactic, type TeamLineup } from '../core/types';
-import { runMatch } from '../sim';
-import { buildReport } from '../sim/report';
+import { createRng, hashString, type Rng } from '../core/rng';
+import type { ClubId, GameData, Player, PlayerId, Tactic, TeamLineup } from '../core/types';
 import { autoLineup } from '../sim/scenario';
-import { PLAYER_CLUB_ID, type ClubState, type Fixture, type FixtureResult, type GameState, type LedgerEntry, type StoredReport } from './state';
+import { PLAYER_CLUB_ID, type ClubState, type Fixture, type GameState, type LedgerEntry } from './state';
 
 export type Result<T = void> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -23,7 +21,7 @@ function overall(p: Player): number {
 // New game
 
 /** Circle-method double round robin: n teams, 2 * (n - 1) rounds; second half swaps sides. */
-function buildSchedule(clubIds: ClubId[], seed: number, rng: Rng): Fixture[][] {
+export function buildSchedule(clubIds: ClubId[], seed: number, rng: Rng, season = 1): Fixture[][] {
   const teams = [...clubIds];
   for (let i = teams.length - 1; i > 0; i--) {
     const j = rng.int(0, i);
@@ -44,7 +42,7 @@ function buildSchedule(clubIds: ClubId[], seed: number, rng: Rng): Fixture[][] {
   }
   const rounds = [...half, ...half.map((pairs) => pairs.map(([a, b]) => [b, a] as [ClubId, ClubId]))];
   return rounds.map((pairs, round) => pairs.map(([blue, red], index) => ({
-    round, index, blue, red, seed: hashString(`${seed}:${round}:${index}`),
+    round, index, blue, red, seed: hashString(season === 1 ? `${seed}:${round}:${index}` : `${seed}:s${season}:${round}:${index}`),
   })));
 }
 
@@ -100,7 +98,7 @@ export function withP1Defaults(p: Player): Player {
 }
 
 export function seasonOver(state: GameState): boolean {
-  return state.week >= state.totalRounds;
+  return state.calendar.phase === 'FINISHED';
 }
 
 export function clubById(state: GameState, id: ClubId): ClubState {
@@ -114,7 +112,12 @@ export function rosterOf(state: GameState, id: ClubId = PLAYER_CLUB_ID): Player[
   return clubById(state, id).roster.map((pid) => state.players[pid]!);
 }
 
-function addLedger(state: GameState, entry: LedgerEntry): void {
+/** 0-based week of the current season (a calendar week, not a league round). */
+export function weekOfSeason(state: GameState): number {
+  return Math.floor(state.calendar.day / 7);
+}
+
+export function addLedger(state: GameState, entry: LedgerEntry): void {
   state.ledger.push(entry);
   state.funds += entry.amount;
 }
@@ -143,21 +146,21 @@ export function signPlayer(state: GameState, data: GameData, playerId: PlayerId)
   state.market = state.market.filter((id) => id !== playerId);
   state.club.roster.push(playerId);
   p.clubId = PLAYER_CLUB_ID;
-  addLedger(state, { week: state.week - (state.week === 0 ? 1 : 0), kind: 'SIGNING', amount: -p.signingFee, note: `签下 ${p.name}` });
+  addLedger(state, { week: weekOfSeason(state), kind: 'SIGNING', amount: -p.signingFee, note: `签下 ${p.name}` });
   return ok(undefined);
 }
 
 export function releasePlayer(state: GameState, data: GameData, playerId: PlayerId): Result {
   const p = state.players[playerId];
   if (!p || !state.club.roster.includes(playerId)) return fail('这名选手不在你的队伍里');
-  if (state.week > 0 && state.club.roster.length <= data.economy.minRoster) return fail(`赛季中队伍至少要有 ${data.economy.minRoster} 人`);
+  if (state.calendar.phase !== 'PRESEASON' && state.club.roster.length <= data.economy.minRoster) return fail(`赛季中队伍至少要有 ${data.economy.minRoster} 人`);
   const fee = releaseFee(data, p);
   if (state.funds < fee) return fail(`资金不足：违约金 ${fee}，当前资金 ${Math.round(state.funds)}`);
   state.club.roster = state.club.roster.filter((id) => id !== playerId);
   state.market.push(playerId);
   p.clubId = null;
   if (state.lineup?.picks.some((pk) => pk.playerId === playerId)) state.lineup = null;
-  addLedger(state, { week: state.week - (state.week === 0 ? 1 : 0), kind: 'RELEASE', amount: -fee, note: `与 ${p.name} 解约` });
+  addLedger(state, { week: weekOfSeason(state), kind: 'RELEASE', amount: -fee, note: `与 ${p.name} 解约` });
   return ok(undefined);
 }
 
@@ -185,128 +188,6 @@ export function readinessIssues(state: GameState, data: GameData): string[] {
   if (roster.length < data.economy.minRoster) return [`至少需要 ${data.economy.minRoster} 名选手（现在 ${roster.length} 人）`];
   if (!state.lineup) return ['还没有设置首发阵容'];
   return validateLineup(state.lineup, roster, data);
-}
-
-// ---------------------------------------------------------------------------
-// Matches
-
-function aiTactic(club: ClubState, fixtureSeed: number): Tactic {
-  if (club.style !== 'RANDOM' && club.style !== 'PLAYER') return club.style;
-  return createRng(fixtureSeed).fork(`tactic:${club.id}`).pick(TACTICS);
-}
-
-function teamFor(state: GameState, data: GameData, clubId: ClubId, fixtureSeed: number) {
-  const club = clubById(state, clubId);
-  const players = rosterOf(state, clubId).map((p) => structuredClone(p));
-  const lineup = clubId === PLAYER_CLUB_ID ? structuredClone(state.lineup!) : autoLineup(data, clubId, players, aiTactic(club, fixtureSeed));
-  return { lineup, players };
-}
-
-export function matchInputFor(state: GameState, data: GameData, fixture: Fixture): MatchInput {
-  return { seed: fixture.seed, blue: teamFor(state, data, fixture.blue, fixture.seed), red: teamFor(state, data, fixture.red, fixture.seed) };
-}
-
-export function currentFixtures(state: GameState): Fixture[] {
-  return state.schedule[state.week] ?? [];
-}
-
-export function playerFixture(state: GameState): Fixture | null {
-  return currentFixtures(state).find((f) => f.blue === PLAYER_CLUB_ID || f.red === PLAYER_CLUB_ID) ?? null;
-}
-
-/** The player's match this week, for the render layer to play before settlement. Does not change state. */
-export function prepareWeek(state: GameState, data: GameData): { playerMatch: MatchInput | null; fixture: Fixture | null; issues: string[] } {
-  const issues = readinessIssues(state, data);
-  const fixture = playerFixture(state);
-  if (issues.length > 0 || !fixture) return { playerMatch: null, fixture, issues };
-  return { playerMatch: matchInputFor(state, data, fixture), fixture, issues };
-}
-
-export interface WeekSummary {
-  round: number;
-  fundsBefore: number;
-  fundsAfter: number;
-  lines: LedgerEntry[];
-  results: FixtureResult[];
-  playerResult: FixtureResult | null;
-  report: StoredReport | null;
-  seasonOver: boolean;
-}
-
-function toFixtureResult(f: Fixture, input: MatchInput, r: MatchResult): FixtureResult {
-  const blueIds = new Set(input.blue.lineup.picks.map((p) => p.playerId));
-  const kills = { blue: 0, red: 0 };
-  for (const p of r.players) {
-    if (blueIds.has(p.playerId)) kills.blue += p.kills;
-    else kills.red += p.kills;
-  }
-  return {
-    round: f.round, index: f.index, blue: f.blue, red: f.red,
-    winner: r.winner === 'BLUE' ? f.blue : f.red, winnerSide: r.winner,
-    durationSec: r.durationSec, kills, blueTactic: input.blue.lineup.tactic, redTactic: input.red.lineup.tactic, checksum: r.checksum,
-  };
-}
-
-/**
- * Settles the week: salaries and sponsor, every match of the round, prizes,
- * standings and form. `playerMatchResult` is the result the render layer
- * produced from prepareWeek's input; if omitted the match is simulated here
- * with the same input, which gives the identical result.
- */
-export function commitWeek(state: GameState, data: GameData, playerMatchResult?: MatchResult): Result<WeekSummary> {
-  const issues = readinessIssues(state, data);
-  if (issues.length > 0) return fail(issues.join('；'));
-  const eco = data.economy;
-  const round = state.week;
-  const fundsBefore = state.funds;
-  const ledgerStart = state.ledger.length;
-
-  addLedger(state, { week: round, kind: 'SALARY', amount: -weeklySalaries(state), note: '选手周薪' });
-  addLedger(state, { week: round, kind: 'SPONSOR', amount: eco.weeklySponsor, note: '基础赞助' });
-
-  const results: FixtureResult[] = [];
-  let playerResult: FixtureResult | null = null;
-  let report: StoredReport | null = null;
-  for (const f of currentFixtures(state)) {
-    const input = matchInputFor(state, data, f);
-    const isPlayer = f.blue === PLAYER_CLUB_ID || f.red === PLAYER_CLUB_ID;
-    const r = isPlayer && playerMatchResult ? playerMatchResult : runMatch(input, data);
-    const fr = toFixtureResult(f, input, r);
-    results.push(fr);
-    if (!isPlayer) continue;
-    playerResult = fr;
-    const won = fr.winner === PLAYER_CLUB_ID;
-    const mySide = f.blue === PLAYER_CLUB_ID ? 'BLUE' : 'RED';
-    addLedger(state, { week: round, kind: 'PRIZE', amount: won ? eco.prizeWin : eco.prizeLoss, note: won ? '比赛胜利奖金' : '比赛出场奖金' });
-    const names = Object.fromEntries([state.club, ...state.aiClubs].map((c) => [c.id, c.name]));
-    const rep = buildReport(r, input, data, names);
-    report = {
-      round, opponent: mySide === 'BLUE' ? f.red : f.blue, won,
-      headline: rep.headline, keyReasons: rep.keyReasons, mvp: rep.mvp, ratings: rep.ratings, durationSec: r.durationSec,
-      kills: mySide === 'BLUE' ? { mine: fr.kills.blue, theirs: fr.kills.red } : { mine: fr.kills.red, theirs: fr.kills.blue },
-      goldDiffTimeline: r.goldDiffTimeline.map((p) => ({ t: p.t, diff: mySide === 'BLUE' ? p.diff : (0 - p.diff) || 0 })), // avoid -0, which JSON cannot keep
-    };
-    state.reports.push(report);
-  }
-  state.results.push(...results);
-
-  // Weekly form drift for every player (stable id order).
-  const rng = rngFromState(state.rngState);
-  for (const id of Object.keys(state.players).sort()) {
-    const p = state.players[id]!;
-    p.form = Math.max(-10, Math.min(10, p.form + rng.int(-eco.formWeeklyDelta, eco.formWeeklyDelta)));
-  }
-  state.rngState = rng.state();
-  state.week++;
-  return ok({
-    round, fundsBefore, fundsAfter: state.funds, lines: state.ledger.slice(ledgerStart),
-    results, playerResult, report, seasonOver: seasonOver(state),
-  });
-}
-
-/** prepareWeek + commitWeek in one go (no rendering). */
-export function advanceWeek(state: GameState, data: GameData): Result<WeekSummary> {
-  return commitWeek(state, data);
 }
 
 // ---------------------------------------------------------------------------

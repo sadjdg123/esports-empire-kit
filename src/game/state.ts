@@ -55,6 +55,7 @@ export interface PlayoffMatch {
   red: ClubId;
   seed: number;
   winner: ClubId | null;
+  day: number; // day of the season the game is played
 }
 
 export interface Fixture {
@@ -89,7 +90,9 @@ export interface LedgerEntry {
 }
 
 export interface StoredReport {
-  round: number;
+  round: number; // league round, or totalRounds + 0/1 for semi-final/final
+  stage?: 'LEAGUE' | 'SEMI' | 'FINAL';
+  season?: number;
   opponent: ClubId;
   won: boolean;
   headline: string;

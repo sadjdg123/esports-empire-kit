@@ -1,4 +1,4 @@
-import { PLAYER_CLUB_ID, clubById, playerFixture, seasonOver, type StoredReport, type WeekSummary } from '../../game';
+import { clubById, nextPlayerFixture, seasonOver, type StoredReport, type WeekSummary } from '../../game';
 import type { PageProps } from '../App';
 import { minutes, money } from '../labels';
 
@@ -30,8 +30,8 @@ export function ReportPage({ game, data, go, round, lastWeek }: PageProps & { ro
   const name = (id: string) => game.players[id]?.name ?? id;
   const mine = new Set(game.club.roster);
   const ratings = [...rep.ratings].sort((a, b) => b.rating - a.rating);
-  const next = playerFixture(game);
-  const nextOpp = next ? clubById(game, next.blue === PLAYER_CLUB_ID ? next.red : next.blue) : null;
+  const next = nextPlayerFixture(game, data);
+  const nextOpp = next ? clubById(game, next.opponent) : null;
   const week = lastWeek && lastWeek.round === rep.round ? lastWeek : null;
   const prize = rep.won ? data.economy.prizeWin : data.economy.prizeLoss;
 
@@ -39,9 +39,9 @@ export function ReportPage({ game, data, go, round, lastWeek }: PageProps & { ro
     <div className="grid">
       <section className={`card wide report ${rep.won ? 'won' : 'lost'}`}>
         <div className="row between">
-          <h2>第 {rep.round + 1} 轮 · {rep.won ? '胜利' : '失利'} · 对阵 {opp.name}</h2>
+          <h2>{rep.stage === 'SEMI' ? '半决赛' : rep.stage === 'FINAL' ? '总决赛' : `第 ${rep.round + 1} 轮`} · {rep.won ? '胜利' : '失利'} · 对阵 {opp.name}</h2>
           <select value={rep.round} onChange={(e) => go('report', { reportRound: Number(e.target.value) })}>
-            {game.reports.map((r) => <option key={r.round} value={r.round}>第 {r.round + 1} 轮 {r.won ? '胜' : '负'}</option>)}
+            {game.reports.map((r) => <option key={r.round} value={r.round}>{r.stage === 'SEMI' ? '半决赛' : r.stage === 'FINAL' ? '总决赛' : `第 ${r.round + 1} 轮`} {r.won ? '胜' : '负'}</option>)}
           </select>
         </div>
         <p className="headline">{rep.headline}</p>

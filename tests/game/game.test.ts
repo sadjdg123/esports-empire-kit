@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../../src/core/config';
 import { runMatch } from '../../src/sim';
 import {
-  PLAYER_CLUB_ID, advanceWeek, commitWeek, financeSummary, marketPlayers, newGame, prepareWeek, readinessIssues,
+  PLAYER_CLUB_ID, advanceToNextMatch, advanceWeek, commitWeek, financeSummary, marketPlayers, newGame, prepareWeek, readinessIssues,
   recommendLineup, releasePlayer, rosterOf, setLineup, signPlayer, signValueSquad, standings, type GameState,
 } from '../../src/game';
 
@@ -109,6 +109,7 @@ describe('lineup', () => {
 describe('season', () => {
   it('watching the player match then committing equals committing directly', () => {
     const a = readyGame(3);
+    advanceToNextMatch(a, data);
     const b = structuredClone(a);
     const prep = prepareWeek(a, data);
     expect(prep.playerMatch).not.toBeNull();
@@ -126,14 +127,14 @@ describe('season', () => {
     expect(s).toEqual(before);
   });
 
-  it('a full season: money is conserved and the table adds up', () => {
+  it('a full regular season: money is conserved and the table adds up', () => {
     const s = readyGame(5);
     for (let w = 0; w < 10; w++) {
       const r = advanceWeek(s, data);
       expect(r.ok).toBe(true);
       expect(fundsFromLedger(s)).toBeCloseTo(s.funds, 6);
     }
-    expect(advanceWeek(s, data).ok).toBe(false); // season over
+    expect(s.week).toBe(10); // regular season done; playoffs follow
     const table = standings(s);
     expect(table).toHaveLength(6);
     expect(table.reduce((a, r) => a + r.played, 0)).toBe(60);

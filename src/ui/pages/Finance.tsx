@@ -27,7 +27,7 @@ export function FinancePage({ game, data }: PageProps) {
         {weeks.length === 0 && <p className="dim">还没有收支记录。</p>}
         {weeks.map((w) => (
           <div key={w.week} className="ledger-week">
-            <div className="row between"><b>{w.week < 0 ? '赛季开始前' : `第 ${w.week + 1} 轮`}</b><span>收入 <span className="good">{money(w.income)}</span> · 支出 <span className="bad">{money(w.expense)}</span></span></div>
+            <div className="row between"><b>{w.week < 0 ? '赛季开始前' : `第 ${w.week + 1} 周`}</b><span>收入 <span className="good">{money(w.income)}</span> · 支出 <span className="bad">{money(w.expense)}</span></span></div>
             <ul className="plain">{w.entries.map((e, i) => <li key={i}>{e.note}：<span className={e.amount < 0 ? 'bad' : 'good'}>{money(e.amount)}</span></li>)}</ul>
           </div>
         ))}
