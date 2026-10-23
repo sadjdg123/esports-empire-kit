@@ -6,10 +6,12 @@ import playersJson from '../data/players.json';
 import clubsJson from '../data/clubs.json';
 import economyJson from '../data/economy.json';
 import matchJson from '../data/match.json';
+import seasonJson from '../data/season.json';
+import growthJson from '../data/growth.json';
 import {
-  ARCHETYPES, LANES, ROLES, TACTICS,
-  type ClubDef, type EconomyConfig, type GameData, type HeroDef, type MatchConfig,
-  type Player, type Role, type TeamLineup,
+  ARCHETYPES, LANES, MANAGEMENT_STYLES, ROLES, TACTICS, TRAINING_FOCI,
+  type ClubDef, type EconomyConfig, type GameData, type GrowthConfig, type HeroDef, type MatchConfig,
+  type Player, type Role, type SeasonConfig, type TeamLineup,
 } from './types';
 
 export interface RawGameData {
@@ -18,6 +20,8 @@ export interface RawGameData {
   clubs: unknown;
   economy: unknown;
   match: unknown;
+  season: unknown;
+  growth: unknown;
 }
 
 export class DataValidationError extends Error {
@@ -177,6 +181,15 @@ function checkPlayer(c: Checker, raw: unknown, p: string, heroIds: Set<string>, 
   c.num(o, 'form', p, -10, 10);
   c.num(o, 'salaryPerWeek', p, 0);
   c.num(o, 'signingFee', p, 0);
+  c.optNum(o, 'potential', p, 1, 100);
+  c.optNum(o, 'fatigue', p, 0, 100);
+  c.optNum(o, 'morale', p, 0, 100);
+  c.optNum(o, 'contractUntil', p, 1, 100);
+  if (expectedClub !== null && o.contractUntil === undefined) c.fail(`${p}.contractUntil`, 'club players need a contract');
+  if (o.stats !== undefined) {
+    const st = c.obj(o.stats, `${p}.stats`);
+    if (st) for (const k of ['played', 'wins', 'kills', 'deaths', 'assists']) c.num(st, k, `${p}.stats`, 0);
+  }
   if (o.clubId !== expectedClub) c.fail(`${p}.clubId`, `expected ${JSON.stringify(expectedClub)}, got ${JSON.stringify(o.clubId)}`);
   return id;
 }
@@ -200,6 +213,9 @@ function checkPlayersAndClubs(c: Checker, rawPlayers: unknown, rawClubs: unknown
     const color = c.str(o, 'color', p);
     if (color && !/^#[0-9a-fA-F]{6}$/.test(color)) c.fail(`${p}.color`, `expected #rrggbb, got ${color}`);
     c.oneOf(o, 'style', p, [...TACTICS, 'RANDOM'] as const);
+    c.oneOf(o, 'management', p, MANAGEMENT_STYLES);
+    c.num(o, 'funds', p, 0);
+    c.num(o, 'reputation', p, 0, 100);
     const roster = c.arr(o.players, `${p}.players`, 5);
     if (!roster) return;
     if (roster.length > 6) c.fail(`${p}.players`, `expected at most 6 players, got ${roster.length}`);
@@ -356,6 +372,34 @@ function checkMatch(c: Checker, raw: unknown, heroIds: Set<string>): void {
   }
 }
 
+function checkSeason(c: Checker, raw: unknown): void {
+  const p = 'season.json';
+  const o = checkNumbers(c, raw, p, ['preseasonWeeks', 'daysPerWeek', 'matchWeekday', 'payWeekday', 'playoffTeams', 'secondsPerDayAt1x', 'startReputation', 'maxSeasonsHistory']);
+  if (!o) return;
+  if (typeof o.daysPerWeek === 'number') {
+    for (const k of ['matchWeekday', 'payWeekday']) if (typeof o[k] === 'number' && (o[k] as number) >= (o.daysPerWeek as number)) c.fail(`${p}.${k}`, 'must be less than daysPerWeek');
+  }
+  if (o.playoffTeams !== 4 && o.playoffTeams !== 2) c.fail(`${p}.playoffTeams`, 'expected 2 or 4');
+  c.arr(o.speeds, `${p}.speeds`, 1);
+  const pauses = c.arr(o.autoPause, `${p}.autoPause`) ?? [];
+  const allowed = ['MATCH_DAY', 'OFFER', 'CONTRACT_EXPIRING', 'LOW_FUNDS', 'SEASON_END'];
+  pauses.forEach((e, i) => { if (!allowed.includes(e as string)) c.fail(`${p}.autoPause[${i}]`, `unknown event ${JSON.stringify(e)}`); });
+}
+
+function checkGrowth(c: Checker, raw: unknown): void {
+  const p = 'growth.json';
+  const o = checkNumbers(c, raw, p, [
+    'weeklyGrowthBase', 'matchExperience', 'potentialSoftCap', 'fatiguePerMatch', 'fatiguePerTrainingWeek', 'fatigueRestRecovery',
+    'fatigueDailyRecovery', 'fatiguePenaltyStart', 'fatiguePenaltyPerPoint', 'moraleNeutral', 'moraleDailyDrift', 'moraleFormPer',
+  ]);
+  if (!o) return;
+  for (const k of ['moraleWin', 'moraleLoss', 'moraleBench']) c.num(o, k, p, -100, 100);
+  const focus = c.obj(o.trainingFocus, `${p}.trainingFocus`);
+  if (focus) for (const f of TRAINING_FOCI) if (!focus[f]) c.fail(`${p}.trainingFocus`, `missing focus ${f}`);
+  const curve = c.arr(o.ageCurve, `${p}.ageCurve`, 2) ?? [];
+  curve.forEach((pt, i) => { const po = c.obj(pt, `${p}.ageCurve[${i}]`); if (po) { c.num(po, 'age', `${p}.ageCurve[${i}]`, 10, 60); c.num(po, 'rate', `${p}.ageCurve[${i}]`, -10, 10); } });
+}
+
 /** Validates raw JSON values; returns a list of human-readable issues (empty = valid). */
 export function validateRawData(raw: RawGameData): string[] {
   const c = new Checker();
@@ -366,6 +410,8 @@ export function validateRawData(raw: RawGameData): string[] {
   checkPlayersAndClubs(c, raw.players, raw.clubs, heroIds);
   checkEconomy(c, raw.economy);
   checkMatch(c, raw.match, heroIds);
+  checkSeason(c, raw.season);
+  checkGrowth(c, raw.growth);
   return c.issues;
 }
 
@@ -382,13 +428,15 @@ export function loadGameData(raw: RawGameData = defaultRawData()): GameData {
     clubs: raw.clubs as ClubDef[],
     economy: raw.economy as EconomyConfig,
     match: raw.match as MatchConfig,
+    season: raw.season as SeasonConfig,
+    growth: raw.growth as GrowthConfig,
     heroById,
   };
 }
 
 /** Fresh deep copy of the bundled JSON, safe to mutate (e.g. in tests). */
 export function defaultRawData(): RawGameData {
-  return structuredClone({ heroes: heroesJson, players: playersJson, clubs: clubsJson, economy: economyJson, match: matchJson });
+  return structuredClone({ heroes: heroesJson, players: playersJson, clubs: clubsJson, economy: economyJson, match: matchJson, season: seasonJson, growth: growthJson });
 }
 
 /** Checks a lineup against the provided roster. Returns issues (empty = valid). */

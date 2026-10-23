@@ -27,7 +27,18 @@
         "form": 2,
         "salaryPerWeek": 750,
         "signingFee": 3000,
-        "clubId": "huiyan"
+        "clubId": "huiyan",
+        "potential": 60,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "huiyan_2",
@@ -47,7 +58,18 @@
         "form": 1,
         "salaryPerWeek": 750,
         "signingFee": 3000,
-        "clubId": "huiyan"
+        "clubId": "huiyan",
+        "potential": 55,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "huiyan_3",
@@ -68,7 +90,18 @@
         "form": 1,
         "salaryPerWeek": 800,
         "signingFee": 3200,
-        "clubId": "huiyan"
+        "clubId": "huiyan",
+        "potential": 48,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "huiyan_4",
@@ -89,7 +122,18 @@
         "form": -3,
         "salaryPerWeek": 1000,
         "signingFee": 4000,
-        "clubId": "huiyan"
+        "clubId": "huiyan",
+        "potential": 58,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "huiyan_5",
@@ -110,9 +154,23 @@
         "form": -3,
         "salaryPerWeek": 950,
         "signingFee": 3800,
-        "clubId": "huiyan"
+        "clubId": "huiyan",
+        "potential": 47,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       }
-    ]
+    ],
+    "management": "STEADY",
+    "funds": 180000,
+    "reputation": 25
   },
   {
     "id": "wugang",
@@ -142,7 +200,18 @@
         "form": 0,
         "salaryPerWeek": 1200,
         "signingFee": 4800,
-        "clubId": "wugang"
+        "clubId": "wugang",
+        "potential": 54,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "wugang_2",
@@ -163,7 +232,18 @@
         "form": -1,
         "salaryPerWeek": 1050,
         "signingFee": 4200,
-        "clubId": "wugang"
+        "clubId": "wugang",
+        "potential": 57,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 1,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "wugang_3",
@@ -184,7 +264,18 @@
         "form": 2,
         "salaryPerWeek": 1500,
         "signingFee": 6000,
-        "clubId": "wugang"
+        "clubId": "wugang",
+        "potential": 63,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "wugang_4",
@@ -204,7 +295,18 @@
         "form": 3,
         "salaryPerWeek": 1050,
         "signingFee": 4200,
-        "clubId": "wugang"
+        "clubId": "wugang",
+        "potential": 64,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "wugang_5",
@@ -226,7 +328,18 @@
         "form": -1,
         "salaryPerWeek": 1100,
         "signingFee": 4400,
-        "clubId": "wugang"
+        "clubId": "wugang",
+        "potential": 67,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 1,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "wugang_6",
@@ -247,9 +360,23 @@
         "form": -2,
         "salaryPerWeek": 850,
         "signingFee": 3400,
-        "clubId": "wugang"
+        "clubId": "wugang",
+        "potential": 63,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       }
-    ]
+    ],
+    "management": "YOUTH",
+    "funds": 220000,
+    "reputation": 35
   },
   {
     "id": "chaosheng",
@@ -278,7 +405,18 @@
         "form": -3,
         "salaryPerWeek": 2050,
         "signingFee": 8200,
-        "clubId": "chaosheng"
+        "clubId": "chaosheng",
+        "potential": 72,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "chaosheng_2",
@@ -299,7 +437,18 @@
         "form": -1,
         "salaryPerWeek": 2100,
         "signingFee": 8400,
-        "clubId": "chaosheng"
+        "clubId": "chaosheng",
+        "potential": 67,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 1,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "chaosheng_3",
@@ -319,7 +468,18 @@
         "form": 2,
         "salaryPerWeek": 1600,
         "signingFee": 6400,
-        "clubId": "chaosheng"
+        "clubId": "chaosheng",
+        "potential": 63,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "chaosheng_4",
@@ -340,7 +500,18 @@
         "form": 3,
         "salaryPerWeek": 2100,
         "signingFee": 8400,
-        "clubId": "chaosheng"
+        "clubId": "chaosheng",
+        "potential": 70,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "chaosheng_5",
@@ -362,9 +533,23 @@
         "form": 2,
         "salaryPerWeek": 1650,
         "signingFee": 6600,
-        "clubId": "chaosheng"
+        "clubId": "chaosheng",
+        "potential": 62,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 3,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       }
-    ]
+    ],
+    "management": "AGGRESSIVE",
+    "funds": 260000,
+    "reputation": 45
   },
   {
     "id": "jinyu",
@@ -392,7 +577,18 @@
         "form": 2,
         "salaryPerWeek": 2150,
         "signingFee": 8600,
-        "clubId": "jinyu"
+        "clubId": "jinyu",
+        "potential": 66,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 3,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "jinyu_2",
@@ -412,7 +608,18 @@
         "form": 0,
         "salaryPerWeek": 3050,
         "signingFee": 12200,
-        "clubId": "jinyu"
+        "clubId": "jinyu",
+        "potential": 80,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "jinyu_3",
@@ -433,7 +640,18 @@
         "form": 0,
         "salaryPerWeek": 2600,
         "signingFee": 10400,
-        "clubId": "jinyu"
+        "clubId": "jinyu",
+        "potential": 72,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "jinyu_4",
@@ -454,7 +672,18 @@
         "form": -3,
         "salaryPerWeek": 2950,
         "signingFee": 11800,
-        "clubId": "jinyu"
+        "clubId": "jinyu",
+        "potential": 78,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "jinyu_5",
@@ -476,7 +705,18 @@
         "form": -1,
         "salaryPerWeek": 2800,
         "signingFee": 11200,
-        "clubId": "jinyu"
+        "clubId": "jinyu",
+        "potential": 72,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 3,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "jinyu_6",
@@ -496,9 +736,23 @@
         "form": 0,
         "salaryPerWeek": 2100,
         "signingFee": 8400,
-        "clubId": "jinyu"
+        "clubId": "jinyu",
+        "potential": 66,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       }
-    ]
+    ],
+    "management": "FALLEN",
+    "funds": 300000,
+    "reputation": 60
   },
   {
     "id": "tianshu",
@@ -528,7 +782,18 @@
         "form": -2,
         "salaryPerWeek": 4000,
         "signingFee": 16000,
-        "clubId": "tianshu"
+        "clubId": "tianshu",
+        "potential": 75,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 3,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "tianshu_2",
@@ -549,7 +814,18 @@
         "form": 0,
         "salaryPerWeek": 3350,
         "signingFee": 13400,
-        "clubId": "tianshu"
+        "clubId": "tianshu",
+        "potential": 76,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "tianshu_3",
@@ -569,7 +845,18 @@
         "form": -3,
         "salaryPerWeek": 4050,
         "signingFee": 16200,
-        "clubId": "tianshu"
+        "clubId": "tianshu",
+        "potential": 89,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "tianshu_4",
@@ -590,7 +877,18 @@
         "form": -2,
         "salaryPerWeek": 3950,
         "signingFee": 15800,
-        "clubId": "tianshu"
+        "clubId": "tianshu",
+        "potential": 84,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "tianshu_5",
@@ -610,7 +908,18 @@
         "form": -2,
         "salaryPerWeek": 3700,
         "signingFee": 14800,
-        "clubId": "tianshu"
+        "clubId": "tianshu",
+        "potential": 79,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       },
       {
         "id": "tianshu_6",
@@ -630,8 +939,22 @@
         "form": -1,
         "salaryPerWeek": 3350,
         "signingFee": 13400,
-        "clubId": "tianshu"
+        "clubId": "tianshu",
+        "potential": 75,
+        "fatigue": 0,
+        "morale": 70,
+        "contractUntil": 2,
+        "stats": {
+          "played": 0,
+          "wins": 0,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0
+        }
       }
-    ]
+    ],
+    "management": "RICH",
+    "funds": 420000,
+    "reputation": 80
   }
 ]

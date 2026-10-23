@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../../src/core/config';
 import { advanceWeek, newGame, signValueSquad, type GameState } from '../../src/game';
+import { readFileSync } from 'node:fs';
 import {
-  MemoryStorage, SAVE_VERSION, backupKey, deserialize, exportFileName, importSave, loadGame, migrate, saveGame, serialize,
+  MIGRATIONS, MemoryStorage, SAVE_VERSION, backupKey, deserialize, exportFileName, importSave, loadGame, migrate, saveGame, serialize,
   type Migration, type SaveFile,
 } from '../../src/save';
 
@@ -73,6 +74,7 @@ describe('migrations', () => {
     delete v0.version;
     (v0.game as GameState).club.name = '';
     const fakeMigrations: Record<number, Migration> = {
+      ...MIGRATIONS,
       0: (old) => {
         (old.game as GameState).club.name = old.clubName as string;
         delete old.clubName;
@@ -80,7 +82,7 @@ describe('migrations', () => {
       },
     };
     const upgraded = migrate(v0, fakeMigrations);
-    expect(upgraded.version).toBe(1);
+    expect(upgraded.version).toBe(SAVE_VERSION);
     expect(upgraded.game.club.name).toBe('存档测试');
     expect(deserialize(JSON.stringify(v0), fakeMigrations).ok).toBe(true);
   });
@@ -152,4 +154,39 @@ describe('import / export', () => {
     expect(importSave(serialize(s, meta)).ok).toBe(true);
     expect(importSave('hello').ok).toBe(false);
   });
+});
+
+describe('P0 (v1) saves', () => {
+  const v1 = readFileSync(new URL('./fixtures/p0-save-v1.json', import.meta.url), 'utf8');
+
+  it('upgrade to v2 with calendar, condition and contract fields filled in', () => {
+    const r = deserialize(v1);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const g = r.save.game as GameState;
+    expect(r.save.version).toBe(SAVE_VERSION);
+    expect(g.week).toBe(3);
+    expect(g.calendar).toEqual({ season: 1, phase: 'REGULAR', day: 14 + 3 * 7 });
+    expect(g.inbox).toEqual([]);
+    expect(g.club.reputation).toBeGreaterThan(0);
+    for (const c of g.aiClubs) expect(c.funds).toBeGreaterThan(0);
+    for (const id of g.club.roster) {
+      const p = g.players[id]!;
+      expect(p.potential).toBeGreaterThan(0);
+      expect(p.fatigue).toBe(0);
+      expect(p.contractUntil).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('can keep playing to the end of the season after the upgrade', () => {
+    const r = deserialize(v1);
+    if (!r.ok) throw new Error(r.error);
+    const g = r.save.game as GameState;
+    const fundsBefore = g.funds;
+    while (g.week < g.totalRounds) expect(advanceWeek(g, data).ok).toBe(true);
+    expect(g.results).toHaveLength(30); // 10 rounds x 3 matches
+    expect(g.funds).not.toBe(fundsBefore);
+    // and saves again as v2
+    expect(deserialize(serialize(g, meta)).ok).toBe(true);
+  }, 60_000);
 });

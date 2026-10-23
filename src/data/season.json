@@ -1,0 +1,22 @@
+{
+  "preseasonWeeks": 2,
+  "daysPerWeek": 7,
+  "matchWeekday": 5,
+  "payWeekday": 0,
+  "playoffTeams": 4,
+  "secondsPerDayAt1x": 2,
+  "speeds": [
+    1,
+    2,
+    4
+  ],
+  "autoPause": [
+    "MATCH_DAY",
+    "OFFER",
+    "CONTRACT_EXPIRING",
+    "LOW_FUNDS",
+    "SEASON_END"
+  ],
+  "startReputation": 15,
+  "maxSeasonsHistory": 50
+}

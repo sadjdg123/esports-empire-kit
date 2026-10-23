@@ -36,12 +36,27 @@ export interface Player {
   salaryPerWeek: number;
   signingFee: number;
   clubId: ClubId | null;
-  // Reserved for P1+, unused in P0:
-  potential?: number;
-  fatigue?: number;
-  morale?: number;
+  // P1 (optional in data files; filled with defaults when missing):
+  potential?: number; // hidden ceiling for growth, 0-100
+  fatigue?: number; // 0-100, high = tired
+  morale?: number; // 0-100
+  contractUntil?: number; // last season (1-based) of the current contract; absent for free agents
+  stats?: CareerStats;
+  // Reserved for P2+:
   traits?: string[];
 }
+
+export interface CareerStats {
+  played: number;
+  wins: number;
+  kills: number;
+  deaths: number;
+  assists: number;
+}
+
+/** How an AI club runs its business (GDD 11). */
+export type ManagementStyle = 'RICH' | 'YOUTH' | 'STEADY' | 'AGGRESSIVE' | 'FALLEN';
+export const MANAGEMENT_STYLES: readonly ManagementStyle[] = ['RICH', 'YOUTH', 'STEADY', 'AGGRESSIVE', 'FALLEN'];
 
 export const DEFAULT_MASTERY = 20;
 
@@ -189,6 +204,9 @@ export interface ClubDef {
   style: ClubStyle;
   description: string;
   players: Player[]; // 5-6, each with clubId === id
+  management: ManagementStyle;
+  funds: number;
+  reputation: number; // 0-100
 }
 
 export interface EconomyConfig {
@@ -366,11 +384,51 @@ export interface MatchConfig {
   tactics: Record<Tactic, TacticConfig>;
 }
 
+export type AutoPauseEvent = 'MATCH_DAY' | 'OFFER' | 'CONTRACT_EXPIRING' | 'LOW_FUNDS' | 'SEASON_END';
+
+export interface SeasonConfig {
+  preseasonWeeks: number; // transfer window before the regular season
+  daysPerWeek: number;
+  matchWeekday: number; // 0-based day of the week league matches are played
+  payWeekday: number; // day salaries and sponsors are settled
+  playoffTeams: number; // top N play semi-finals and a final
+  secondsPerDayAt1x: number;
+  speeds: number[];
+  autoPause: AutoPauseEvent[];
+  startReputation: number;
+  maxSeasonsHistory: number;
+}
+
+export type TrainingFocus = 'MECHANICS' | 'AWARENESS' | 'TEAMWORK' | 'MENTAL' | 'MASTERY' | 'REST';
+export const TRAINING_FOCI: readonly TrainingFocus[] = ['MECHANICS', 'AWARENESS', 'TEAMWORK', 'MENTAL', 'MASTERY', 'REST'];
+
+export interface GrowthConfig {
+  trainingFocus: Record<TrainingFocus, Partial<Record<keyof PlayerAttributes | 'mastery', number>>>;
+  weeklyGrowthBase: number;
+  ageCurve: { age: number; rate: number }[];
+  matchExperience: number;
+  potentialSoftCap: number;
+  fatiguePerMatch: number;
+  fatiguePerTrainingWeek: number;
+  fatigueRestRecovery: number;
+  fatigueDailyRecovery: number;
+  fatiguePenaltyStart: number;
+  fatiguePenaltyPerPoint: number;
+  moraleWin: number;
+  moraleLoss: number;
+  moraleBench: number;
+  moraleDailyDrift: number;
+  moraleNeutral: number;
+  moraleFormPer: number;
+}
+
 export interface GameData {
   heroes: HeroDef[];
   players: Player[]; // free agents
   clubs: ClubDef[];
   economy: EconomyConfig;
   match: MatchConfig;
+  season: SeasonConfig;
+  growth: GrowthConfig;
   heroById: Record<HeroId, HeroDef>;
 }

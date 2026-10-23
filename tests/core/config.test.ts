@@ -121,3 +121,30 @@ describe('validateLineup', () => {
     expect(issues).toContain('picks[1]: unknown hero nope');
   });
 });
+
+describe('P1 data', () => {
+  const data = loadGameData();
+  it('loads season and growth settings', () => {
+    expect(data.season.preseasonWeeks).toBe(2);
+    expect(data.season.playoffTeams).toBe(4);
+    expect(data.growth.ageCurve.length).toBeGreaterThan(2);
+  });
+  it('gives every club player a contract and every player a hidden potential', () => {
+    for (const c of data.clubs) {
+      expect(c.funds).toBeGreaterThan(0);
+      for (const p of c.players) {
+        expect(p.contractUntil).toBeGreaterThanOrEqual(1);
+        expect(p.potential).toBeGreaterThan(0);
+      }
+    }
+    for (const p of data.players) expect(p.contractUntil).toBeUndefined();
+  });
+  it('rejects a club player without a contract and a bad weekday', () => {
+    const raw = defaultRawData();
+    delete (raw.clubs as { players: Record<string, unknown>[] }[])[0]!.players[0]!.contractUntil;
+    (raw.season as Record<string, unknown>).matchWeekday = 9;
+    const issues = validateRawData(raw);
+    expect(issues).toContain('clubs.json[0].players[0].contractUntil: club players need a contract');
+    expect(issues).toContain('season.json.matchWeekday: must be less than daysPerWeek');
+  });
+});

@@ -1,7 +1,7 @@
 // Management game state (P0): one player club, 5 AI clubs, a 10-round league.
 // Everything here is plain JSON so it can be saved as-is.
 
-import type { ClubId, ClubStyle, Player, PlayerId, Side, Tactic, TeamLineup } from '../core/types';
+import type { ClubId, ClubStyle, ManagementStyle, Player, PlayerId, Side, Tactic, TeamLineup, TrainingFocus } from '../core/types';
 
 export const PLAYER_CLUB_ID = 'player';
 
@@ -12,6 +12,49 @@ export interface ClubState {
   color: string;
   style: ClubStyle | 'PLAYER';
   roster: PlayerId[];
+  reputation: number; // 0-100
+  management: ManagementStyle | 'PLAYER';
+  funds: number; // AI clubs only; the player's money is GameState.funds
+}
+
+export type SeasonPhase = 'PRESEASON' | 'REGULAR' | 'PLAYOFFS' | 'FINISHED';
+
+export interface Calendar {
+  season: number; // 1-based
+  phase: SeasonPhase;
+  day: number; // days since the start of this season (0-based)
+}
+
+export type InboxKind = 'INFO' | 'MATCH' | 'OFFER' | 'CONTRACT' | 'FINANCE' | 'SEASON';
+
+export interface InboxMessage {
+  id: number;
+  season: number;
+  day: number;
+  kind: InboxKind;
+  title: string;
+  body: string;
+  read: boolean;
+  /** Machine-readable payload for actionable messages (offers, renewals). */
+  data?: Record<string, string | number>;
+}
+
+export interface SeasonRecord {
+  season: number;
+  table: { clubId: ClubId; name: string; wins: number; losses: number }[];
+  champion: ClubId | null;
+  playerRank: number;
+  playerPlayoff: 'CHAMPION' | 'FINAL' | 'SEMI' | 'NONE';
+  fundsEnd: number;
+}
+
+export interface PlayoffMatch {
+  stage: 'SEMI' | 'FINAL';
+  index: number;
+  blue: ClubId;
+  red: ClubId;
+  seed: number;
+  winner: ClubId | null;
 }
 
 export interface Fixture {
@@ -74,4 +117,11 @@ export interface GameState {
   ledger: LedgerEntry[];
   reports: StoredReport[];
   rngState: number[];
+  // P1
+  calendar: Calendar;
+  training: TrainingFocus;
+  inbox: InboxMessage[];
+  nextMessageId: number;
+  history: SeasonRecord[];
+  playoffs: PlayoffMatch[];
 }

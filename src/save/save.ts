@@ -1,7 +1,7 @@
 // Versioned save files. Pure logic: storage is injected through StorageAdapter,
 // and the timestamp comes from the caller (logic layers never read the clock).
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 /**
  * What the save layer needs to know about the game state. The full type lives
@@ -39,8 +39,46 @@ export function serialize<G extends SavableGame>(state: G, meta: SaveMeta): stri
 /** A migration upgrades a save object from `from` to `from + 1`. */
 export type Migration = (save: Record<string, unknown>) => Record<string, unknown>;
 
-/** Registered upgrades, keyed by the version they upgrade from. v1 is the first real format. */
-export const MIGRATIONS: Record<number, Migration> = {};
+type Obj = Record<string, unknown>;
+
+/** P0 (v1) -> P1 (v2): calendar, inbox, history, reputation, AI club money, player condition and contracts. */
+function migrateV1toV2(save: Obj): Obj {
+  const g = save.game as Obj;
+  const week = typeof g.week === 'number' ? g.week : 0;
+  const total = typeof g.totalRounds === 'number' ? g.totalRounds : 10;
+  g.calendar = { season: 1, phase: week >= total ? 'FINISHED' : week === 0 ? 'PRESEASON' : 'REGULAR', day: 14 + week * 7 };
+  g.training ??= 'MECHANICS';
+  g.inbox ??= [];
+  g.nextMessageId ??= 1;
+  g.history ??= [];
+  g.playoffs ??= [];
+  const club = g.club as Obj;
+  club.reputation ??= 15;
+  club.management ??= 'PLAYER';
+  club.funds ??= 0;
+  // AI club budgets were not tracked in P0: give every club the same mid-sized purse.
+  for (const c of (g.aiClubs as Obj[] | undefined) ?? []) {
+    c.reputation ??= 40;
+    c.management ??= 'STEADY';
+    c.funds ??= 250000;
+  }
+  const players = (g.players as Record<string, Obj> | undefined) ?? {};
+  for (const id of Object.keys(players).sort()) {
+    const p = players[id]!;
+    const a = p.attrs as Record<string, number> | undefined;
+    const ovr = a ? (a.mechanics! + a.awareness! + a.teamwork! + a.mental!) / 4 : 50;
+    const age = typeof p.age === 'number' ? p.age : 22;
+    p.potential ??= Math.min(100, Math.round(ovr + Math.max(0, 24 - age) * 1.5));
+    p.fatigue ??= 0;
+    p.morale ??= 70;
+    p.stats ??= { played: 0, wins: 0, kills: 0, deaths: 0, assists: 0 };
+    if (p.clubId !== null && p.clubId !== undefined) p.contractUntil ??= 2;
+  }
+  return save;
+}
+
+/** Registered upgrades, keyed by the version they upgrade from. */
+export const MIGRATIONS: Record<number, Migration> = { 1: migrateV1toV2 };
 
 export class SaveError extends Error {}
 
@@ -84,6 +122,9 @@ export function checkSave(save: SaveFile): string | null {
   if (rng.length !== 4 || !rng.every((w) => Number.isInteger(w))) return '随机数状态损坏';
   if (!Array.isArray(save.rngState) || save.rngState.length !== 4) return '随机数状态损坏';
   if ((g.week as number) < 0 || (g.week as number) > (g.totalRounds as number)) return '赛程进度超出范围';
+  const cal = g.calendar as Record<string, unknown> | undefined;
+  if (!cal || !isNum(cal.season) || !isNum(cal.day) || typeof cal.phase !== 'string') return '缺少日历信息';
+  for (const k of ['inbox', 'history', 'playoffs']) if (!Array.isArray(g[k])) return `游戏数据缺少 ${k}`;
   return null;
 }
 

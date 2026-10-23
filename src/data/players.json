@@ -19,7 +19,17 @@
     "form": -3,
     "salaryPerWeek": 800,
     "signingFee": 3200,
-    "clubId": null
+    "clubId": null,
+    "potential": 50,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_top_2",
@@ -39,7 +49,17 @@
     "form": 0,
     "salaryPerWeek": 2700,
     "signingFee": 10800,
-    "clubId": null
+    "clubId": null,
+    "potential": 78,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_top_3",
@@ -61,7 +81,17 @@
     "form": -2,
     "salaryPerWeek": 550,
     "signingFee": 2200,
-    "clubId": null
+    "clubId": null,
+    "potential": 50,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_top_4",
@@ -82,7 +112,17 @@
     "form": 3,
     "salaryPerWeek": 4200,
     "signingFee": 16800,
-    "clubId": null
+    "clubId": null,
+    "potential": 79,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_top_5",
@@ -103,7 +143,17 @@
     "form": 3,
     "salaryPerWeek": 1800,
     "signingFee": 7200,
-    "clubId": null
+    "clubId": null,
+    "potential": 62,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_top_6",
@@ -125,7 +175,17 @@
     "form": -2,
     "salaryPerWeek": 4400,
     "signingFee": 17600,
-    "clubId": null
+    "clubId": null,
+    "potential": 84,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_jungle_1",
@@ -146,7 +206,17 @@
     "form": 0,
     "salaryPerWeek": 1000,
     "signingFee": 4000,
-    "clubId": null
+    "clubId": null,
+    "potential": 53,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_jungle_2",
@@ -167,7 +237,17 @@
     "form": 1,
     "salaryPerWeek": 2000,
     "signingFee": 8000,
-    "clubId": null
+    "clubId": null,
+    "potential": 75,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_jungle_3",
@@ -188,7 +268,17 @@
     "form": -1,
     "salaryPerWeek": 2600,
     "signingFee": 10400,
-    "clubId": null
+    "clubId": null,
+    "potential": 70,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_jungle_4",
@@ -209,7 +299,17 @@
     "form": 0,
     "salaryPerWeek": 3700,
     "signingFee": 14800,
-    "clubId": null
+    "clubId": null,
+    "potential": 82,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_jungle_5",
@@ -230,7 +330,17 @@
     "form": 3,
     "salaryPerWeek": 3250,
     "signingFee": 13000,
-    "clubId": null
+    "clubId": null,
+    "potential": 84,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_jungle_6",
@@ -251,7 +361,17 @@
     "form": 1,
     "salaryPerWeek": 800,
     "signingFee": 3200,
-    "clubId": null
+    "clubId": null,
+    "potential": 53,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_mid_1",
@@ -271,7 +391,17 @@
     "form": -3,
     "salaryPerWeek": 1800,
     "signingFee": 7200,
-    "clubId": null
+    "clubId": null,
+    "potential": 79,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_mid_2",
@@ -292,7 +422,17 @@
     "form": 2,
     "salaryPerWeek": 1150,
     "signingFee": 4600,
-    "clubId": null
+    "clubId": null,
+    "potential": 58,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_mid_3",
@@ -313,7 +453,17 @@
     "form": 1,
     "salaryPerWeek": 4200,
     "signingFee": 16800,
-    "clubId": null
+    "clubId": null,
+    "potential": 84,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_mid_4",
@@ -333,7 +483,17 @@
     "form": -1,
     "salaryPerWeek": 3650,
     "signingFee": 14600,
-    "clubId": null
+    "clubId": null,
+    "potential": 85,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_mid_5",
@@ -354,7 +514,17 @@
     "form": 2,
     "salaryPerWeek": 850,
     "signingFee": 3400,
-    "clubId": null
+    "clubId": null,
+    "potential": 54,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_mid_6",
@@ -375,7 +545,17 @@
     "form": -3,
     "salaryPerWeek": 1500,
     "signingFee": 6000,
-    "clubId": null
+    "clubId": null,
+    "potential": 69,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_adc_1",
@@ -396,7 +576,17 @@
     "form": -1,
     "salaryPerWeek": 3300,
     "signingFee": 13200,
-    "clubId": null
+    "clubId": null,
+    "potential": 74,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_adc_2",
@@ -417,7 +607,17 @@
     "form": -3,
     "salaryPerWeek": 1300,
     "signingFee": 5200,
-    "clubId": null
+    "clubId": null,
+    "potential": 65,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_adc_3",
@@ -437,7 +637,17 @@
     "form": 1,
     "salaryPerWeek": 2700,
     "signingFee": 10800,
-    "clubId": null
+    "clubId": null,
+    "potential": 79,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_adc_4",
@@ -458,7 +668,17 @@
     "form": 0,
     "salaryPerWeek": 1300,
     "signingFee": 5200,
-    "clubId": null
+    "clubId": null,
+    "potential": 64,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_adc_5",
@@ -479,7 +699,17 @@
     "form": -3,
     "salaryPerWeek": 500,
     "signingFee": 2000,
-    "clubId": null
+    "clubId": null,
+    "potential": 55,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_adc_6",
@@ -500,7 +730,17 @@
     "form": 2,
     "salaryPerWeek": 4500,
     "signingFee": 18000,
-    "clubId": null
+    "clubId": null,
+    "potential": 91,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_support_1",
@@ -521,7 +761,17 @@
     "form": 0,
     "salaryPerWeek": 3050,
     "signingFee": 12200,
-    "clubId": null
+    "clubId": null,
+    "potential": 83,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_support_2",
@@ -543,7 +793,17 @@
     "form": 1,
     "salaryPerWeek": 550,
     "signingFee": 2200,
-    "clubId": null
+    "clubId": null,
+    "potential": 49,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_support_3",
@@ -564,7 +824,17 @@
     "form": -2,
     "salaryPerWeek": 5050,
     "signingFee": 20200,
-    "clubId": null
+    "clubId": null,
+    "potential": 88,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_support_4",
@@ -585,7 +855,17 @@
     "form": 2,
     "salaryPerWeek": 1300,
     "signingFee": 5200,
-    "clubId": null
+    "clubId": null,
+    "potential": 51,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_support_5",
@@ -605,7 +885,17 @@
     "form": 0,
     "salaryPerWeek": 1900,
     "signingFee": 7600,
-    "clubId": null
+    "clubId": null,
+    "potential": 68,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   },
   {
     "id": "fa_support_6",
@@ -626,6 +916,16 @@
     "form": -3,
     "salaryPerWeek": 2500,
     "signingFee": 10000,
-    "clubId": null
+    "clubId": null,
+    "potential": 67,
+    "fatigue": 0,
+    "morale": 70,
+    "stats": {
+      "played": 0,
+      "wins": 0,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0
+    }
   }
 ]

@@ -53,10 +53,17 @@ export function newGame(name: string, color: string, seed: number, data: GameDat
   const players: Record<PlayerId, Player> = {};
   for (const p of data.players) players[p.id] = structuredClone(p);
   const aiClubs: ClubState[] = data.clubs.map((c) => {
-    for (const p of c.players) players[p.id] = structuredClone(p);
-    return { id: c.id, name: c.name, shortName: c.shortName, color: c.color, style: c.style, roster: c.players.map((p) => p.id) };
+    for (const p of c.players) players[p.id] = withP1Defaults(structuredClone(p));
+    return {
+      id: c.id, name: c.name, shortName: c.shortName, color: c.color, style: c.style, roster: c.players.map((p) => p.id),
+      reputation: c.reputation, management: c.management, funds: c.funds,
+    };
   });
-  const club: ClubState = { id: PLAYER_CLUB_ID, name: name.trim() || '我的俱乐部', shortName: (name.trim() || '我的').slice(0, 2), color, style: 'PLAYER', roster: [] };
+  for (const p of data.players) players[p.id] = withP1Defaults(players[p.id]!);
+  const club: ClubState = {
+    id: PLAYER_CLUB_ID, name: name.trim() || '我的俱乐部', shortName: (name.trim() || '我的').slice(0, 2), color, style: 'PLAYER', roster: [],
+    reputation: data.season.startReputation, management: 'PLAYER', funds: 0,
+  };
   const schedule = buildSchedule([PLAYER_CLUB_ID, ...aiClubs.map((c) => c.id)], seed, rng);
   return {
     seed,
@@ -74,7 +81,22 @@ export function newGame(name: string, color: string, seed: number, data: GameDat
     ledger: [],
     reports: [],
     rngState: rng.state(),
+    calendar: { season: 1, phase: 'PRESEASON', day: 0 },
+    training: 'MECHANICS',
+    inbox: [],
+    nextMessageId: 1,
+    history: [],
+    playoffs: [],
   };
+}
+
+/** Fills the P1 player fields that older data or saves may lack. */
+export function withP1Defaults(p: Player): Player {
+  p.potential ??= Math.min(100, Math.round(overall(p) + Math.max(0, 24 - p.age) * 1.5));
+  p.fatigue ??= 0;
+  p.morale ??= 70;
+  p.stats ??= { played: 0, wins: 0, kills: 0, deaths: 0, assists: 0 };
+  return p;
 }
 
 export function seasonOver(state: GameState): boolean {
