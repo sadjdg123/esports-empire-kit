@@ -4,7 +4,7 @@
 > 多 Agent 模式下，每个 Agent 只改自己负责的行。
 
 **当前阶段**：P0b
-**当前任务**：T10 完成，等门哥看比赛画面
+**当前任务**：GATE-2，等门哥按试玩指南试玩
 **最近更新**：2026-10-22
 
 | 任务 | 名称 | 负责 | 状态 | 完成日期 | 备注 |
@@ -20,8 +20,8 @@
 | T07 | 迷你经营逻辑 | Claude Code | ✅ 完成 | 2026-10-22 | 汇报：docs/reports/T07.md |
 | T08 | 存档系统 | Claude Code | ✅ 完成 | 2026-10-22 | 汇报：docs/reports/T08.md |
 | T09 | 管理界面 | Claude Code | ✅ 完成 | 2026-10-22 | 汇报：docs/reports/T09.md |
-| T10 | 比赛画面 | Claude Code | 👀 待确认 | 2026-10-23 | 汇报：docs/reports/T10.md；等门哥看画面 |
-| T11 | 整合与试玩验收 | | ⬜ 未开始 | | |
-| GATE-2 | P0b 关卡（门哥试玩） | 门哥 | ⬜ | | |
+| T10 | 比赛画面 | Claude Code | ✅ 完成 | 2026-10-23 | 汇报：docs/reports/T10.md |
+| T11 | 整合与试玩验收 | Claude Code | ✅ 完成 | 2026-10-23 | 汇报：docs/reports/T11.md；试玩指南 docs/PLAYTEST.md |
+| GATE-2 | P0b 关卡（门哥试玩） | 门哥 | 👀 待试玩 | | 链接见 docs/PLAYTEST.md |
 
 状态图例：⬜ 未开始 · 🔄 进行中 · 👀 待确认 · ✅ 完成 · ❌ 卡住
