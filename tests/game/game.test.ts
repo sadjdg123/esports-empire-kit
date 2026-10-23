@@ -3,7 +3,7 @@ import { loadGameData } from '../../src/core/config';
 import { runMatch } from '../../src/sim';
 import {
   PLAYER_CLUB_ID, advanceToNextMatch, advanceWeek, commitWeek, financeSummary, marketPlayers, newGame, prepareWeek, readinessIssues,
-  recommendLineup, releasePlayer, rosterOf, setLineup, signPlayer, signValueSquad, standings, type GameState,
+  recommendLineup, releaseFeeFor, releasePlayer, rosterOf, setLineup, signPlayer, signValueSquad, standings, type GameState,
 } from '../../src/game';
 
 const data = loadGameData();
@@ -55,9 +55,11 @@ describe('market', () => {
     expect(s.club.roster).toContain(p.id);
     expect(s.market).not.toContain(p.id);
     expect(s.funds).toBe(data.economy.startingFunds - p.signingFee);
+    const fee = releaseFeeFor(s, data, p);
+    expect(fee).toBeGreaterThan(0);
     expect(releasePlayer(s, data, p.id).ok).toBe(true);
     expect(s.market).toContain(p.id);
-    expect(s.funds).toBe(data.economy.startingFunds - p.signingFee - p.salaryPerWeek * data.economy.releaseFeeWeeks);
+    expect(s.funds).toBe(data.economy.startingFunds - p.signingFee - fee);
     expect(fundsFromLedger(s)).toBe(s.funds);
   });
 

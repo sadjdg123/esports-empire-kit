@@ -85,6 +85,8 @@ export function newGame(name: string, color: string, seed: number, data: GameDat
     nextMessageId: 1,
     history: [],
     playoffs: [],
+    offers: [],
+    negotiations: [],
   };
 }
 
@@ -133,11 +135,15 @@ export function weeklySalaries(state: GameState): number {
   return rosterOf(state).reduce((a, p) => a + p.salaryPerWeek, 0);
 }
 
-export function releaseFee(data: GameData, p: Player): number {
-  return p.salaryPerWeek * data.economy.releaseFeeWeeks;
+/** The season a contract signed now starts in (signing after the final counts for the next season). */
+export function contractStartSeason(state: GameState): number {
+  return state.calendar.phase === 'FINISHED' ? state.calendar.season + 1 : state.calendar.season;
 }
 
-export function signPlayer(state: GameState, data: GameData, playerId: PlayerId): Result {
+/** Signs a free agent for `years` seasons, counting the current one. */
+export function signPlayer(state: GameState, data: GameData, playerId: PlayerId, years = data.economy.contracts.defaultYears): Result {
+  const k = data.economy.contracts;
+  if (!Number.isInteger(years) || years < k.minYears || years > k.maxYears) return fail(`合同年限要在 ${k.minYears}–${k.maxYears} 年之间`);
   const p = state.players[playerId];
   if (!p || !state.market.includes(playerId)) return fail('这名选手不在自由市场');
   if (state.club.roster.length >= data.economy.maxRoster) return fail(`队伍已满（最多 ${data.economy.maxRoster} 人）`);
@@ -146,21 +152,8 @@ export function signPlayer(state: GameState, data: GameData, playerId: PlayerId)
   state.market = state.market.filter((id) => id !== playerId);
   state.club.roster.push(playerId);
   p.clubId = PLAYER_CLUB_ID;
+  p.contractUntil = contractStartSeason(state) + years - 1;
   addLedger(state, { week: weekOfSeason(state), kind: 'SIGNING', amount: -p.signingFee, note: `签下 ${p.name}` });
-  return ok(undefined);
-}
-
-export function releasePlayer(state: GameState, data: GameData, playerId: PlayerId): Result {
-  const p = state.players[playerId];
-  if (!p || !state.club.roster.includes(playerId)) return fail('这名选手不在你的队伍里');
-  if (state.calendar.phase !== 'PRESEASON' && state.club.roster.length <= data.economy.minRoster) return fail(`赛季中队伍至少要有 ${data.economy.minRoster} 人`);
-  const fee = releaseFee(data, p);
-  if (state.funds < fee) return fail(`资金不足：违约金 ${fee}，当前资金 ${Math.round(state.funds)}`);
-  state.club.roster = state.club.roster.filter((id) => id !== playerId);
-  state.market.push(playerId);
-  p.clubId = null;
-  if (state.lineup?.picks.some((pk) => pk.playerId === playerId)) state.lineup = null;
-  addLedger(state, { week: weekOfSeason(state), kind: 'RELEASE', amount: -fee, note: `与 ${p.name} 解约` });
   return ok(undefined);
 }
 

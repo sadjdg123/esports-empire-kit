@@ -58,6 +58,27 @@ export interface PlayoffMatch {
   day: number; // day of the season the game is played
 }
 
+/** A transfer bid. Player bids are answered at once; AI bids for the player's players wait in the inbox. */
+export interface TransferOffer {
+  id: number;
+  season: number;
+  day: number;
+  buyer: ClubId;
+  seller: ClubId;
+  playerId: PlayerId;
+  fee: number;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
+}
+
+/** A contract renewal talk with one of the player's players (one per player per season). */
+export interface Negotiation {
+  playerId: PlayerId;
+  season: number;
+  ask: number; // weekly salary the player wants
+  countered: boolean; // the one counter offer has been used
+  status: 'OPEN' | 'AGREED' | 'REFUSED';
+}
+
 export interface Fixture {
   round: number; // 0-based
   index: number; // position within the round
@@ -80,7 +101,7 @@ export interface FixtureResult {
   checksum: string;
 }
 
-export type LedgerKind = 'SALARY' | 'SPONSOR' | 'PRIZE' | 'SIGNING' | 'RELEASE';
+export type LedgerKind = 'SALARY' | 'SPONSOR' | 'PRIZE' | 'SIGNING' | 'RELEASE' | 'TRANSFER';
 
 export interface LedgerEntry {
   week: number; // round index the entry belongs to (0-based); -1 = before the season
@@ -127,4 +148,6 @@ export interface GameState {
   nextMessageId: number;
   history: SeasonRecord[];
   playoffs: PlayoffMatch[];
+  offers: TransferOffer[];
+  negotiations: Negotiation[];
 }

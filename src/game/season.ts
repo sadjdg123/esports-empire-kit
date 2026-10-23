@@ -12,10 +12,15 @@ import {
   addLedger, buildSchedule, clubById, financeSummary, readinessIssues, rosterOf, seasonOver, standings, weekOfSeason, weeklySalaries, type Result,
 } from './game';
 import {
-  PLAYER_CLUB_ID, type ClubState, type Fixture, type FixtureResult, type GameState, type InboxKind, type InboxMessage,
+  PLAYER_CLUB_ID, type ClubState, type Fixture, type FixtureResult, type GameState, type InboxMessage,
   type LedgerEntry, type PlayoffMatch, type SeasonPhase, type StoredReport,
 } from './state';
+import { remindExpiring, rollContracts } from './contracts';
+import { postMessage } from './messages';
 import { applyDailyRecovery, applyMatchEffects, applyTrainingWeek } from './training';
+import { expireOffers, generateAiOffers } from './transfers';
+
+export { postMessage };
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (error: string): Result<never> => ({ ok: false, error });
@@ -54,13 +59,6 @@ export function describeDate(state: GameState, data: GameData): string {
 
 // ---------------------------------------------------------------------------
 // Inbox
-
-export function postMessage(state: GameState, kind: InboxKind, title: string, body: string, data?: Record<string, string | number>): InboxMessage {
-  const m: InboxMessage = { id: state.nextMessageId++, season: state.calendar.season, day: state.calendar.day, kind, title, body, read: false, data };
-  state.inbox.push(m);
-  if (state.inbox.length > 200) state.inbox = state.inbox.slice(-200);
-  return m;
-}
 
 // ---------------------------------------------------------------------------
 // Today's matches
@@ -176,7 +174,8 @@ function finishSeason(state: GameState, data: GameData): void {
 }
 
 /** Starts the next season: new schedule, clean table, everyone one year older. */
-export function startNewSeason(state: GameState, data: GameData): void {
+/** Returns true when the player has contracts ending in the new season (a reminder was posted). */
+export function startNewSeason(state: GameState, data: GameData): boolean {
   const rng = rngFromState(state.rngState);
   state.calendar = { season: state.calendar.season + 1, phase: 'PRESEASON', day: 0 };
   state.schedule = buildSchedule([PLAYER_CLUB_ID, ...state.aiClubs.map((c) => c.id)], state.seed, rng, state.calendar.season);
@@ -186,8 +185,10 @@ export function startNewSeason(state: GameState, data: GameData): void {
   state.results = [];
   state.reports = [];
   state.playoffs = [];
+  state.offers = state.offers.filter((o) => o.status === 'PENDING');
   for (const id of Object.keys(state.players).sort()) state.players[id]!.age++;
-  postMessage(state, 'SEASON', `第 ${state.calendar.season} 赛季开始`, `休赛期 ${data.season.preseasonWeeks} 周，可以签人、调整阵容。常规赛 ${state.totalRounds} 轮之后是前 ${data.season.playoffTeams} 名的季后赛。`);
+  postMessage(state, 'SEASON', `第 ${state.calendar.season} 赛季开始`, `休赛期 ${data.season.preseasonWeeks} 周，可以签人、买卖选手、调整阵容。常规赛 ${state.totalRounds} 轮之后是前 ${data.season.playoffTeams} 名的季后赛。`);
+  return rollContracts(state, data);
 }
 
 /**
@@ -200,10 +201,7 @@ export function advanceDay(state: GameState, data: GameData): DayResult {
   const res = (pause: AutoPauseEvent | null): DayResult => ({ day: state.calendar.day, pause, messages: state.inbox.slice(inboxBefore) });
   if (playerMatchToday(state, data)) return res('MATCH_DAY');
   if (todaysMatches(state, data).length > 0) commitMatchDay(state, data); // AI-only day (e.g. eliminated from playoffs)
-  if (seasonOver(state)) {
-    startNewSeason(state, data);
-    return res(null);
-  }
+  if (seasonOver(state)) return res(startNewSeason(state, data) ? 'CONTRACT_EXPIRING' : null);
 
   const cfg = data.season;
   const L = seasonLayout(state, data);
@@ -213,16 +211,19 @@ export function advanceDay(state: GameState, data: GameData): DayResult {
 
   if (state.calendar.phase === 'PRESEASON' && day >= L.regularStart) {
     state.calendar.phase = 'REGULAR';
+    expireOffers(state);
     postMessage(state, 'SEASON', '常规赛开始', `本赛季 ${state.totalRounds} 轮，每周${WEEKDAY[cfg.matchWeekday]}比赛。`);
   }
   if (state.calendar.phase === 'REGULAR' && state.week >= state.totalRounds && day >= L.playoffStart) {
     state.calendar.phase = 'PLAYOFFS';
     startPlayoffs(state, data);
+    if (remindExpiring(state)) pause = 'CONTRACT_EXPIRING';
   }
   applyDailyRecovery(state, data);
   if (day % cfg.daysPerWeek === cfg.payWeekday) {
     paySalaries(state, data);
     applyTrainingWeek(state, data);
+    if (generateAiOffers(state, data).length > 0) pause ??= 'OFFER';
     const f = financeSummary(state, data);
     if (f.lowFunds && f.weeklySalaries > 0) {
       postMessage(state, 'FINANCE', '资金偏低', `现在资金 ${Math.round(state.funds)}，低于 ${data.economy.lowFundsWarningWeeks} 周工资。可以考虑解约高薪选手。`);

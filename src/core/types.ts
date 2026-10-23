@@ -215,11 +215,45 @@ export interface EconomyConfig {
   prizeWin: number;
   prizeLoss: number;
   signingFeeWeeks: number; // signing fee = salary * weeks (informational; players carry signingFee)
-  releaseFeeWeeks: number; // release fee = salary * weeks
   lowFundsWarningWeeks: number; // warn when funds < weekly salaries * this
   minRoster: number;
   maxRoster: number;
   formWeeklyDelta: number; // max weekly random change of form
+  contracts: ContractConfig;
+}
+
+/** Salaries, market values, renewals and transfers (P1). */
+export interface ContractConfig {
+  // fair weekly salary = salaryBase + max(0, overall - salaryFloor)^salaryExp * salaryPer (+ youth premium)
+  salaryBase: number;
+  salaryFloor: number;
+  salaryExp: number;
+  salaryPer: number;
+  youthAge: number; // players up to this age are also paid for their potential
+  youthPremiumPerPotential: number; // per point of (potential - overall)
+  // market value = fair salary * valueWeeks * age/potential multiplier * form multiplier
+  valueWeeks: number;
+  valuePotentialPer: number;
+  valueDeclineAge: number;
+  valueDeclinePerYear: number;
+  valueMinMult: number;
+  valueFormPer: number;
+  minYears: number;
+  maxYears: number;
+  defaultYears: number;
+  askMoralePer: number; // renewal ask rises by this share per morale point below neutral
+  askMinOfCurrent: number; // never asks for less than this share of the current salary
+  counterAcceptRatio: number; // a counter offer >= ask * ratio is accepted...
+  counterMoralePer: number; // ...the ratio drops by this per morale point above neutral
+  refuseMoralePenalty: number;
+  releaseFeeShare: number; // release fee = salary * remaining contract weeks * share
+  aiSellMult: number; // AI sells a bench player for >= value * this
+  aiSellCoreMult: number; // ...and a starter for >= value * this
+  aiOfferChancePerWeek: number;
+  aiOfferMin: number;
+  aiOfferMax: number;
+  aiOfferMinGain: number; // AI bids only for players this much better than its starter
+  aiReserveWeeks: number; // AI keeps this many weeks of payroll in the bank
 }
 
 export type MapNodeType = 'BASE' | 'TOWER' | 'LANE' | 'JUNGLE' | 'RIVER' | 'OBJECTIVE';

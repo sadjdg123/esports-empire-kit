@@ -52,6 +52,8 @@ function migrateV1toV2(save: Obj): Obj {
   g.nextMessageId ??= 1;
   g.history ??= [];
   g.playoffs ??= [];
+  g.offers ??= [];
+  g.negotiations ??= [];
   const club = g.club as Obj;
   club.reputation ??= 15;
   club.management ??= 'PLAYER';
@@ -124,7 +126,10 @@ export function checkSave(save: SaveFile): string | null {
   if ((g.week as number) < 0 || (g.week as number) > (g.totalRounds as number)) return '赛程进度超出范围';
   const cal = g.calendar as Record<string, unknown> | undefined;
   if (!cal || !isNum(cal.season) || !isNum(cal.day) || typeof cal.phase !== 'string') return '缺少日历信息';
-  for (const k of ['inbox', 'history', 'playoffs']) if (!Array.isArray(g[k])) return `游戏数据缺少 ${k}`;
+  // Fields added during P1 development, after v2 was defined.
+  g.offers ??= [];
+  g.negotiations ??= [];
+  for (const k of ['inbox', 'history', 'playoffs', 'offers', 'negotiations']) if (!Array.isArray(g[k])) return `游戏数据缺少 ${k}`;
   return null;
 }
 

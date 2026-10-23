@@ -234,10 +234,18 @@ function checkEconomy(c: Checker, raw: unknown): void {
   const o = c.obj(raw, 'economy.json');
   if (!o) return;
   const p = 'economy.json';
-  for (const k of ['startingFunds', 'weeklySponsor', 'prizeWin', 'prizeLoss', 'signingFeeWeeks', 'releaseFeeWeeks', 'lowFundsWarningWeeks', 'formWeeklyDelta']) c.num(o, k, p, 0);
+  for (const k of ['startingFunds', 'weeklySponsor', 'prizeWin', 'prizeLoss', 'signingFeeWeeks', 'lowFundsWarningWeeks', 'formWeeklyDelta']) c.num(o, k, p, 0);
   const min = c.num(o, 'minRoster', p, 5, 20, true);
   const max = c.num(o, 'maxRoster', p, 5, 20, true);
   if (max < min) c.fail(`${p}.maxRoster`, 'must be >= minRoster');
+  const k = checkNumbers(c, o.contracts, `${p}.contracts`, [
+    'salaryBase', 'salaryFloor', 'salaryExp', 'salaryPer', 'youthAge', 'youthPremiumPerPotential', 'valueWeeks', 'valuePotentialPer',
+    'valueDeclineAge', 'valueDeclinePerYear', 'valueMinMult', 'valueFormPer', 'minYears', 'maxYears', 'defaultYears', 'askMoralePer',
+    'askMinOfCurrent', 'counterAcceptRatio', 'counterMoralePer', 'refuseMoralePenalty', 'releaseFeeShare', 'aiSellMult', 'aiSellCoreMult',
+    'aiOfferChancePerWeek', 'aiOfferMin', 'aiOfferMax', 'aiOfferMinGain', 'aiReserveWeeks',
+  ]);
+  if (k && typeof k.minYears === 'number' && typeof k.maxYears === 'number' && typeof k.defaultYears === 'number'
+    && !(k.minYears <= k.defaultYears && k.defaultYears <= k.maxYears)) c.fail(`${p}.contracts.defaultYears`, 'must be between minYears and maxYears');
 }
 
 function checkNumbers(c: Checker, raw: unknown, path: string, keys: string[], min = 0): Obj | null {

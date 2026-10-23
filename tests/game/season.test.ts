@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../../src/core/config';
 import {
-  PLAYER_CLUB_ID, advanceDay, advanceUntilPause, commitMatchDay, describeDate, newGame, playerMatchToday,
+  PLAYER_CLUB_ID, advanceDay, advanceToNextMatch, autoManage, advanceUntilPause, commitMatchDay, describeDate, newGame, playerMatchToday,
   seasonLayout, signValueSquad, standings, type GameState,
 } from '../../src/game';
 import { deserialize, serialize } from '../../src/save';
@@ -46,7 +46,7 @@ describe('calendar', () => {
 
   it('stops on match day and does not move until the match is played', () => {
     const s = ready(2);
-    const r = advanceUntilPause(s, data);
+    const r = advanceToNextMatch(s, data);
     expect(r.pause).toBe('MATCH_DAY');
     expect(s.calendar.day).toBe(seasonLayout(s, data).roundDay(0));
     const day = s.calendar.day;
@@ -62,7 +62,7 @@ describe('calendar', () => {
   it('cannot play without a lineup: the calendar waits on match day', () => {
     const s = ready(3);
     s.lineup = null;
-    advanceUntilPause(s, data);
+    advanceToNextMatch(s, data);
     expect(commitMatchDay(s, data).ok).toBe(false);
     const day = s.calendar.day;
     advanceDay(s, data);
@@ -107,6 +107,7 @@ describe('a full season', () => {
       schedules.push(JSON.stringify(s.schedule.map((r) => r.map((f) => f.seed))));
       playSeason(s);
       advanceDay(s, data); // into the next season
+      expect(autoManage(s, data).ok).toBe(true); // contracts end; keep the club playable
     }
     expect(s.calendar).toEqual({ season: 4, phase: 'PRESEASON', day: 0 });
     expect(s.history.map((h) => h.season)).toEqual([1, 2, 3]);
