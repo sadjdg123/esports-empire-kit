@@ -23,6 +23,7 @@ import { aiUpgradeFacilities } from './facilities';
 import { announceRetirements, awardSeasonMvp, retirePlayers, retirementNoticeDue } from './career';
 import { chemistryFromMatch, chemistryNewSeason, groupChemistry } from './chemistry';
 import { refreshStaffMarket, rollStaffContracts } from './staff';
+import { coachMatchDay, coachTraining, settleDecisionResults, settleMatchDecision, staffWeek } from './delegation';
 import { postMessage } from './messages';
 import { applyDailyRecovery, applyMatchEffects, applyTrainingWeek } from './training';
 import { expireOffers, generateAiOffers } from './transfers';
@@ -176,6 +177,7 @@ function finishSeason(state: GameState, data: GameData): void {
   if (state.history.length > data.season.maxSeasonsHistory) state.history = state.history.slice(-data.season.maxSeasonsHistory);
   recordCareers(state, champion);
   awardSeasonMvp(state, data);
+  settleDecisionResults(state);
   postMessage(state, 'SEASON', `第 ${state.calendar.season} 赛季结束`,
     `${champion ? `冠军：${clubById(state, champion).name}。` : ''}你的常规赛排名第 ${rank}${champion === PLAYER_CLUB_ID ? '，并拿下了总冠军！' : '。'}继续前进就会进入新赛季的休赛期。`);
 }
@@ -224,6 +226,7 @@ export function startNewSeason(state: GameState, data: GameData): boolean {
   postMessage(state, 'SEASON', '自由市场更新', `${talent.joined} 名新秀进入自由市场${talent.retired > 0 ? `；${talent.retired} 名没有球队的老将退役` : ''}${talent.left > 0 ? `；${talent.left} 名自由球员离开了联赛` : ''}。`);
   aiSignFreeAgents(state, data);
   chemistryNewSeason(state, data);
+  staffWeek(state, data); // hired staff set the new season up
   return remindExpiring(state);
 }
 
@@ -259,17 +262,21 @@ export function advanceDay(state: GameState, data: GameData): DayResult {
   applyDailyRecovery(state, data);
   if (day % cfg.daysPerWeek === cfg.payWeekday) {
     runPayDay(state, data); // before training: this week's training is paid for
+    coachTraining(state, data); // a hired coach picks this week's training first
     applyTrainingWeek(state, data);
     if (retirementNoticeDue(state, data)) announceRetirements(state, data);
     if (state.calendar.phase === 'PRESEASON') aiPreseasonWeek(state, data);
-    if (generateAiOffers(state, data).length > 0) pause ??= 'OFFER';
+    const bids = generateAiOffers(state, data);
+    staffWeek(state, data);
+    // Only bids the manager left for the player stop the clock.
+    if (bids.some((o) => o.status === 'PENDING')) pause ??= 'OFFER';
     const f = financeSummary(state, data);
     if (f.lowFunds && f.weeklySalaries > 0) {
       postMessage(state, 'FINANCE', '资金偏低', `现在资金 ${Math.round(state.funds)}，低于 ${data.economy.lowFundsWarningWeeks} 周工资。${rescueOptions(state, data).join('；')}。`);
       pause = 'LOW_FUNDS';
     }
   }
-  if (playerMatchToday(state, data)) pause = 'MATCH_DAY';
+  if (playerMatchToday(state, data)) { coachMatchDay(state, data); pause = 'MATCH_DAY'; }
   else if (todaysMatches(state, data).length > 0) commitMatchDay(state, data);
   if (seasonOver(state)) pause = 'SEASON_END';
   return res(pause);
@@ -373,6 +380,7 @@ export function commitMatchDay(state: GameState, data: GameData, playerMatchResu
     }
     if (!isPlayer) continue;
     playerResult = fr;
+    settleMatchDecision(state, fr.winner === PLAYER_CLUB_ID);
     const won = fr.winner === PLAYER_CLUB_ID;
     const mySide = f.blue === PLAYER_CLUB_ID ? 'BLUE' : 'RED';
     const label = stage === 'LEAGUE' ? '比赛' : stage === 'SEMI' ? '季后赛半决赛' : '总决赛';

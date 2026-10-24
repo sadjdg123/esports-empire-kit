@@ -1,0 +1,356 @@
+// Staff decisions (P3, T31): the hired manager, coach and finance chief run their part of the
+// club within the player's permissions. Every decision goes into the decision log; under
+// "small things alone" anything above the deal limit, and under any level the sale of a
+// protected core player, becomes a pending decision for the player (approved in T32).
+// Skill scales mistakes and misjudgement; style decides what each one prefers.
+
+import { hashString, rngFromState } from '../core/rng';
+import type { GameData, Player, Role, StaffMember, StaffRole, Tactic } from '../core/types';
+import { missingRoles } from './advice';
+import { acceptRenewal, expiringPlayers, marketValue, negotiationFor, renewalAsk, seasonWeeks } from './contracts';
+import { facilityDef, facilityValue, nextFacilityLevel, sponsorStanding, upgradeFacility } from './facilities';
+import { activeSponsor, bestSponsorFor, expectedWeeklyIncome, financeSummary, signSponsor, sponsorOffers, weeklyMoney } from './finance';
+import { clubById, emergencySalaryCap, marketPlayers, playerOverall, recommendLineup, rosterOf, setLineup, signPlayer, weekOfSeason, type Result } from './game';
+import { nextPlayerFixture } from './season';
+import { hiredStaff, mainSkill } from './staff';
+import { PLAYER_CLUB_ID, type DecisionEntry, type GameState, type PendingDecision } from './state';
+import { respondToOffer, transferWindowOpen } from './transfers';
+
+/** A decision a staff member wants to carry out. `run` does it; the rest describes it for the log. */
+interface Action {
+  kind: string;
+  text: string;
+  reason: string;
+  cost: number; // money it moves now (negative = spend)
+  payload: Record<string, string | number>;
+  big?: boolean; // always needs the player (selling a protected player)
+  ref?: string; // a player the result is about, filled in later
+  run: () => Result<unknown>;
+}
+
+const weekOf = (state: GameState) => Math.floor(state.calendar.day / 7);
+const ROLE_LABEL: Record<Role, string> = { TOP: '上单', JUNGLE: '打野', MID: '中单', ADC: '射手', SUPPORT: '辅助' };
+
+/** The strongest starters, whom staff may not sell on their own. */
+export function protectedPlayers(state: GameState): Set<string> {
+  const n = state.delegation.protectTop;
+  return new Set(rosterOf(state).sort((a, b) => playerOverall(b) - playerOverall(a) || a.id.localeCompare(b.id)).slice(0, n).map((p) => p.id));
+}
+
+function mistakeChance(data: GameData, s: StaffMember): number {
+  return data.staff.decisions.mistakeAtZero * (1 - mainSkill(data, s) / 100);
+}
+
+/**
+ * How good a player looks to this manager: true overall plus a misjudgement that shrinks with
+ * skill. The misjudgement is his own fixed view of that player, so he does not change his mind
+ * from one week to the next.
+ */
+function perceived(data: GameData, s: StaffMember, p: Player): number {
+  const noise = data.staff.decisions.perceptionNoise * (1 - s.skills.scouting / 100);
+  const view = (hashString(`${s.id}:${p.id}`) % 2001) / 1000 - 1;
+  return playerOverall(p) + view * noise;
+}
+
+/** Weeks of running costs kept in the bank: the finance chief's style, else the manager's. */
+function reserveWeeks(state: GameState, data: GameData): number {
+  const f = hiredStaff(state, 'FINANCE') ?? hiredStaff(state, 'MANAGER');
+  return data.staff.decisions.reserveWeeks[f?.style ?? 'CAUTIOUS'];
+}
+
+/** Money left after `spend` now and `extraWeekly` more per week, beyond the reserve. */
+function spare(state: GameState, data: GameData, spend = 0, extraWeekly = 0): number {
+  const m = weeklyMoney(state, data);
+  const costs = m.salaries + m.training + m.upkeep + m.staff + extraWeekly;
+  return state.funds - spend - costs * reserveWeeks(state, data);
+}
+
+export function addDecision(state: GameState, data: GameData, entry: Omit<DecisionEntry, 'id' | 'season' | 'day'>): DecisionEntry {
+  const e: DecisionEntry = { id: state.nextDecisionId++, season: state.calendar.season, day: state.calendar.day, ...entry };
+  state.decisionLog.push(e);
+  const max = data.staff.delegation.logMax;
+  if (state.decisionLog.length > max) state.decisionLog = state.decisionLog.slice(-max);
+  return e;
+}
+
+/** Carries out, proposes or only advises an action, depending on the role's permission. */
+function decide(state: GameState, data: GameData, role: StaffRole, a: Action): void {
+  const s = hiredStaff(state, role);
+  if (!s) return;
+  const slot = state.delegation.roles[role];
+  const base = { role, staffName: s.name, kind: a.kind, text: a.text, reason: a.reason, cost: a.cost, ...(a.ref ? { ref: a.ref } : {}) };
+  if (slot.authority === 'SELF') {
+    // Advice only, once a week for the same suggestion.
+    const week = weekOf(state);
+    if (state.decisionLog.some((e) => e.status === 'ADVICE' && e.season === state.calendar.season && Math.floor(e.day / 7) === week && e.kind === a.kind && e.text === a.text)) return;
+    addDecision(state, data, { ...base, status: 'ADVICE' });
+    return;
+  }
+  const needsYes = a.big || (slot.authority === 'SMALL' && Math.abs(a.cost) > state.delegation.limit);
+  if (needsYes) {
+    const key = JSON.stringify(a.payload);
+    if (state.pending.some((p) => p.kind === a.kind && JSON.stringify(p.payload) === key)) return;
+    const pd: PendingDecision = {
+      id: state.nextDecisionId++, role, staffId: s.id, kind: a.kind, text: a.text, reason: a.reason, cost: a.cost,
+      season: state.calendar.season, day: state.calendar.day, expiresDay: state.calendar.day + data.staff.delegation.pendingExpireWeeks * 7,
+      payload: a.payload, big: !!a.big,
+    };
+    state.pending.push(pd);
+    return;
+  }
+  const r = a.run();
+  if (r.ok) addDecision(state, data, { ...base, status: 'DONE' });
+}
+
+/** Carries out an approved pending decision (T32 calls this). */
+export function runPending(state: GameState, data: GameData, p: PendingDecision): Result<unknown> {
+  const action = rebuild(state, data, p);
+  if (!action) return { ok: false, error: '情况变了，这件事已经做不了' };
+  return action.run();
+}
+
+/** Rebuilds the runnable action of a pending decision from its payload. */
+function rebuild(state: GameState, data: GameData, p: PendingDecision): Action | null {
+  const v = p.payload;
+  const stub = { kind: p.kind, text: p.text, reason: p.reason, cost: p.cost, payload: v };
+  switch (p.kind) {
+    case 'SIGN': return { ...stub, run: () => signPlayer(state, data, String(v.playerId)) };
+    case 'SELL': return { ...stub, run: () => respondToOffer(state, data, Number(v.offerId), true) };
+    case 'RENEW': return { ...stub, run: () => acceptRenewal(state, data, String(v.playerId), data.economy.contracts.defaultYears) };
+    case 'FACILITY': return { ...stub, run: () => upgradeFacility(state, data, String(v.room) as never) };
+    case 'SPONSOR': return { ...stub, run: () => signSponsor(state, data, String(v.sponsorId), 1) };
+    default: return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Coach: training, lineup and tactics
+
+/** Monday: this week's training. A weaker coach sometimes keeps the squad training when it should rest. */
+export function coachTraining(state: GameState, data: GameData): void {
+  const s = hiredStaff(state, 'COACH');
+  if (!s) return;
+  const roster = rosterOf(state);
+  if (roster.length === 0) return;
+  const rng = rngFromState(state.rngState);
+  const fatigue = roster.reduce((a, p) => a + (p.fatigue ?? 0), 0) / roster.length;
+  const sum = (k: 'mechanics' | 'awareness' | 'teamwork' | 'mental') => roster.reduce((a, p) => a + p.attrs[k], 0);
+  const weakest = (['MECHANICS', 'AWARENESS', 'TEAMWORK', 'MENTAL'] as const).map((f) => [f, sum(f.toLowerCase() as 'mechanics')] as const)
+    .sort((a, b) => a[1] - b[1])[0]![0];
+  const tired = fatigue >= data.staff.decisions.restFatigue;
+  const slip = rng.chance(mistakeChance(data, s));
+  state.rngState = rng.state();
+  const plan = tired && !slip ? 'REST' : weakest;
+  const reason = tired ? (slip ? `全队平均疲劳 ${Math.round(fatigue)}，本该休息，但他想多练一周` : `全队平均疲劳 ${Math.round(fatigue)}，该休息了`) : `全队${FOCUS_LABEL[weakest]}最弱`;
+  if (state.training === plan) return;
+  decide(state, data, 'COACH', { kind: 'TRAINING', text: `本周训练：${FOCUS_LABEL[plan]}`, reason, cost: 0, payload: { plan }, run: () => { state.training = plan; return { ok: true, value: plan }; } });
+}
+
+const FOCUS_LABEL: Record<string, string> = { MECHANICS: '操作', AWARENESS: '意识', TEAMWORK: '配合', MENTAL: '心态', REST: '休息', MASTERY: '英雄' };
+
+/** Match day: the lineup and a tactic against the opponent's usual one. A weaker coach may misread it. */
+export function coachMatchDay(state: GameState, data: GameData): void {
+  const s = hiredStaff(state, 'COACH');
+  if (!s || rosterOf(state).length < 5) return;
+  const next = nextPlayerFixture(state, data);
+  if (!next) return;
+  const opp = clubById(state, next.opponent);
+  const d = data.staff.decisions;
+  const rng = rngFromState(state.rngState);
+  const slip = rng.chance(mistakeChance(data, s));
+  state.rngState = rng.state();
+  const known = opp.style !== 'RANDOM' && opp.style !== 'PLAYER';
+  const counter = known ? d.tacticCounter[opp.style as Tactic] : undefined;
+  const right: Tactic = counter ?? d.defaultTactic;
+  const tactic: Tactic = slip ? (state.lineup?.tactic ?? 'STEADY_MACRO') : right;
+  const lu = recommendLineup(state, data, tactic);
+  if (!lu.ok) return;
+  const same = JSON.stringify(state.lineup) === JSON.stringify(lu.value);
+  if (same) return;
+  const name = (t: Tactic) => `「${data.match.tactics[t].name}」`;
+  const usual = known ? `${opp.name}惯用${name(opp.style as Tactic)}` : `${opp.name}的打法不固定`;
+  const plan = counter ? `，用${name(right)}克制` : `，用最稳的${name(right)}`;
+  const reason = usual + (slip && tactic !== right ? `${plan.replace('，用', '，本该用')}，他没看准，沿用原来的打法` : plan);
+  decide(state, data, 'COACH', {
+    kind: 'TACTIC', text: `对阵${opp.name}：「${data.match.tactics[tactic].name}」，按位置和熟练度排首发`, reason, cost: 0, payload: { tactic, opponent: opp.id },
+    run: () => setLineup(state, data, lu.value),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Manager: signings, renewals, bids
+
+function managerScore(data: GameData, s: StaffMember, p: Player): number {
+  const d = data.staff.decisions;
+  const look = perceived(data, s, p);
+  if (s.style === 'CAUTIOUS') return look / Math.sqrt(Math.max(1, p.salaryPerWeek)) * 10;
+  if (s.style === 'YOUTH' && p.age <= d.youthAgeMax) return look + Math.max(0, (p.potential ?? look) - playerOverall(p)) * d.youthPotentialWeight;
+  return look;
+}
+
+/** Fills missing roles, renews the players worth keeping, upgrades a weak starter, answers bids. */
+export function managerWeek(state: GameState, data: GameData): void {
+  const s = hiredStaff(state, 'MANAGER');
+  if (!s) return;
+  const d = data.staff.decisions;
+  // 1) Bids from AI clubs for our players.
+  if (transferWindowOpen(state)) {
+    const keep = protectedPlayers(state);
+    const starters = new Set(state.lineup?.picks.map((pk) => pk.playerId) ?? []);
+    for (const o of state.offers.filter((x) => x.status === 'PENDING' && x.seller === PLAYER_CLUB_ID)) {
+      const p = state.players[o.playerId];
+      if (!p) continue;
+      const value = marketValue(data, p);
+      const good = o.fee >= value * d.sellOverValue && state.club.roster.length > data.economy.minRoster;
+      const buyer = clubById(state, o.buyer).name;
+      if (good) {
+        decide(state, data, 'MANAGER', {
+          kind: 'SELL', text: `把 ${p.name} 以 ${o.fee} 卖给${buyer}`, reason: `报价是身价（约 ${value}）的 ${(o.fee / value).toFixed(1)} 倍${starters.has(p.id) ? '，他是首发，卖了要补人' : ''}`,
+          cost: o.fee, payload: { offerId: o.id }, big: keep.has(p.id), run: () => respondToOffer(state, data, o.id, true),
+        });
+      } else if (!keep.has(p.id) || state.delegation.roles.MANAGER.authority !== 'SELF') {
+        decide(state, data, 'MANAGER', { kind: 'REJECT', text: `拒绝${buyer}对 ${p.name} 的 ${o.fee} 报价`, reason: `报价不到身价（约 ${value}）的 ${d.sellOverValue} 倍`, cost: 0, payload: { offerId: o.id }, run: () => respondToOffer(state, data, o.id, false) });
+      }
+    }
+  }
+  // 2) A missing role: sign the best this manager sees (and the club can afford).
+  for (const role of missingRoles(state)) signFor(state, data, s, role, `队里没有${ROLE_LABEL[role]}`);
+  // 3) Renewals in the last season of a contract.
+  if (state.calendar.phase === 'REGULAR' || state.calendar.phase === 'PLAYOFFS') {
+    const ranked = rosterOf(state).sort((a, b) => managerScore(data, s, b) - managerScore(data, s, a) || a.id.localeCompare(b.id));
+    const wanted = new Set(ranked.slice(0, d.rosterTarget).map((p) => p.id));
+    // Players staying next season without a renewal; below a full team, renewals ignore the reserve.
+    const expiring = expiringPlayers(state);
+    let staying = state.club.roster.length - expiring.length;
+    for (const p of ranked.filter((x) => expiring.includes(x))) {
+      if (p.retiring || !wanted.has(p.id)) continue;
+      if (negotiationFor(state, p.id)) { staying++; continue; }
+      const ask = renewalAsk(data, p, facilityValue(state, data, PLAYER_CLUB_ID, 'OFFICE'));
+      const extra = ask - p.salaryPerWeek;
+      // Within the salary cap and the reserve; short of a team, any renewal the bank can carry.
+      const needed = staying < data.economy.minRoster;
+      const affordable = spare(state, data, 0, Math.max(0, extra)) >= 0;
+      if (!(needed ? affordable || ask <= salaryCap(state, data, s) : affordable && ask <= salaryCap(state, data, s))) continue;
+      staying++;
+      decide(state, data, 'MANAGER', {
+        kind: 'RENEW', text: `和 ${p.name} 续约，周薪 ${ask}`, reason: `他是队里最值得留的 ${d.rosterTarget} 个人之一`, cost: -ask * data.economy.signingFeeWeeks,
+        payload: { playerId: p.id }, ref: p.id, run: () => acceptRenewal(state, data, p.id, data.economy.contracts.defaultYears),
+      });
+    }
+  }
+  // 4) Pre-season: a clearly better player for the weakest starter, if there is money for it.
+  if (state.calendar.phase === 'PRESEASON' && state.club.roster.length < data.economy.maxRoster && state.lineup) {
+    const weakest = state.lineup.picks.map((pk) => ({ pk, p: state.players[pk.playerId]! })).sort((a, b) => playerOverall(a.p) - playerOverall(b.p))[0];
+    if (weakest) {
+      const role = weakest.pk.role;
+      const now = perceived(data, s, weakest.p);
+      signFor(state, data, s, role, `首发${ROLE_LABEL[role]} ${weakest.p.name} 是队里最弱的`, now + d.upgradeMargin);
+    }
+  }
+}
+
+/** Highest weekly salary this manager pays: a fifth of the week's income after staff wages, scaled by style. */
+function salaryCap(state: GameState, data: GameData, s: StaffMember): number {
+  const income = expectedWeeklyIncome(state, data) - weeklyMoney(state, data).staff;
+  return (income / data.economy.minRoster) * data.staff.decisions.salaryCap[s.style];
+}
+
+/**
+ * Signs for a role. Filling an empty role (`atLeast` unset) only needs the fee and a salary
+ * within the style's cap; an upgrade must also leave the reserve untouched.
+ */
+function signFor(state: GameState, data: GameData, s: StaffMember, role: Role, why: string, atLeast = -Infinity): void {
+  const cap = salaryCap(state, data, s);
+  const upgrade = atLeast > -Infinity;
+  // Short of a full team the club may sign cheap players even without money (the game's emergency rule).
+  const emergency = !upgrade && state.club.roster.length < data.economy.minRoster ? emergencySalaryCap(state, data) : -1;
+  const pool = marketPlayers(state).filter((p) => p.primaryRole === role && !p.retiring
+    && ((p.signingFee <= state.funds && state.funds >= 0 && p.salaryPerWeek <= cap) || p.salaryPerWeek <= emergency)
+    && (!upgrade || spare(state, data, p.signingFee, p.salaryPerWeek) >= 0));
+  const scored = pool.map((p) => ({ p, score: managerScore(data, s, p), look: perceived(data, s, p) })).sort((a, b) => b.score - a.score || a.p.id.localeCompare(b.p.id));
+  const pick = scored.find((x) => x.look >= atLeast);
+  if (!pick) return;
+  const p = pick.p;
+  const style = data.staff.styles[s.style].name;
+  decide(state, data, 'MANAGER', {
+    kind: 'SIGN', text: `签下${ROLE_LABEL[role]} ${p.name}（能力 ${Math.round(playerOverall(p))}，周薪 ${p.salaryPerWeek}）`,
+    reason: `${why}；${style}型经理看他能力约 ${Math.round(pick.look)}`, cost: -p.signingFee, payload: { playerId: p.id }, ref: p.id,
+    run: () => signPlayer(state, data, p.id),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Finance: sponsor, rescue, rooms
+
+export function financeWeek(state: GameState, data: GameData): void {
+  const s = hiredStaff(state, 'FINANCE');
+  if (!s) return;
+  const d = data.staff.decisions;
+  const rng = rngFromState(state.rngState);
+  try {
+    const slip = () => rng.chance(mistakeChance(data, s));
+    // 1) No sponsor: the best offer (a weaker finance chief may take the second best).
+    if (!activeSponsor(state) && state.calendar.phase !== 'FINISHED') {
+      const offers = sponsorOffers(state, data).filter((o) => o.id !== data.economy.finance.emergencySponsor.id);
+      const best = bestSponsorFor(data, sponsorStanding(state, data));
+      const other = offers.find((o) => o.id !== best.id);
+      const pick = slip() && other ? other : best;
+      decide(state, data, 'FINANCE', {
+        kind: 'SPONSOR', text: `签赞助：${pick.name}（每周 ${pick.weekly}）`, reason: pick === best ? '能签到的最划算的一家' : '他更看好这家的长期合作',
+        cost: pick.signingBonus, payload: { sponsorId: pick.id }, run: () => signSponsor(state, data, pick.id, 1),
+      });
+    }
+    // 2) Money below the warning line: the emergency deal.
+    const em = data.economy.finance.emergencySponsor;
+    // Only when the cash now outweighs the sponsor money it gives up for the rest of the season.
+    const current = activeSponsor(state)?.weekly ?? 0;
+    const lost = Math.max(0, current - em.weekly) * Math.max(0, seasonWeeks(state, data) - weekOfSeason(state));
+    if (financeSummary(state, data).lowFunds && state.funds < 0 && state.sponsor?.sponsorId !== em.id && lost < em.signingBonus) {
+      decide(state, data, 'FINANCE', {
+        kind: 'RESCUE', text: `接应急赞助"${em.name}"，立即到账 ${em.signingBonus}`, reason: `资金已经是 ${Math.round(state.funds)}`,
+        cost: em.signingBonus, payload: { sponsorId: em.id }, run: () => signSponsor(state, data, em.id, 1),
+      });
+    }
+    // 3) Pre-season, with a full team: one room upgrade from the spare money, in this style's order.
+    if (state.calendar.phase === 'PRESEASON' && missingRoles(state).length === 0) {
+      const free = spare(state, data);
+      const careless = slip(); // a weaker one sometimes spends all the spare money, not just a share
+      for (const room of d.facilityOrder[s.style]) {
+        const next = nextFacilityLevel(data, state.club, room);
+        if (!next) continue;
+        const ok = careless ? next.cost <= free : next.cost <= free * d.facilityShare;
+        if (!ok) continue;
+        decide(state, data, 'FINANCE', {
+          kind: 'FACILITY', text: `把${facilityDef(data, room).name}升一级（${next.cost}）`, reason: careless ? '他觉得现在不升就晚了，把余钱都花了' : `留够 ${reserveWeeks(state, data)} 周开销后还有余钱`,
+          cost: -next.cost, payload: { room }, run: () => upgradeFacility(state, data, room),
+        });
+        break;
+      }
+    }
+  } finally {
+    state.rngState = rng.state();
+  }
+}
+
+/** All staff decisions of a pay day (the coach's training runs earlier, before the week is trained). */
+export function staffWeek(state: GameState, data: GameData): void {
+  managerWeek(state, data); // the team first, then what is left for the finance chief
+  financeWeek(state, data);
+}
+
+/** End of season: how the signings of this season worked out. */
+export function settleDecisionResults(state: GameState): void {
+  for (const e of state.decisionLog) {
+    if (e.result || e.status !== 'DONE' || e.season !== state.calendar.season || !e.ref) continue;
+    const p = state.players[e.ref];
+    const c = p?.career?.find((x) => x.season === e.season);
+    if (e.kind === 'SIGN' || e.kind === 'RENEW') e.result = c ? `本季 ${c.played} 场 ${c.wins} 胜${c.champion ? '，拿了冠军' : ''}` : '本季没有上场';
+  }
+}
+
+/** After the player's match: did the coach's plan work? */
+export function settleMatchDecision(state: GameState, won: boolean): void {
+  const e = [...state.decisionLog].reverse().find((x) => x.kind === 'TACTIC' && x.season === state.calendar.season && !x.result && x.status === 'DONE');
+  if (e && state.calendar.day - e.day <= 7) e.result = won ? '赢了' : '输了';
+}
+

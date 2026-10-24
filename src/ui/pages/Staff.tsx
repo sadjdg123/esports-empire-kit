@@ -7,6 +7,24 @@ import { money } from '../labels';
 
 const SKILL_NAME = { scouting: '识人', leading: '带队', money: '理财' } as const;
 const LIMITS = [10000, 30000, 50000, 100000];
+const STATUS = { DONE: '已办', ADVICE: '建议', APPROVED: '已批', REJECTED: '驳回', EXPIRED: '过期' } as const;
+
+/** The last few things this staff member did or suggested, newest first. */
+function Recent({ game, role }: { game: PageProps['game']; role: StaffRole }) {
+  const list = game.decisionLog.filter((e) => e.role === role).slice(-4).reverse();
+  const waiting = game.pending.filter((p) => p.role === role);
+  if (list.length === 0 && waiting.length === 0) return <p className="dim small-text">还没做过决定。</p>;
+  return (
+    <ul className="plain decisions small-text">
+      {waiting.map((p) => <li key={`p${p.id}`}><b className="tag">待批</b> {p.text} <span className="dim">— {p.reason}</span></li>)}
+      {list.map((e) => (
+        <li key={e.id}>
+          <b className="tag">{STATUS[e.status as keyof typeof STATUS] ?? e.status}</b> {e.text} <span className="dim">— {e.reason}{e.result ? `（结果：${e.result}）` : ''}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 function Skills({ s }: { s: StaffMember }) {
   return (
@@ -71,7 +89,7 @@ export function StaffPage({ game, data, act, flash, ask }: PageProps) {
             </select>
           </label>
         </div>
-        <p className="dim small-text">负责人现在只拿工资、给你出主意；让他们真正动手干活是下一步（T31）。</p>
+        {game.pending.length > 0 && <p className="small-text">有 {game.pending.length} 件事超出额度，等你拍板（批准按钮下一版加上）。</p>}
       </section>
       {STAFF_ROLES.map((role) => {
         const s = hiredStaff(game, role);
@@ -97,6 +115,8 @@ export function StaffPage({ game, data, act, flash, ask }: PageProps) {
                     </label>
                   ))}
                 </div>
+                <h4 className="small-text">最近的决定</h4>
+                <Recent game={game} role={role} />
                 <div className="row">
                   {s.hired && s.hired.until <= game.calendar.season && <button className="small" onClick={() => renew(role, s)}>续约</button>}
                   <button className="small link danger" onClick={() => fire(role, s)}>解雇</button>

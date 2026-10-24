@@ -40,8 +40,8 @@
     "skillMin": 30,
     "skillMax": 90,
     "mainSkillBonus": 12,
-    "salaryBase": 400,
-    "salaryPerSkill": 30,
+    "salaryBase": 200,
+    "salaryPerSkill": 12,
     "signingFeeWeeks": 4,
     "contractYears": 2,
     "releaseFeeShare": 0.5,
@@ -89,5 +89,53 @@
     "protectTop": 3,
     "pendingExpireWeeks": 2,
     "logMax": 200
+  },
+  "decisions": {
+    "mistakeAtZero": 0.45,
+    "perceptionNoise": 14,
+    "reserveWeeks": {
+      "CAUTIOUS": 12,
+      "BOLD": 4,
+      "YOUTH": 8
+    },
+    "restFatigue": 40,
+    "upgradeMargin": 5,
+    "sellOverValue": 1.25,
+    "youthAgeMax": 21,
+    "youthPotentialWeight": 0.4,
+    "rosterTarget": 6,
+    "facilityShare": 0.5,
+    "facilityOrder": {
+      "CAUTIOUS": [
+        "STREAM",
+        "OFFICE",
+        "LOUNGE",
+        "TRAINING",
+        "ANALYSIS"
+      ],
+      "BOLD": [
+        "TRAINING",
+        "ANALYSIS",
+        "LOUNGE",
+        "STREAM",
+        "OFFICE"
+      ],
+      "YOUTH": [
+        "TRAINING",
+        "LOUNGE",
+        "ANALYSIS",
+        "STREAM",
+        "OFFICE"
+      ]
+    },
+    "tacticCounter": {
+      "STEADY_MACRO": "TEAMFIGHT_PUSH"
+    },
+    "defaultTactic": "TEAMFIGHT_PUSH",
+    "salaryCap": {
+      "CAUTIOUS": 0.9,
+      "BOLD": 1.2,
+      "YOUTH": 1.0
+    }
   }
 }

@@ -213,6 +213,7 @@ export interface DecisionEntry {
   reason: string;
   cost: number;
   status: 'DONE' | 'ADVICE' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
+  ref?: string; // a player the result is about (signings, renewals)
   result?: string;
 }
 

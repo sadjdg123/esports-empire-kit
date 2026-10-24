@@ -13,3 +13,4 @@ export * from './career';
 export * from './chemistry';
 export * from './advice';
 export * from './staff';
+export * from './delegation';

@@ -679,6 +679,23 @@ export interface StaffConfig {
     pendingExpireWeeks: number;
     logMax: number; // decision log entries kept
   };
+  /** How staff decide (T31). Skill s (0-100) scales mistakes and misjudgement by (1 - s/100). */
+  decisions: {
+    mistakeAtZero: number; // chance of a mistake for each decision at skill 0
+    perceptionNoise: number; // a manager misjudges a player's overall by up to this much at skill 0
+    reserveWeeks: Record<StaffStyle, number>; // weeks of running costs kept in the bank
+    salaryCap: Record<StaffStyle, number>; // a signing's salary at most this x a fifth of the weekly income
+    restFatigue: number; // the coach rests the squad at this average fatigue
+    upgradeMargin: number; // signs a better player only if he looks this much better than the starter
+    sellOverValue: number; // accepts a bid of at least this times the market value
+    youthAgeMax: number;
+    youthPotentialWeight: number; // youth-minded managers add this x (potential - overall) for young players
+    rosterTarget: number; // contracts the manager wants to keep
+    facilityShare: number; // finance spends at most this share of the spare money on one upgrade
+    facilityOrder: Record<StaffStyle, FacilityId[]>;
+    tacticCounter: Partial<Record<Tactic, Tactic>>; // a clear counter to an opponent's usual tactic (from the balance report)
+    defaultTactic: Tactic; // against an opponent whose tactic is not known
+  };
 }
 
 export interface GameData {

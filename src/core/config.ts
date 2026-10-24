@@ -603,6 +603,19 @@ function checkStaff(c: Checker, raw: unknown): void {
     for (const k of ['namePrefixes', 'nameSuffixes']) c.arr(m[k], `${p}.market.${k}`, 1);
   }
   checkNumbers(c, o.delegation, `${p}.delegation`, ['defaultLimit', 'protectTop', 'pendingExpireWeeks', 'logMax']);
+  const dec = checkNumbers(c, o.decisions, `${p}.decisions`, ['mistakeAtZero', 'perceptionNoise', 'restFatigue', 'upgradeMargin', 'sellOverValue', 'youthAgeMax', 'youthPotentialWeight', 'rosterTarget', 'facilityShare']);
+  if (dec) {
+    if ((dec.mistakeAtZero as number) > 1) c.fail(`${p}.decisions.mistakeAtZero`, 'is a chance (0-1)');
+    for (const k of ['reserveWeeks', 'salaryCap']) {
+      const rw = c.obj(dec[k], `${p}.decisions.${k}`);
+      if (rw) for (const s of STAFF_STYLES) c.num(rw, s, `${p}.decisions.${k}`, 0);
+    }
+    const fo = c.obj(dec.facilityOrder, `${p}.decisions.facilityOrder`);
+    if (fo) for (const s of STAFF_STYLES) { const list = c.arr(fo[s], `${p}.decisions.facilityOrder.${s}`, 1) ?? []; list.forEach((f) => { if (!FACILITY_IDS.includes(f as never)) c.fail(`${p}.decisions.facilityOrder.${s}`, `unknown room ${String(f)}`); }); }
+    const tc = c.obj(dec.tacticCounter, `${p}.decisions.tacticCounter`);
+    if (tc) for (const [t, v] of Object.entries(tc)) if (!TACTICS.includes(t as never) || !TACTICS.includes(v as never)) c.fail(`${p}.decisions.tacticCounter.${t}`, 'expected tactic → tactic');
+    if (!TACTICS.includes(dec.defaultTactic as never)) c.fail(`${p}.decisions.defaultTactic`, 'expected a tactic');
+  }
 }
 
 /** Validates raw JSON values; returns a list of human-readable issues (empty = valid). */
