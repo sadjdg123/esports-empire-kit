@@ -49,9 +49,9 @@
       "TOP"
     ],
     "base": {
-      "hp": 840,
+      "hp": 860,
       "attack": 42,
-      "armor": 33,
+      "armor": 36,
       "attackRange": 100,
       "attackInterval": 1.1,
       "moveSpeed": 38

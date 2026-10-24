@@ -702,7 +702,7 @@
       "powerCurve": [
         {
           "toSec": 840,
-          "damage": 1.11
+          "damage": 1.16
         },
         {
           "fromSec": 1440,
@@ -754,8 +754,12 @@
       "splitRoles": [],
       "powerCurve": [
         {
+          "toSec": 600,
+          "damage": 0.97
+        },
+        {
           "fromSec": 1080,
-          "damage": 1.05
+          "damage": 1.09
         }
       ],
       "farmGold": 1.12,
@@ -793,11 +797,12 @@
       "powerCurve": [
         {
           "toSec": 720,
-          "damage": 0.97
+          "damage": 0.94
         },
         {
-          "fromSec": 1080,
-          "damage": 1.05
+          "fromSec": 780,
+          "toSec": 1440,
+          "damage": 1.04
         }
       ],
       "farmGold": 1.0,

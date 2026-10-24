@@ -1,20 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { armorFactor, structureAttackable } from '../../src/sim/combat';
+import { armorFactor, heroDamageMult, structureAttackable } from '../../src/sim/combat';
 import { runMatch, step } from '../../src/sim';
 import { computeCoefficients } from '../../src/sim/units';
 import { atNode, graphDistance } from '../../src/sim/map';
 import { data, duel, mirrorInput } from './helpers';
 
 describe('basic attacks', () => {
-  it('deal attack x (tick / interval) x mechanics coefficient, reduced by armor', () => {
+  it('deal attack x (tick / interval) x damage multiplier (mechanics, tactic tempo), reduced by armor', () => {
     const s = duel('RIV_TOP', [0], [0]);
     const blue = s.heroes[0]!;
     const red = s.heroes[5]!;
     const redHp = red.hp;
     const blueHp = blue.hp;
     step(s);
-    const expectedOnRed = blue.attack * (1 / blue.hero.base.attackInterval) * blue.coef.damage * armorFactor(s, red.armor);
-    const expectedOnBlue = red.attack * (1 / red.hero.base.attackInterval) * red.coef.damage * armorFactor(s, blue.armor);
+    const expectedOnRed = blue.attack * (1 / blue.hero.base.attackInterval) * heroDamageMult(s, blue) * armorFactor(s, red.armor);
+    const expectedOnBlue = red.attack * (1 / red.hero.base.attackInterval) * heroDamageMult(s, red) * armorFactor(s, blue.armor);
     expect(redHp - red.hp).toBeCloseTo(expectedOnRed, 6);
     expect(blueHp - blue.hp).toBeCloseTo(expectedOnBlue, 6);
   });
