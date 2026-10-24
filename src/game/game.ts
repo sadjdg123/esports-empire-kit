@@ -7,6 +7,7 @@ import { personalityFor } from '../core/personality';
 import { createRng, hashString, type Rng } from '../core/rng';
 import { FACILITY_IDS, STAFF_ROLES, type ClubId, type FacilityId, type GameData, type Player, type PlayerId, type Tactic, type TeamLineup } from '../core/types';
 import { autoLineup } from '../sim/scenario';
+import { refreshStaffMarket } from './staff';
 import { PLAYER_CLUB_ID, type ClubState, type Delegation, type Fixture, type GameState, type LedgerEntry } from './state';
 
 export type Result<T = void> = { ok: true; value: T } | { ok: false; error: string };
@@ -64,7 +65,7 @@ export function newGame(name: string, color: string, seed: number, data: GameDat
     reputation: data.season.startReputation, management: 'PLAYER', funds: 0, facilities: startingFacilities(),
   };
   const schedule = buildSchedule([PLAYER_CLUB_ID, ...aiClubs.map((c) => c.id)], seed, rng);
-  return {
+  const state: GameState = {
     seed,
     week: 0,
     totalRounds: schedule.length,
@@ -99,6 +100,8 @@ export function newGame(name: string, color: string, seed: number, data: GameDat
     decisionLog: [],
     nextDecisionId: 1,
   };
+  refreshStaffMarket(state, data);
+  return state;
 }
 
 /** Nobody hired, every role run by the player (P3). */

@@ -22,6 +22,7 @@ import { applyMatchFinance, applyPlayoffAwards, autoSponsor, financeSummary, pay
 import { aiUpgradeFacilities } from './facilities';
 import { announceRetirements, awardSeasonMvp, retirePlayers, retirementNoticeDue } from './career';
 import { chemistryFromMatch, chemistryNewSeason, groupChemistry } from './chemistry';
+import { refreshStaffMarket, rollStaffContracts } from './staff';
 import { postMessage } from './messages';
 import { applyDailyRecovery, applyMatchEffects, applyTrainingWeek } from './training';
 import { expireOffers, generateAiOffers } from './transfers';
@@ -199,7 +200,7 @@ function recordCareers(state: GameState, champion: ClubId | null): void {
 /** Starts the next season: retirees leave, new schedule, clean table, everyone one year older. */
 /** Returns true when the player has contracts ending in the new season (a reminder was posted). */
 export function startNewSeason(state: GameState, data: GameData): boolean {
-  retirePlayers(state, data);
+  const retired = retirePlayers(state, data);
   aiRenewals(state, data, state.calendar.season);
   aiUpgradeFacilities(state, data, (club) => (club.management === 'PLAYER' ? 0 : data.ai.styles[club.management].reserveWeeks));
   const rng = rngFromState(state.rngState);
@@ -216,6 +217,8 @@ export function startNewSeason(state: GameState, data: GameData): boolean {
   for (const id of Object.keys(state.players).sort()) state.players[id]!.age++;
   postMessage(state, 'SEASON', `第 ${state.calendar.season} 赛季开始`, `休赛期 ${data.season.preseasonWeeks} 周，可以签人、买卖选手、调整阵容。常规赛 ${state.totalRounds} 轮之后是前 ${data.season.playoffTeams} 名的季后赛。`);
   rollContracts(state, data);
+  rollStaffContracts(state, data);
+  refreshStaffMarket(state, data, retired);
   settleReputation(state, data);
   const talent = refreshTalent(state, data);
   postMessage(state, 'SEASON', '自由市场更新', `${talent.joined} 名新秀进入自由市场${talent.retired > 0 ? `；${talent.retired} 名没有球队的老将退役` : ''}${talent.left > 0 ? `；${talent.left} 名自由球员离开了联赛` : ''}。`);

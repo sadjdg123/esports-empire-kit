@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { loadGameData } from '../core/config';
 import type { GameData } from '../core/types';
 import {
-  PLAYER_CLUB_ID, advanceDay, advanceToNextMatch, clubById, commitWeek, nextPlayerFixture, prepareWeek, readinessIssues,
+  PLAYER_CLUB_ID, advanceDay, advanceToNextMatch, clubById, commitWeek, nextPlayerFixture, prepareWeek, readinessIssues, refreshStaffMarket,
   type DayResult, type GameState, type InboxMessage, type Result, type WeekSummary,
 } from '../game';
 import { lookFor } from '../render/pixel/chibi';
@@ -31,6 +31,7 @@ import { MatchPage } from './pages/Match';
 import { ReportPage } from './pages/Report';
 import { SchedulePage } from './pages/Schedule';
 import { SettingsPage } from './pages/Settings';
+import { StaffPage } from './pages/Staff';
 import { StartPage } from './pages/Start';
 import { TrainingPage } from './pages/Training';
 import { SAVE_KEY, browserStorage } from './storage';
@@ -38,7 +39,7 @@ import './styles.css';
 
 export type Page =
   | 'start' | 'home' | 'overview' | 'inbox' | 'market' | 'lineup' | 'training' | 'contracts' | 'schedule' | 'finance' | 'history'
-  | 'report' | 'settings' | 'match' | 'menu' | 'matchday' | 'seasonend' | 'facilities';
+  | 'report' | 'settings' | 'match' | 'menu' | 'matchday' | 'seasonend' | 'facilities' | 'staff';
 
 export interface PageProps {
   game: GameState;
@@ -61,7 +62,7 @@ export type ClockSpeed = 1 | 2 | 4;
 
 const HOTSPOT_PAGE: Record<Hotspot, Page> = {
   lineup: 'lineup', training: 'training', schedule: 'schedule', contracts: 'contracts', finance: 'finance',
-  history: 'history', report: 'report', inbox: 'inbox', market: 'market', facilities: 'facilities',
+  history: 'history', report: 'report', inbox: 'inbox', market: 'market', facilities: 'facilities', staff: 'staff',
 };
 const TITLES: Partial<Record<Page, [string, string]>> = {
   menu: ['菜单', 'home'], matchday: ['比赛日', 'schedule'], seasonend: ['赛季结束', 'history'],
@@ -71,7 +72,10 @@ const TUTORIAL_KEY = 'esports-empire.tutorial.v1';
 
 function initialLoad(): { outcome: LoadOutcome; game: GameState | null } {
   const outcome = loadGame(browserStorage, SAVE_KEY);
-  return { outcome, game: outcome.save ? (outcome.save.game as GameState) : null };
+  const game = outcome.save ? (outcome.save.game as GameState) : null;
+  // Saves from before P3 have no staff candidates yet: give them this season's batch.
+  if (game && game.staffMarket.length === 0 && Object.keys(game.staff).length === 0) refreshStaffMarket(game, data);
+  return { outcome, game };
 }
 
 function readTutorialSeen(): boolean {
@@ -260,6 +264,7 @@ export function App() {
           {win === 'schedule' && <SchedulePage {...props} />}
           {win === 'finance' && <FinancePage {...props} />}
           {win === 'facilities' && <FacilitiesPage {...props} />}
+          {win === 'staff' && <StaffPage {...props} />}
           {win === 'history' && <HistoryPage {...props} />}
           {win === 'report' && <ReportPage {...props} round={reportRound} lastWeek={lastWeek} />}
           {win === 'settings' && <SettingsPage {...props} onReplace={(g) => { setGame(g); gameRef.current = g; setLastWeek(null); setRunning(false); setWin(null); }} onNewGame={() => go('start')} />}

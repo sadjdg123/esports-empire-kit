@@ -35,6 +35,7 @@ export interface SceneExtras {
   titles: number; // championships won (gold cups)
   finals: number; // lost finals (silver cups)
   facilities?: Partial<Record<FacilityId, number>>; // room levels (T22): more furniture at higher levels
+  staff?: string[]; // ids of hired staff (P3): each gets a seat at the staff desk in the office
 }
 
 const z0 = (f: Floor) => (f === 1 ? FH : 0);
@@ -77,6 +78,9 @@ const SPOTS: Record<Activity, Spot[]> = {
   TALK: [{ i: 5.65, j: 3.3, f: 1, pose: 'sit' }],
 };
 const MANAGER: Spot = { i: 5.65, j: 1.55, f: 1, pose: 'stand' };
+/** Seats behind the staff desk in the office, one per hired staff member (P3). */
+const STAFF_SEATS: [number, number][] = [[5.75, 4.2], [6.7, 4.2], [7.65, 4.2]];
+const STAFF_DESK_DEPTH = 5.55 + 4.5 + 1.2;
 
 // Small icons for the speech bubbles (6x6).
 const ICON_PAL = { o: OUT, n: '#3a6fd8', z: '#5a5aa8', r: '#e04848', b: '#5ab0ee', d: '#555555', y: '#f2b84b' };
@@ -329,7 +333,7 @@ export class ClubScene {
 
   /** Everything that does not move is drawn once, and again only when the club colour or the trophies change. */
   private build(): void {
-    const key = `${this.color}|${this.extras.titles}|${this.extras.finals}|${JSON.stringify(this.extras.facilities ?? {})}`;
+    const key = `${this.color}|${this.extras.titles}|${this.extras.finals}|${JSON.stringify(this.extras.facilities ?? {})}`; // staff are drawn live, not baked
     if (key === this.builtFor) return;
     this.builtFor = key;
     this.sky = this.capture(() => {
@@ -367,6 +371,8 @@ export class ClubScene {
         items.push({ depth: this.figureDepth(fig), draw: () => this.drawFigure(fig) });
       }
       if (f === 1) items.push({ depth: MANAGER.i + MANAGER.j, draw: () => this.drawManager() });
+      // Staff sit behind the staff desk (depth just below the desk's).
+      if (f === 1) (this.extras.staff ?? []).forEach((id, k) => items.push({ depth: STAFF_DESK_DEPTH - 0.1 - k * 0.01, draw: () => this.drawStaff(id, k) }));
       items.sort((a, b) => a.depth - b.depth);
       for (const it of items) it.draw();
     }
@@ -723,7 +729,15 @@ export class ClubScene {
       this.box(6.0, 2.15, 0.15, 0.15, 3, '#f4f4f4', 10, 1);
     }, { hotspot: 'contracts' });
     add(1, 5.65 + 3.3 + 0.3, () => this.box(5.45, 3.55, 0.4, 0.08, 8, '#6d4c8a', 5, 1));
-    add(1, 7.5 + 4.5 + 0.4, () => this.plant(7.45, 4.4, 1));
+    // Staff desk (P3): a long low desk with three laptops; hired staff sit behind it.
+    add(1, STAFF_DESK_DEPTH, () => {
+      this.box(5.5, 4.45, 2.45, 0.35, 9, '#9a6a3e', 0, 1);
+      for (let k = 0; k < 3; k++) {
+        const [x, y] = iso(5.75 + k * 0.95, 4.5, 1);
+        this.px(x - 2, y - 13, 5, 3, '#3b3f4c');
+        this.px(x - 1, y - 12, 3, 1, '#9fe0ff');
+      }
+    }, { hotspot: 'staff' });
     this.addRoomUpgrades(add);
   }
 
@@ -868,6 +882,14 @@ export class ClubScene {
     const img = chibi(f.look, frame, f.flip);
     const h = crop ?? img.height;
     this.ctx.drawImage(img, 0, 0, img.width, h, Math.round(x - img.width / 2), Math.round(y - h + dy + bob), img.width, h);
+  }
+
+  /** A hired staff member behind the staff desk, typing (P3). */
+  private drawStaff(id: string, k: number): void {
+    const [si, sj] = STAFF_SEATS[k]!;
+    const img = chibi(lookFor(id, this.color), Math.floor(this.time * 4 + k) % 2 ? 'typeA' : 'typeB');
+    const [x, y] = iso(si, sj, 1);
+    this.ctx.drawImage(img, 0, 0, img.width, 15, Math.round(x - img.width / 2), Math.round(y - 17), img.width, 15);
   }
 
   private drawManager(): void {

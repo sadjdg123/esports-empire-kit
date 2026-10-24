@@ -9,7 +9,7 @@ import {
 import { TIRED_AT } from './activities';
 
 /** Furniture the player can tap; each opens one window. */
-export type Hotspot = 'lineup' | 'training' | 'schedule' | 'contracts' | 'finance' | 'history' | 'report' | 'inbox' | 'market' | 'facilities';
+export type Hotspot = 'lineup' | 'training' | 'schedule' | 'contracts' | 'finance' | 'history' | 'report' | 'inbox' | 'market' | 'facilities' | 'staff';
 export type Marker = 'bang' | 'sweat' | 'note';
 
 /** Unread mail, a short roster, a lineup that isn't ready, offers, expiring contracts, money trouble, tired players. */

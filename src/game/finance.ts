@@ -8,6 +8,7 @@ import { postMessage } from './messages';
 import { PLAYER_CLUB_ID, type ClubState, type FixtureResult, type GameState, type LedgerKind } from './state';
 import { facilityUpkeep, facilityValue, sponsorStanding } from './facilities';
 import { trainingFocusOf } from './training';
+import { staffWages } from './staff';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (error: string): Result<never> => ({ ok: false, error });
@@ -135,6 +136,7 @@ export interface WeeklyMoney {
   merch: number;
   training: number; // as a positive amount
   upkeep: number; // facilities, as a positive amount
+  staff: number; // hired staff wages (player club, P3), as a positive amount
   net: number;
 }
 
@@ -150,7 +152,8 @@ export function weeklyMoney(state: GameState, data: GameData, clubId: ClubId = P
     * (1 + facilityValue(state, data, clubId, 'STREAM')));
   const training = trainingFocusOf(state, data, clubId) === 'REST' ? 0 : club.roster.length * f.trainingCostPerPlayer;
   const upkeep = facilityUpkeep(data, club);
-  return { salaries, sponsor, league, merch, training, upkeep, net: sponsor + league + merch - salaries - training - upkeep };
+  const staff = clubId === PLAYER_CLUB_ID ? staffWages(state) : 0;
+  return { salaries, sponsor, league, merch, training, upkeep, staff, net: sponsor + league + merch - salaries - training - upkeep - staff };
 }
 
 /** Pay day for every club. */
@@ -164,6 +167,7 @@ export function runPayDay(state: GameState, data: GameData): void {
   line('MERCH', m.merch, '周边收入');
   line('TRAINING', -m.training, '训练开销');
   line('UPKEEP', -m.upkeep, '设施维护');
+  line('STAFF', -m.staff, '负责人工资');
   for (const club of state.aiClubs) club.funds += weeklyMoney(state, data, club.id).net;
 }
 

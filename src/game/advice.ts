@@ -26,7 +26,7 @@ export interface MoneyOutlook { weeklyNet: number; weeksLeft: number | null } //
 
 export function moneyOutlook(state: GameState, data: GameData, extraSalary = 0, funds = state.funds): MoneyOutlook {
   const m = weeklyMoney(state, data);
-  const costs = m.salaries + extraSalary + m.training + m.upkeep;
+  const costs = m.salaries + extraSalary + m.training + m.upkeep + m.staff;
   const weeklyNet = Math.round(expectedWeeklyIncome(state, data, PLAYER_CLUB_ID) - costs);
   const weeksLeft = weeklyNet >= 0 ? null : Math.max(0, Math.floor(funds / -weeklyNet));
   return { weeklyNet, weeksLeft };

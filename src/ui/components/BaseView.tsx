@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import type { GameData } from '../../core/types';
+import { STAFF_ROLES, type GameData } from '../../core/types';
 import type { GameState } from '../../game';
 import { clubActivities } from '../../render/club/activities';
 import { ClubScene, SCENE_H, SCENE_W, type Hotspot, type Marker } from '../../render/club/ClubScene';
@@ -34,7 +34,8 @@ export function BaseView({ game, data, markers, cheer, onPlayer, onHotspot }: {
   const titles = game.history.filter((h) => h.playerPlayoff === 'CHAMPION').length;
   const finals = game.history.filter((h) => h.playerPlayoff === 'FINAL').length;
   const rooms = JSON.stringify(game.club.facilities);
-  useEffect(() => { sceneRef.current?.setExtras({ titles, finals, facilities: JSON.parse(rooms) }); }, [titles, finals, rooms]);
+  const staff = STAFF_ROLES.map((r) => game.delegation.roles[r].staffId).filter((x): x is string => !!x).join(',');
+  useEffect(() => { sceneRef.current?.setExtras({ titles, finals, facilities: JSON.parse(rooms), staff: staff ? staff.split(',') : [] }); }, [titles, finals, rooms, staff]);
 
   const tap = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const r = e.currentTarget.getBoundingClientRect();

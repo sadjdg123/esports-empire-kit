@@ -274,3 +274,14 @@ button.link.name { padding: 0; margin: 0; color: var(--text); font-weight: 600; 
 .advice.warn { background: #fbf0d8; color: #7a5410; border: 1px solid #e8cf94; }
 .advice.good { background: #e3f3e8; color: #24603d; border: 1px solid #a9d6b7; }
 .fill-tag { margin-left: 4px; font-size: 12px; padding: 1px 6px; border-radius: 6px; background: #3e9d5d; color: #fff; white-space: nowrap; }
+
+/* Staff (P3) */
+.staff-card { padding: 8px 0; border-bottom: 1px dashed #e0d2b0; }
+.staff-card:last-child { border-bottom: none; }
+.staff-skills { margin: 6px 0; }
+.skill-row { display: grid; grid-template-columns: 34px 1fr 28px; align-items: center; gap: 6px; }
+.skill-row .bar { height: 8px; border-radius: 4px; background: #eadfc6; overflow: hidden; }
+.skill-row .bar i { display: block; height: 100%; background: #3a7bd5; }
+.authority { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+.authority .tactic { flex: 1 1 30%; min-width: 92px; }
+.row.wrap { flex-wrap: wrap; gap: 10px; }

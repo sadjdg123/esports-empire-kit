@@ -1,0 +1,128 @@
+import { AUTHORITIES, STAFF_ROLES, type Authority, type StaffMember, type StaffRole } from '../../core/types';
+import { fireStaff, hireStaff, hiredStaff, mainSkill, renewStaff, setAuthority, setDelegationLimits, staffReleaseFee, staffWages } from '../../game';
+import type { PageProps } from '../App';
+import { Portrait } from '../components/Portrait';
+import { lookFor } from '../../render/pixel/chibi';
+import { money } from '../labels';
+
+const SKILL_NAME = { scouting: '识人', leading: '带队', money: '理财' } as const;
+const LIMITS = [10000, 30000, 50000, 100000];
+
+function Skills({ s }: { s: StaffMember }) {
+  return (
+    <div className="staff-skills">
+      {(Object.keys(SKILL_NAME) as (keyof typeof SKILL_NAME)[]).map((k) => (
+        <div key={k} className="skill-row">
+          <span className="dim small-text">{SKILL_NAME[k]}</span>
+          <span className="bar"><i style={{ width: `${s.skills[k]}%` }} /></span>
+          <b className="small-text">{s.skills[k]}</b>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Staff (P3, T30): hire a manager, a coach and a finance chief, and decide how freely each may act. */
+export function StaffPage({ game, data, act, flash, ask }: PageProps) {
+  const cfg = data.staff;
+  const hire = (s: StaffMember) => {
+    ask(`聘请${cfg.roles[s.role].name} ${s.name}？签约费 ${money(s.signingFee)}，之后每周工资 ${money(s.salaryPerWeek)}，合同 ${cfg.market.contractYears} 个赛季。`, '聘请', () => {
+      const r = act((d) => hireStaff(d, data, s.id));
+      flash(r.ok ? `${s.name} 上任了，权限是"${cfg.authorityNames[game.delegation.roles[s.role].authority === 'SELF' ? 'SMALL' : game.delegation.roles[s.role].authority]}"` : r.error);
+    });
+  };
+  const fire = (role: StaffRole, s: StaffMember) => {
+    ask(`解雇 ${s.name}？要付违约金 ${money(staffReleaseFee(game, data, s))}，${cfg.roles[role].name}的工作回到你手上。`, '解雇', () => {
+      const r = act((d) => fireStaff(d, data, role));
+      flash(r.ok ? `已解雇 ${s.name}` : r.error);
+    });
+  };
+  const renew = (role: StaffRole, s: StaffMember) => {
+    ask(`和 ${s.name} 续约 ${cfg.market.contractYears} 个赛季？续约费 ${money(s.signingFee)}，工资不变。`, '续约', () => {
+      const r = act((d) => renewStaff(d, data, role));
+      flash(r.ok ? `${s.name} 续约到第 ${r.value} 赛季` : r.error);
+    });
+  };
+  const authority = (role: StaffRole, a: Authority) => {
+    const r = act((d) => setAuthority(d, role, a));
+    if (!r.ok) flash(r.error);
+  };
+  const limits = (limit: number, protectTop: number) => {
+    const r = act((d) => setDelegationLimits(d, limit, protectTop));
+    if (!r.ok) flash(r.error);
+  };
+  const candidates = (role: StaffRole) => game.staffMarket.map((id) => game.staff[id]!).filter((s) => s.role === role)
+    .sort((a, b) => mainSkill(data, b) - mainSkill(data, a) || a.id.localeCompare(b.id));
+
+  return (
+    <div className="grid">
+      <section className="card wide">
+        <h2>负责人</h2>
+        <p className="dim">雇人替你管日常的事。每个岗位可以选：亲自管（他只给建议）、小事自己办（额度内自己做，超出的交给你批）、全权托管。现在负责人每周工资合计 {money(staffWages(game))}。</p>
+        <div className="row wrap">
+          <label className="small-text">单笔额度
+            <select value={game.delegation.limit} onChange={(e) => limits(Number(e.target.value), game.delegation.protectTop)}>
+              {LIMITS.map((v) => <option key={v} value={v}>{money(v)} 以内自己做主</option>)}
+            </select>
+          </label>
+          <label className="small-text">核心保护
+            <select value={game.delegation.protectTop} onChange={(e) => limits(game.delegation.limit, Number(e.target.value))}>
+              {[0, 1, 2, 3, 4, 5].map((v) => <option key={v} value={v}>{v === 0 ? '不保护' : `首发最强 ${v} 人不卖`}</option>)}
+            </select>
+          </label>
+        </div>
+        <p className="dim small-text">负责人现在只拿工资、给你出主意；让他们真正动手干活是下一步（T31）。</p>
+      </section>
+      {STAFF_ROLES.map((role) => {
+        const s = hiredStaff(game, role);
+        const slot = game.delegation.roles[role];
+        return (
+          <section key={role} className="card staff-role">
+            <h3>{cfg.roles[role].name} <span className="dim small-text">{cfg.roles[role].description}</span></h3>
+            {s ? (
+              <div className="staff-card hired">
+                <div className="row">
+                  <Portrait look={lookFor(s.id, game.club.color)} size={44} />
+                  <div>
+                    <b>{s.name}</b> <span className="dim small-text">{cfg.styles[s.style].name} · {s.origin === 'RETIRED' ? '退役选手' : '职业负责人'}</span>
+                    <div className="small-text">周薪 {money(s.salaryPerWeek)} · 合同到第 {s.hired?.until} 赛季</div>
+                  </div>
+                </div>
+                <Skills s={s} />
+                <div className="authority">
+                  {AUTHORITIES.map((a) => (
+                    <label key={a} className={`tactic ${slot.authority === a ? 'on' : ''}`}>
+                      <input type="radio" name={`auth-${role}`} checked={slot.authority === a} onChange={() => authority(role, a)} />
+                      <b>{cfg.authorityNames[a]}</b>
+                    </label>
+                  ))}
+                </div>
+                <div className="row">
+                  {s.hired && s.hired.until <= game.calendar.season && <button className="small" onClick={() => renew(role, s)}>续约</button>}
+                  <button className="small link danger" onClick={() => fire(role, s)}>解雇</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="dim small-text">空缺：这部分现在由你亲自管。下面是这个休赛期的候选人。</p>
+                {candidates(role).length === 0 && <p className="dim small-text">暂时没有候选人，下个休赛期会有新的一批。</p>}
+                <ul className="plain staff-list">
+                  {candidates(role).map((c) => (
+                    <li key={c.id} className="staff-card">
+                      <div className="row between">
+                        <div><b>{c.name}</b> <span className="dim small-text">{cfg.styles[c.style].name}{c.origin === 'RETIRED' ? ' · 退役选手' : ''}</span></div>
+                        <button className="primary small" onClick={() => hire(c)} disabled={game.funds < c.signingFee}>聘请</button>
+                      </div>
+                      <Skills s={c} />
+                      <div className="dim small-text">周薪 {money(c.salaryPerWeek)} · 签约费 {money(c.signingFee)} · {cfg.styles[c.style].description}</div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
