@@ -29,7 +29,7 @@ export interface Calendar {
   day: number; // days since the start of this season (0-based)
 }
 
-export type InboxKind = 'INFO' | 'MATCH' | 'OFFER' | 'CONTRACT' | 'FINANCE' | 'SEASON';
+export type InboxKind = 'INFO' | 'MATCH' | 'OFFER' | 'CONTRACT' | 'FINANCE' | 'SEASON' | 'STAFF';
 
 export interface InboxMessage {
   id: number;

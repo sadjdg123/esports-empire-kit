@@ -1,5 +1,5 @@
 import { AUTHORITIES, STAFF_ROLES, type Authority, type StaffMember, type StaffRole } from '../../core/types';
-import { fireStaff, hireStaff, hiredStaff, mainSkill, renewStaff, setAuthority, setDelegationLimits, staffReleaseFee, staffWages } from '../../game';
+import { approvePending, fireStaff, hireStaff, hiredStaff, mainSkill, rejectPending, renewStaff, setAuthority, setDelegationLimits, staffReleaseFee, staffWages } from '../../game';
 import type { PageProps } from '../App';
 import { Portrait } from '../components/Portrait';
 import { lookFor } from '../../render/pixel/chibi';
@@ -12,11 +12,9 @@ const STATUS = { DONE: '已办', ADVICE: '建议', APPROVED: '已批', REJECTED:
 /** The last few things this staff member did or suggested, newest first. */
 function Recent({ game, role }: { game: PageProps['game']; role: StaffRole }) {
   const list = game.decisionLog.filter((e) => e.role === role).slice(-4).reverse();
-  const waiting = game.pending.filter((p) => p.role === role);
-  if (list.length === 0 && waiting.length === 0) return <p className="dim small-text">还没做过决定。</p>;
+  if (list.length === 0) return <p className="dim small-text">还没做过决定。</p>;
   return (
     <ul className="plain decisions small-text">
-      {waiting.map((p) => <li key={`p${p.id}`}><b className="tag">待批</b> {p.text} <span className="dim">— {p.reason}</span></li>)}
       {list.map((e) => (
         <li key={e.id}>
           <b className="tag">{STATUS[e.status as keyof typeof STATUS] ?? e.status}</b> {e.text} <span className="dim">— {e.reason}{e.result ? `（结果：${e.result}）` : ''}</span>
@@ -69,6 +67,11 @@ export function StaffPage({ game, data, act, flash, ask }: PageProps) {
     const r = act((d) => setDelegationLimits(d, limit, protectTop));
     if (!r.ok) flash(r.error);
   };
+  const decide = (id: number, yes: boolean) => {
+    const p = game.pending.find((x) => x.id === id);
+    const r = act((d) => (yes ? approvePending(d, data, id) : rejectPending(d, data, id)));
+    flash(r.ok ? `${yes ? '已批准' : '已驳回'}：${p?.text ?? ''}` : r.error);
+  };
   const candidates = (role: StaffRole) => game.staffMarket.map((id) => game.staff[id]!).filter((s) => s.role === role)
     .sort((a, b) => mainSkill(data, b) - mainSkill(data, a) || a.id.localeCompare(b.id));
 
@@ -89,8 +92,26 @@ export function StaffPage({ game, data, act, flash, ask }: PageProps) {
             </select>
           </label>
         </div>
-        {game.pending.length > 0 && <p className="small-text">有 {game.pending.length} 件事超出额度，等你拍板（批准按钮下一版加上）。</p>}
       </section>
+      {game.pending.length > 0 && (
+        <section className="card wide pending">
+          <h2>待你拍板 <span className="badge">{game.pending.length}</span></h2>
+          <ul className="plain">
+            {game.pending.map((p) => (
+              <li key={p.id} className={`pending-item ${p.big ? 'big' : ''}`}>
+                <div className="small-text dim">{cfg.roles[p.role].name} {game.staff[p.staffId]?.name ?? ''}{p.big ? ' · 大事' : ''} · {Math.max(0, p.expiresDay - game.calendar.day)} 天后作废</div>
+                <div><b>{p.text}</b></div>
+                <div className="small-text">{p.reason}</div>
+                <div className="small-text">{p.cost === 0 ? '不花钱' : p.cost > 0 ? `进账 ${money(p.cost)}` : `花费 ${money(-p.cost)}`}</div>
+                <div className="row pending-buttons">
+                  <button className="primary" onClick={() => decide(p.id, true)}>批准</button>
+                  <button onClick={() => decide(p.id, false)}>驳回</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {STAFF_ROLES.map((role) => {
         const s = hiredStaff(game, role);
         const slot = game.delegation.roles[role];

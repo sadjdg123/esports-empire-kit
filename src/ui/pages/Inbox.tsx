@@ -3,7 +3,7 @@ import { PLAYER_CLUB_ID, clubById, marketValue, respondToOffer, type InboxMessag
 import type { PageProps } from '../App';
 import { money } from '../labels';
 
-const KIND_NAME: Record<InboxMessage['kind'], string> = { INFO: '通知', MATCH: '比赛', OFFER: '报价', CONTRACT: '合同', FINANCE: '财务', SEASON: '赛季' };
+const KIND_NAME: Record<InboxMessage['kind'], string> = { INFO: '通知', MATCH: '比赛', OFFER: '报价', CONTRACT: '合同', FINANCE: '财务', SEASON: '赛季', STAFF: '负责人' };
 
 export function InboxPage(props: PageProps) {
   const { game, data, act, go, flash, ask } = props;

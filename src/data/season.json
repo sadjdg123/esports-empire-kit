@@ -15,7 +15,8 @@
     "OFFER",
     "CONTRACT_EXPIRING",
     "LOW_FUNDS",
-    "SEASON_END"
+    "SEASON_END",
+    "DECISION"
   ],
   "startReputation": 15,
   "maxSeasonsHistory": 50,

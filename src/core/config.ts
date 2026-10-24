@@ -442,7 +442,7 @@ function checkSeason(c: Checker, raw: unknown): void {
   if (o.playoffTeams !== 4 && o.playoffTeams !== 2) c.fail(`${p}.playoffTeams`, 'expected 2 or 4');
   c.arr(o.speeds, `${p}.speeds`, 1);
   const pauses = c.arr(o.autoPause, `${p}.autoPause`) ?? [];
-  const allowed = ['MATCH_DAY', 'OFFER', 'CONTRACT_EXPIRING', 'LOW_FUNDS', 'SEASON_END'];
+  const allowed = ['MATCH_DAY', 'OFFER', 'CONTRACT_EXPIRING', 'LOW_FUNDS', 'SEASON_END', 'DECISION'];
   pauses.forEach((e, i) => { if (!allowed.includes(e as string)) c.fail(`${p}.autoPause[${i}]`, `unknown event ${JSON.stringify(e)}`); });
 }
 

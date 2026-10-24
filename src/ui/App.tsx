@@ -164,6 +164,7 @@ export function App() {
   const handlePause = useCallback((r: DayResult) => {
     if (r.pause === 'MATCH_DAY') { setWin('matchday'); return; }
     if (r.pause === 'SEASON_END') { setWin('seasonend'); return; }
+    if (r.pause === 'DECISION') { setWin('staff'); flash('有件大事要你拍板'); return; }
     const last = r.messages[r.messages.length - 1];
     if (last) flash(last.title);
   }, [flash]);
@@ -241,7 +242,7 @@ export function App() {
 
   return (
     <div className="app base-screen">
-      <Hud game={game} data={data} running={running} speed={speed} setRunning={setRunning} setSpeed={setSpeed} toNextMatch={toNextMatch} />
+      <Hud game={game} data={data} running={running} speed={speed} setRunning={setRunning} setSpeed={setSpeed} toNextMatch={toNextMatch} openPending={() => go('staff')} />
       {notice && <div className="notice">{notice}<button className="link" onClick={() => setNotice(null)}>知道了</button></div>}
       <BaseView
         game={game} data={data} markers={markersFor(game, data)} cheer={game.calendar.day === cheerDay}
@@ -325,7 +326,8 @@ function dialogLine(g: GameState, act: PageProps['act'], go: PageProps['go'], tu
       dismiss: seeTutorial,
     };
   }
-  const m = g.inbox.find((x) => !x.read && x.kind !== 'MATCH');
+  // A staff weekly summary only speaks up when something waits for the player.
+  const m = g.inbox.find((x) => !x.read && x.kind !== 'MATCH' && !(x.kind === 'STAFF' && !x.data?.pending));
   if (!m) return null;
   const markRead = () => act((d) => { const x = d.inbox.find((y) => y.id === m.id); if (x) x.read = true; return { ok: true, value: undefined }; });
   const speakerFor = (msg: InboxMessage) => {
@@ -334,7 +336,7 @@ function dialogLine(g: GameState, act: PageProps['act'], go: PageProps['go'], tu
     const p = pid ? g.players[pid] : undefined;
     return p ? { speaker: p.name, look: lookFor(p.id, g.club.color) } : { speaker: '助理 小禾', look: ASSISTANT };
   };
-  const target: Page | null = m.kind === 'OFFER' || m.kind === 'CONTRACT' ? 'contracts' : m.kind === 'FINANCE' ? 'finance' : m.kind === 'SEASON' ? 'schedule' : null;
+  const target: Page | null = m.kind === 'OFFER' || m.kind === 'CONTRACT' ? 'contracts' : m.kind === 'FINANCE' ? 'finance' : m.kind === 'SEASON' ? 'schedule' : m.kind === 'STAFF' ? 'staff' : null;
   return {
     key: `msg-${m.id}`, ...speakerFor(m), text: `${m.title}：${m.body}`,
     action: target ? { label: '去看看', run: () => { markRead(); go(target); } } : undefined,

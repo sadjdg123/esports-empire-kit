@@ -4,9 +4,9 @@ import type { ClockSpeed } from '../App';
 import { money } from '../labels';
 
 /** The status bar over the base: date, money, reputation, the clock. */
-export function Hud({ game, data, running, speed, setRunning, setSpeed, toNextMatch }: {
+export function Hud({ game, data, running, speed, setRunning, setSpeed, toNextMatch, openPending }: {
   game: GameState; data: GameData; running: boolean; speed: ClockSpeed;
-  setRunning: (v: boolean) => void; setSpeed: (v: ClockSpeed) => void; toNextMatch: () => void;
+  setRunning: (v: boolean) => void; setSpeed: (v: ClockSpeed) => void; toNextMatch: () => void; openPending: () => void;
 }) {
   const f = financeSummary(game, data);
   const next = nextPlayerFixture(game, data);
@@ -21,6 +21,7 @@ export function Hud({ game, data, running, speed, setRunning, setSpeed, toNextMa
       <div className="hud-row">
         <span className={`hud-money ${level}`}>{money(game.funds)}</span>
         <span className="hud-rep">声望 {Math.round(game.club.reputation)}</span>
+        {game.pending.length > 0 && <button className="hud-pending" onClick={openPending}>待批 {game.pending.length}</button>}
         <span className="hud-clock">
           <button className={running ? 'on' : ''} onClick={() => setRunning(!running)} aria-label={running ? '暂停' : '开始'}>
             {running ? '⏸ 暂停' : game.calendar.phase === 'FINISHED' ? '▶ 新赛季' : '▶ 开始'}

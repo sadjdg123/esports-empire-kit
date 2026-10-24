@@ -481,7 +481,7 @@ export interface MatchConfig {
   tactics: Record<Tactic, TacticConfig>;
 }
 
-export type AutoPauseEvent = 'MATCH_DAY' | 'OFFER' | 'CONTRACT_EXPIRING' | 'LOW_FUNDS' | 'SEASON_END';
+export type AutoPauseEvent = 'MATCH_DAY' | 'OFFER' | 'CONTRACT_EXPIRING' | 'LOW_FUNDS' | 'SEASON_END' | 'DECISION';
 
 export interface SeasonConfig {
   preseasonWeeks: number; // transfer window before the regular season

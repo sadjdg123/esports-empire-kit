@@ -23,7 +23,7 @@ import { aiUpgradeFacilities } from './facilities';
 import { announceRetirements, awardSeasonMvp, retirePlayers, retirementNoticeDue } from './career';
 import { chemistryFromMatch, chemistryNewSeason, groupChemistry } from './chemistry';
 import { refreshStaffMarket, rollStaffContracts } from './staff';
-import { coachMatchDay, coachTraining, settleDecisionResults, settleMatchDecision, staffWeek } from './delegation';
+import { coachMatchDay, coachTraining, expirePending, postStaffWeekSummary, settleDecisionResults, settleMatchDecision, staffWeek } from './delegation';
 import { postMessage } from './messages';
 import { applyDailyRecovery, applyMatchEffects, applyTrainingWeek } from './training';
 import { expireOffers, generateAiOffers } from './transfers';
@@ -260,6 +260,7 @@ export function advanceDay(state: GameState, data: GameData): DayResult {
     if (remindExpiring(state)) pause = 'CONTRACT_EXPIRING';
   }
   applyDailyRecovery(state, data);
+  expirePending(state, data);
   if (day % cfg.daysPerWeek === cfg.payWeekday) {
     runPayDay(state, data); // before training: this week's training is paid for
     coachTraining(state, data); // a hired coach picks this week's training first
@@ -267,9 +268,10 @@ export function advanceDay(state: GameState, data: GameData): DayResult {
     if (retirementNoticeDue(state, data)) announceRetirements(state, data);
     if (state.calendar.phase === 'PRESEASON') aiPreseasonWeek(state, data);
     const bids = generateAiOffers(state, data);
-    staffWeek(state, data);
-    // Only bids the manager left for the player stop the clock.
+    // Only big staff decisions (a core player's sale, a spend beyond the reserve) and bids the manager left for the player stop the clock.
+    if (staffWeek(state, data)) pause ??= 'DECISION';
     if (bids.some((o) => o.status === 'PENDING')) pause ??= 'OFFER';
+    postStaffWeekSummary(state, data);
     const f = financeSummary(state, data);
     if (f.lowFunds && f.weeklySalaries > 0) {
       postMessage(state, 'FINANCE', '资金偏低', `现在资金 ${Math.round(state.funds)}，低于 ${data.economy.lowFundsWarningWeeks} 周工资。${rescueOptions(state, data).join('；')}。`);

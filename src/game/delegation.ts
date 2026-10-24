@@ -1,17 +1,19 @@
 // Staff decisions (P3, T31): the hired manager, coach and finance chief run their part of the
 // club within the player's permissions. Every decision goes into the decision log; under
 // "small things alone" anything above the deal limit, and under any level the sale of a
-// protected core player, becomes a pending decision for the player (approved in T32).
-// Skill scales mistakes and misjudgement; style decides what each one prefers.
+// protected core player or a spend beyond the money set aside, becomes a pending decision
+// for the player (T32: approve, reject, or it expires). Skill scales mistakes and
+// misjudgement; style decides what each one prefers.
 
 import { hashString, rngFromState } from '../core/rng';
-import type { GameData, Player, Role, StaffMember, StaffRole, Tactic } from '../core/types';
+import { STAFF_ROLES, type GameData, type Player, type Role, type StaffMember, type StaffRole, type Tactic } from '../core/types';
 import { missingRoles } from './advice';
 import { acceptRenewal, expiringPlayers, marketValue, negotiationFor, renewalAsk, seasonWeeks } from './contracts';
 import { facilityDef, facilityValue, nextFacilityLevel, sponsorStanding, upgradeFacility } from './facilities';
 import { activeSponsor, bestSponsorFor, expectedWeeklyIncome, financeSummary, signSponsor, sponsorOffers, weeklyMoney } from './finance';
 import { clubById, emergencySalaryCap, marketPlayers, playerOverall, recommendLineup, rosterOf, setLineup, signPlayer, weekOfSeason, type Result } from './game';
 import { nextPlayerFixture } from './season';
+import { postMessage } from './messages';
 import { hiredStaff, mainSkill } from './staff';
 import { PLAYER_CLUB_ID, type DecisionEntry, type GameState, type PendingDecision } from './state';
 import { respondToOffer, transferWindowOpen } from './transfers';
@@ -24,6 +26,7 @@ interface Action {
   cost: number; // money it moves now (negative = spend)
   payload: Record<string, string | number>;
   big?: boolean; // always needs the player (selling a protected player)
+  essential?: boolean; // keeps the club playable (short of five players): never held back by the budget
   ref?: string; // a player the result is about, filled in later
   run: () => Result<unknown>;
 }
@@ -86,14 +89,17 @@ function decide(state: GameState, data: GameData, role: StaffRole, a: Action): v
     addDecision(state, data, { ...base, status: 'ADVICE' });
     return;
   }
-  const needsYes = a.big || (slot.authority === 'SMALL' && Math.abs(a.cost) > state.delegation.limit);
+  // "Over budget": a spend that would eat into the money set aside for running costs.
+  const overBudget = !a.essential && a.cost < 0 && spare(state, data, -a.cost) < 0;
+  const big = !!a.big || overBudget;
+  const needsYes = big || (slot.authority === 'SMALL' && Math.abs(a.cost) > state.delegation.limit);
   if (needsYes) {
     const key = JSON.stringify(a.payload);
     if (state.pending.some((p) => p.kind === a.kind && JSON.stringify(p.payload) === key)) return;
     const pd: PendingDecision = {
       id: state.nextDecisionId++, role, staffId: s.id, kind: a.kind, text: a.text, reason: a.reason, cost: a.cost,
       season: state.calendar.season, day: state.calendar.day, expiresDay: state.calendar.day + data.staff.delegation.pendingExpireWeeks * 7,
-      payload: a.payload, big: !!a.big,
+      payload: a.payload, big,
     };
     state.pending.push(pd);
     return;
@@ -102,11 +108,61 @@ function decide(state: GameState, data: GameData, role: StaffRole, a: Action): v
   if (r.ok) addDecision(state, data, { ...base, status: 'DONE' });
 }
 
-/** Carries out an approved pending decision (T32 calls this). */
+/** Carries out a pending decision as it stands, without touching the queue. */
 export function runPending(state: GameState, data: GameData, p: PendingDecision): Result<unknown> {
   const action = rebuild(state, data, p);
   if (!action) return { ok: false, error: '情况变了，这件事已经做不了' };
   return action.run();
+}
+
+/** Moves a pending decision from the queue into the log. */
+function resolve(state: GameState, data: GameData, p: PendingDecision, status: DecisionEntry['status'], result?: string): void {
+  state.pending = state.pending.filter((x) => x.id !== p.id);
+  addDecision(state, data, {
+    role: p.role, staffName: state.staff[p.staffId]?.name ?? '前任负责人', kind: p.kind, text: p.text, reason: p.reason, cost: p.cost, status,
+    ...(typeof p.payload.playerId === 'string' ? { ref: p.payload.playerId } : {}), ...(result ? { result } : {}),
+  });
+}
+
+/** The player says yes: the staff member carries it out. If it cannot be done any more, it is dropped. */
+export function approvePending(state: GameState, data: GameData, id: number): Result<unknown> {
+  const p = state.pending.find((x) => x.id === id);
+  if (!p) return { ok: false, error: '这件事已经处理过了' };
+  const action = rebuild(state, data, p);
+  if (!action) { resolve(state, data, p, 'EXPIRED', '情况变了，没办成'); return { ok: false, error: '情况变了，这件事已经做不了' }; }
+  const r = action.run();
+  if (!r.ok) return r; // e.g. not enough money right now: stays in the queue
+  resolve(state, data, p, 'APPROVED');
+  return r;
+}
+
+/** The player says no. A bid the manager wanted to accept is turned down. */
+export function rejectPending(state: GameState, data: GameData, id: number): Result<undefined> {
+  const p = state.pending.find((x) => x.id === id);
+  if (!p) return { ok: false, error: '这件事已经处理过了' };
+  if (p.kind === 'SELL') respondToOffer(state, data, Number(p.payload.offerId), false);
+  resolve(state, data, p, 'REJECTED');
+  return { ok: true, value: undefined };
+}
+
+/** Pending decisions nobody answered in time are dropped. Returns how many. */
+export function expirePending(state: GameState, data: GameData): number {
+  const old = state.pending.filter((p) => state.calendar.day >= p.expiresDay || p.season !== state.calendar.season);
+  for (const p of old) resolve(state, data, p, 'EXPIRED', '你没有回复，没做');
+  return old.length;
+}
+
+/** Monday: one inbox line on what staff did last week and what waits for the player. */
+export function postStaffWeekSummary(state: GameState, data: GameData): void {
+  if (!STAFF_ROLES.some((r) => hiredStaff(state, r))) return;
+  const since = state.calendar.day - data.season.daysPerWeek;
+  const week = state.decisionLog.filter((e) => e.season === state.calendar.season && e.day > since);
+  const done = week.filter((e) => e.status === 'DONE').length;
+  const advice = week.filter((e) => e.status === 'ADVICE').length;
+  const waiting = state.pending.length;
+  if (done + advice + waiting === 0) return;
+  const parts = [`本周负责人做了 ${done} 件事`, ...(advice > 0 ? [`提了 ${advice} 条建议`] : []), `待你批 ${waiting} 件`];
+  postMessage(state, 'STAFF', parts.join('，'), waiting > 0 ? '到"负责人"里批准或驳回。不处理的话 2 周后自动作废。' : '到"负责人"里可以看到每件事的原因。', { pending: waiting });
 }
 
 /** Rebuilds the runnable action of a pending decision from its payload. */
@@ -234,7 +290,7 @@ export function managerWeek(state: GameState, data: GameData): void {
       staying++;
       decide(state, data, 'MANAGER', {
         kind: 'RENEW', text: `和 ${p.name} 续约，周薪 ${ask}`, reason: `他是队里最值得留的 ${d.rosterTarget} 个人之一`, cost: -ask * data.economy.signingFeeWeeks,
-        payload: { playerId: p.id }, ref: p.id, run: () => acceptRenewal(state, data, p.id, data.economy.contracts.defaultYears),
+        payload: { playerId: p.id }, ref: p.id, essential: needed, run: () => acceptRenewal(state, data, p.id, data.economy.contracts.defaultYears),
       });
     }
   }
@@ -275,7 +331,7 @@ function signFor(state: GameState, data: GameData, s: StaffMember, role: Role, w
   decide(state, data, 'MANAGER', {
     kind: 'SIGN', text: `签下${ROLE_LABEL[role]} ${p.name}（能力 ${Math.round(playerOverall(p))}，周薪 ${p.salaryPerWeek}）`,
     reason: `${why}；${style}型经理看他能力约 ${Math.round(pick.look)}`, cost: -p.signingFee, payload: { playerId: p.id }, ref: p.id,
-    run: () => signPlayer(state, data, p.id),
+    essential: !upgrade && state.club.roster.length < data.economy.minRoster, run: () => signPlayer(state, data, p.id),
   });
 }
 
@@ -332,10 +388,12 @@ export function financeWeek(state: GameState, data: GameData): void {
   }
 }
 
-/** All staff decisions of a pay day (the coach's training runs earlier, before the week is trained). */
-export function staffWeek(state: GameState, data: GameData): void {
+/** All staff decisions of a pay day (the coach's training runs earlier). True if something big now waits for the player. */
+export function staffWeek(state: GameState, data: GameData): boolean {
+  const before = new Set(state.pending.map((p) => p.id));
   managerWeek(state, data); // the team first, then what is left for the finance chief
   financeWeek(state, data);
+  return state.pending.some((p) => p.big && !before.has(p.id));
 }
 
 /** End of season: how the signings of this season worked out. */
