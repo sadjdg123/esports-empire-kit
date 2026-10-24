@@ -70,4 +70,4 @@
 | T26 | 英雄池扩充 | Claude Code | ✅ 完成 | 2026-10-23 | 汇报：docs/reports/T26.md；D56；16 个英雄 |
 | T27 | 赞助目标与名人堂 | Claude Code | ✅ 完成 | 2026-10-23 | 汇报：docs/reports/T27.md；D57 |
 | T28 | P2 平衡与 20 赛季验收 | Claude Code | ✅ 完成 | 2026-10-24 | 汇报：docs/reports/T28.md；D58；G4 贴线、设施回报偏低待定 |
-| GATE-4 | P2 关卡（门哥连续玩两个以上赛季） | 门哥 | 👀 待确认 | | 总结 docs/reports/GATE-4.md；试玩指南 docs/PLAYTEST.md |
+| GATE-4 | P2 关卡（门哥连续玩两个以上赛季） | 门哥 | 👀 试玩中 | | 总结 docs/reports/GATE-4.md；第 1 季反馈已修：F2 签人和阵容提醒（D59） |

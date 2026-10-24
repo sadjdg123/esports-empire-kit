@@ -60,6 +60,18 @@ export function LineupPage({ game, data, act, go, flash }: PageProps) {
           <h2>首发阵容</h2>
           <button onClick={recommend}>一键推荐</button>
         </div>
+        {(() => {
+          // Picks out of position, loud at the top (GATE-4 feedback: easy to miss inside the role cards).
+          const off = lineup.picks.filter((pk) => { const p = game.players[pk.playerId]; return p && p.primaryRole !== pk.role && p.secondaryRole !== pk.role; });
+          if (off.length === 0) return null;
+          const lacking = ROLES.filter((r) => !roster.some((p) => p.primaryRole === r));
+          return (
+            <div className="advice bad">
+              ⚠ {off.map((pk) => `${game.players[pk.playerId]!.name} 在打${ROLE_NAME[pk.role]}`).join('，')}，这不是他会的位置，发挥会明显打折。
+              {lacking.length > 0 && <> 队里没有{lacking.map((r) => ROLE_NAME[r]).join('、')}，<button className="link" onClick={() => go('market')}>去签人</button>补一个。</>}
+            </div>
+          );
+        })()}
         {lineup.picks.length >= 2 && (() => {
           const chem = Math.round(groupChemistry(game, lineup.picks.map((p) => p.playerId)));
           const k = data.match.coefficients.chemistry;
