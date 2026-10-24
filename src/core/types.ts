@@ -693,6 +693,8 @@ export interface StaffConfig {
     rosterTarget: number; // contracts the manager wants to keep
     facilityShare: number; // finance spends at most this share of the spare money on one upgrade
     facilityOrder: Record<StaffStyle, FacilityId[]>;
+    trainLagGap: number; // the coach trains mechanics unless another attribute is this far below it
+    cautiousSalaryWeight: number; // a cautious manager takes this many ability points off per 1000 of weekly salary
     tacticCounter: Partial<Record<Tactic, Tactic>>; // a clear counter to an opponent's usual tactic (from the balance report)
     defaultTactic: Tactic; // against an opponent whose tactic is not known
   };

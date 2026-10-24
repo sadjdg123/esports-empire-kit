@@ -39,7 +39,7 @@ describe('staff candidates (T30)', () => {
     for (const id of s.staffMarket) {
       const c = s.staff[id]!;
       for (const v of Object.values(c.skills)) { expect(v).toBeGreaterThanOrEqual(m.skillMin); expect(v).toBeLessThanOrEqual(100); }
-      const expected = Math.round((m.salaryBase + Math.max(0, mainSkill(data, c) - m.skillMin) * m.salaryPerSkill) / 50) * 50;
+      const expected = Math.round((m.salaryBase + Math.max(0, mainSkill(data, c) - m.skillMin) * m.salaryPerSkill) / 10) * 10;
       expect(c.salaryPerWeek).toBe(expected);
       expect(c.signingFee).toBe(c.salaryPerWeek * m.signingFeeWeeks);
     }

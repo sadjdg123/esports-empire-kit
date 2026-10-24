@@ -603,7 +603,7 @@ function checkStaff(c: Checker, raw: unknown): void {
     for (const k of ['namePrefixes', 'nameSuffixes']) c.arr(m[k], `${p}.market.${k}`, 1);
   }
   checkNumbers(c, o.delegation, `${p}.delegation`, ['defaultLimit', 'protectTop', 'pendingExpireWeeks', 'logMax']);
-  const dec = checkNumbers(c, o.decisions, `${p}.decisions`, ['mistakeAtZero', 'perceptionNoise', 'restFatigue', 'upgradeMargin', 'sellOverValue', 'youthAgeMax', 'youthPotentialWeight', 'rosterTarget', 'facilityShare']);
+  const dec = checkNumbers(c, o.decisions, `${p}.decisions`, ['mistakeAtZero', 'perceptionNoise', 'restFatigue', 'upgradeMargin', 'sellOverValue', 'youthAgeMax', 'youthPotentialWeight', 'rosterTarget', 'facilityShare', 'cautiousSalaryWeight', 'trainLagGap']);
   if (dec) {
     if ((dec.mistakeAtZero as number) > 1) c.fail(`${p}.decisions.mistakeAtZero`, 'is a chance (0-1)');
     for (const k of ['reserveWeeks', 'salaryCap']) {

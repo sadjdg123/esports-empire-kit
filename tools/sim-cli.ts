@@ -3,6 +3,7 @@
 //   npm run sim -- --n 1000 [--threads 4] [--only G4,G5] [--no-write]  balance report (GDD 16.1)
 //   npm run sim -- --economy [--n 100]                              economy calibration (T07, T16)
 //   npm run sim -- --league [--seasons 20] [--seeds 8] [--write [--out file.md]]  multi-season league health (T17, T20)
+//   npm run sim -- --staff [--seasons 20] [--seeds 16] [--levels auto,90,55,20] [--write [--out file.md]]  clubs left to staff (T34)
 import { loadGameData } from '../src/core/config';
 import { ROLES, type Tactic } from '../src/core/types';
 import { runMatch } from '../src/sim';
@@ -180,7 +181,76 @@ async function league(): Promise<void> {
   }
 }
 
+/** Clubs run by staff with full control (good / average / poor), against the plain automatic manager (T34). */
+async function staffSim(): Promise<void> {
+  const { availableParallelism } = await import('node:os');
+  const { Worker } = await import('node:worker_threads');
+  const seasons = Number(arg('seasons') ?? 20);
+  const seeds = Number(arg('seeds') ?? 16);
+  const levels = (arg('levels') ?? 'auto,90,55,20').split(',');
+  const threads = Math.max(1, Number(arg('threads') ?? availableParallelism()));
+  type Rec = import('./balance/worker').StaffRecord;
+  const jobs = levels.flatMap((level) => Array.from({ length: seeds }, (_, seed) => ({ level, seed })));
+  const per = Math.ceil(jobs.length / threads);
+  const t0 = Date.now();
+  const rows = (await Promise.all(Array.from({ length: Math.min(threads, jobs.length) }, (_, k) => {
+    const mine = jobs.slice(k * per, (k + 1) * per);
+    return Promise.all(mine.map((j) => new Promise<Rec[]>((resolve, reject) => {
+      const w = new Worker(new URL('./balance/worker-boot.mjs', import.meta.url), { workerData: { mode: 'staff', seasons, level: j.level, from: j.seed, to: j.seed + 1 } });
+      w.once('message', resolve);
+      w.once('error', reject);
+    }))).then((x) => x.flat());
+  }))).flat();
+  const start = 100000;
+  const med = (xs: number[]) => { const v = [...xs].sort((a, b) => a - b); return v.length ? v[Math.floor(v.length / 2)]! : 0; };
+  const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
+  const name = (l: string) => (l === 'auto' ? '普通经营（不雇人）' : `负责人能力 ${l}`);
+  type Sum = { level: string; winRate: number; titles: number; finals: number; fundsMed: number; fundsMin: number; worstMinFunds: number; starter: number; league: number; staffCost: number; slips: number; minRoster: number; champs: Map<string, number> };
+  const sums: Sum[] = levels.map((level) => {
+    const rs = rows.filter((r) => r.level === level);
+    const all = rs.flatMap((r) => r.seasons);
+    const w = all.reduce((a, x) => a + x.wins, 0), l = all.reduce((a, x) => a + x.losses, 0);
+    const champs = new Map<string, number>();
+    for (const x of all) champs.set(x.championName, (champs.get(x.championName) ?? 0) + 1);
+    return {
+      level, winRate: w / Math.max(1, w + l), titles: all.filter((x) => x.champion).length / Math.max(1, rs.length),
+      finals: all.filter((x) => x.playoff === 'FINAL' || x.playoff === 'CHAMPION').length / Math.max(1, rs.length),
+      fundsMed: med(rs.map((r) => r.seasons[r.seasons.length - 1]!.funds)) / start, fundsMin: Math.min(...rs.map((r) => r.seasons[r.seasons.length - 1]!.funds)) / start,
+      worstMinFunds: Math.min(...all.map((x) => x.minFunds)) / start,
+      starter: mean(all.map((x) => x.starterAvg)), league: mean(all.map((x) => x.leagueStarterAvg)), staffCost: mean(all.map((x) => x.staffCost)),
+      slips: mean(all.map((x) => x.slips)), minRoster: Math.min(...all.map((x) => x.roster)), champs,
+    };
+  });
+  console.log(`负责人托管：${seeds} 局 × ${seasons} 个赛季，每种 ${levels.length} 档，用时 ${Math.round((Date.now() - t0) / 1000)} 秒`);
+  for (const s2 of sums) {
+    console.log(`  ${name(s2.level)}：胜率 ${(s2.winRate * 100).toFixed(1)}% · 每局冠军 ${s2.titles.toFixed(2)} 次、进决赛 ${s2.finals.toFixed(2)} 次 · 第 ${seasons} 季资金中位 ${s2.fundsMed.toFixed(2)} 倍（最少 ${s2.fundsMin.toFixed(2)}）· 最低点 ${s2.worstMinFunds.toFixed(2)} 倍 · 首发 ${s2.starter.toFixed(1)}（联盟 ${s2.league.toFixed(1)}）· 负责人开销 ${Math.round(s2.staffCost)}/季 · 失误 ${s2.slips.toFixed(1)}/季 · 最少 ${s2.minRoster} 人`);
+  }
+  const dump = arg('dump');
+  if (dump) { const { writeFileSync } = await import('node:fs'); writeFileSync(dump, JSON.stringify(rows)); }
+  if (process.argv.includes('--write')) {
+    const { writeFileSync } = await import('node:fs');
+    const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const path = arg('out') ?? `docs/reports/staff-${day}.md`;
+    const md = [`# 负责人托管 ${seasons} 赛季报告 ${day}`, '', `> 命令：\`npm run sim -- --staff --seasons ${seasons} --seeds ${seeds} --write\` · 每档 ${seeds} 局，每局从新开档连续打 ${seasons} 个赛季。负责人档：三个岗位都雇这个能力的人、全权托管，工资按这个能力算；雇不起的岗位由"普通经营"代管。`, '',
+      '| 方式 | 胜率 | 每局冠军 | 每局进决赛 | 第 20 季资金中位（开局倍数） | 最少 | 全程最低点 | 玩家首发能力 | 联盟首发能力 | 负责人开销 / 季 | 失误 / 季 | 最少人数 |', '|---|---|---|---|---|---|---|---|---|---|---|---|'];
+    for (const s2 of sums) md.push(`| ${name(s2.level)} | ${(s2.winRate * 100).toFixed(1)}% | ${s2.titles.toFixed(2)} | ${s2.finals.toFixed(2)} | ${s2.fundsMed.toFixed(2)} | ${s2.fundsMin.toFixed(2)} | ${s2.worstMinFunds.toFixed(2)} | ${s2.starter.toFixed(1)} | ${s2.league.toFixed(1)} | ${Math.round(s2.staffCost)} | ${s2.slips.toFixed(1)} | ${s2.minRoster} |`);
+    md.push('', '## 冠军分布（所有局、所有赛季）', '');
+    for (const s2 of sums) md.push(`- ${name(s2.level)}：${[...s2.champs].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join('、')}`);
+    md.push('', '## 逐赛季（各档所有局平均）', '', '| 赛季 | ' + levels.map((l) => `${name(l)} 胜率 / 资金中位`).join(' | ') + ' |', '|---|' + levels.map(() => '---').join('|') + '|');
+    for (let k = 0; k < seasons; k++) {
+      md.push(`| ${k + 1} | ` + levels.map((l) => {
+        const xs = rows.filter((r) => r.level === l).map((r) => r.seasons[k]!);
+        const w = xs.reduce((a, x) => a + x.wins, 0), lo = xs.reduce((a, x) => a + x.losses, 0);
+        return `${((w / Math.max(1, w + lo)) * 100).toFixed(0)}% / ${(med(xs.map((x) => x.funds)) / start).toFixed(2)}`;
+      }).join(' | ') + ' |');
+    }
+    writeFileSync(path, md.join('\n') + '\n');
+    console.log(`  报告已写入 ${path}`);
+  }
+}
+
 if (process.argv.includes('--one')) one();
 else if (process.argv.includes('--league')) void league();
+else if (process.argv.includes('--staff')) void staffSim();
 else if (process.argv.includes('--economy')) void economy();
 else void balance();

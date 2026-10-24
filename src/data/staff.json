@@ -40,8 +40,8 @@
     "skillMin": 30,
     "skillMax": 90,
     "mainSkillBonus": 12,
-    "salaryBase": 200,
-    "salaryPerSkill": 12,
+    "salaryBase": 80,
+    "salaryPerSkill": 4,
     "signingFeeWeeks": 4,
     "contractYears": 2,
     "releaseFeeShare": 0.5,
@@ -92,7 +92,7 @@
   },
   "decisions": {
     "mistakeAtZero": 0.45,
-    "perceptionNoise": 14,
+    "perceptionNoise": 22,
     "reserveWeeks": {
       "CAUTIOUS": 12,
       "BOLD": 4,
@@ -136,6 +136,8 @@
       "CAUTIOUS": 0.9,
       "BOLD": 1.2,
       "YOUTH": 1.0
-    }
+    },
+    "cautiousSalaryWeight": 2,
+    "trainLagGap": 12
   }
 }

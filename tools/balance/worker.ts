@@ -5,7 +5,11 @@ import { hashString } from '../../src/core/rng';
 import { runMatch } from '../../src/sim';
 import { buildReport } from '../../src/sim/report';
 import { buildCase, type ScenarioId } from './scenarios';
-import { PLAYER_CLUB_ID, type ManageStyle, advanceDay, autoManage, autoTraining, commitMatchDay, newGame, playerOverall, rosterOf, standings, weeklySalaries } from '../../src/game';
+import { STAFF_ROLES } from '../../src/core/types';
+import {
+  PLAYER_CLUB_ID, type GameState, type ManageStyle, advanceDay, autoManage, autoTraining, commitMatchDay, hireStaff, hiredStaff, newGame, playerOverall, renewStaff,
+  rosterOf, staffWeek, standings, weeklySalaries,
+} from '../../src/game';
 
 export interface EconomySeason { ratio: number; wins: number; rank: number; salaries: number; afterSigning: number; reputation: number; playoff: string }
 export interface EconomyRecord { seed: number; seasons: EconomySeason[] }
@@ -17,6 +21,10 @@ export interface LeagueRecord {
   talent: { season: number; marketSize: number; leagueAvg: number; starterAvg: number; best: number; avgAge: number; p10: number; p50: number; p90: number; totalMoney: number; avgSalary: number; retiring: number; retiredFree: number; rookies: number; fromRookies: number }[];
   playerFunds: number[];
 }
+
+/** One run of a club left to staff (P3, T34), or to the plain automatic manager (`level` 'auto'). */
+export interface StaffRunSeason { wins: number; losses: number; playoff: string; champion: boolean; funds: number; minFunds: number; starterAvg: number; leagueStarterAvg: number; roster: number; staffCost: number; slips: number; hired: number; championName: string }
+export interface StaffRecord { seed: number; level: string; seasons: StaffRunSeason[] }
 
 export interface MatchRecord {
   i: number;
@@ -44,9 +52,68 @@ function goldAt(tl: { t: number; diff: number }[], t: number): number {
   return v;
 }
 
-const { scenario, from, to, repeat, mode } = workerData as { scenario: ScenarioId; from: number; to: number; repeat: boolean; mode?: 'economy' | 'league'; strategy?: string; seasons?: number };
+const { scenario, from, to, repeat, mode } = workerData as { scenario: ScenarioId; from: number; to: number; repeat: boolean; mode?: 'economy' | 'league' | 'staff'; strategy?: string; seasons?: number };
 const data = loadGameData();
-if (mode === 'league') {
+
+/**
+ * Hires a candidate for every empty role, at the given skill (all three skills), paying the
+ * wage that skill would ask for. Without the money the role stays with the "player", which
+ * the simulation plays as the plain automatic manager.
+ */
+function hireAt(s: GameState, skill: number): void {
+  const m = data.staff.market;
+  for (const role of STAFF_ROLES) {
+    if (hiredStaff(s, role)) continue;
+    const c = s.staffMarket.map((id) => s.staff[id]!).find((x) => x.role === role);
+    if (!c) continue;
+    c.skills = { scouting: skill, leading: skill, money: skill };
+    c.salaryPerWeek = Math.round((m.salaryBase + Math.max(0, skill + m.mainSkillBonus - m.skillMin) * m.salaryPerSkill) / 10) * 10;
+    c.signingFee = c.salaryPerWeek * m.signingFeeWeeks;
+    if (hireStaff(s, data, c.id).ok) s.delegation.roles[role].authority = 'FULL';
+  }
+}
+
+if (mode === 'staff') {
+  const level = workerData.level as string; // 'auto' or a skill 0-100
+  const rows: StaffRecord[] = [];
+  for (let seed = from; seed < to; seed++) {
+    const s = newGame('委任', '#3a7bd5', 30_000 + seed, data);
+    const rec: StaffRecord = { seed, level, seasons: [] };
+    const auto = level === 'auto';
+    for (let k = 0; k < (workerData.seasons as number); k++) {
+      if (auto) autoManage(s, data, 'balanced');
+      else { hireAt(s, Number(level)); staffWeek(s, data); if (!hiredStaff(s, 'MANAGER') || !hiredStaff(s, 'COACH')) autoManage(s, data, 'balanced'); }
+      let wins = 0, losses = 0, minFunds = s.funds;
+      for (let guard = 0; guard < 400 && s.calendar.phase !== 'FINISHED'; guard++) {
+        if (auto) autoTraining(s);
+        const pause = advanceDay(s, data).pause;
+        minFunds = Math.min(minFunds, s.funds);
+        if (pause !== 'MATCH_DAY') continue;
+        let c = commitMatchDay(s, data);
+        if (!c.ok) { autoManage(s, data, 'balanced'); c = commitMatchDay(s, data); }
+        if (!c.ok) throw new Error(c.error);
+        if (c.value.playerResult?.winner === PLAYER_CLUB_ID) wins++;
+        else if (c.value.playerResult) losses++;
+      }
+      const h = s.history[s.history.length - 1]!;
+      const starters = (id: string) => rosterOf(s, id).map(playerOverall).sort((a, b) => b - a).slice(0, 5);
+      const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
+      const season = s.calendar.season;
+      rec.seasons.push({
+        wins, losses, playoff: h.playerPlayoff, champion: h.champion === PLAYER_CLUB_ID, funds: s.funds, minFunds,
+        starterAvg: mean(starters(PLAYER_CLUB_ID)), leagueStarterAvg: mean([s.club, ...s.aiClubs].flatMap((c) => starters(c.id))), roster: s.club.roster.length,
+        staffCost: -s.ledger.filter((e) => e.kind === 'STAFF').reduce((a, e) => a + e.amount, 0),
+        slips: s.decisionLog.filter((e) => e.season === season && /没看准|想多练|练得更强|不升就晚/.test(e.reason)).length,
+        hired: STAFF_ROLES.filter((r) => hiredStaff(s, r)).length,
+        championName: h.champion === PLAYER_CLUB_ID ? '玩家' : s.aiClubs.find((c) => c.id === h.champion)?.shortName ?? '?',
+      });
+      if (!auto) for (const role of STAFF_ROLES) { const st = hiredStaff(s, role); if (st?.hired && st.hired.until <= s.calendar.season) renewStaff(s, data, role); }
+      advanceDay(s, data); // into the next season
+    }
+    rows.push(rec);
+  }
+  parentPort!.postMessage(rows);
+} else if (mode === 'league') {
   const rows: LeagueRecord[] = [];
   for (let seed = from; seed < to; seed++) {
     const s = newGame('多赛季', '#3a7bd5', 20_000 + seed, data);

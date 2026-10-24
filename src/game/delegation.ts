@@ -6,7 +6,7 @@
 // misjudgement; style decides what each one prefers.
 
 import { hashString, rngFromState } from '../core/rng';
-import { STAFF_ROLES, type GameData, type Player, type Role, type StaffMember, type StaffRole, type Tactic } from '../core/types';
+import { STAFF_ROLES, TACTICS, type GameData, type Player, type Role, type StaffMember, type StaffRole, type Tactic } from '../core/types';
 import { missingRoles } from './advice';
 import { acceptRenewal, expiringPlayers, marketValue, negotiationFor, renewalAsk, seasonWeeks } from './contracts';
 import { facilityDef, facilityValue, nextFacilityLevel, sponsorStanding, upgradeFacility } from './facilities';
@@ -192,14 +192,22 @@ export function coachTraining(state: GameState, data: GameData): void {
   if (roster.length === 0) return;
   const rng = rngFromState(state.rngState);
   const fatigue = roster.reduce((a, p) => a + (p.fatigue ?? 0), 0) / roster.length;
-  const sum = (k: 'mechanics' | 'awareness' | 'teamwork' | 'mental') => roster.reduce((a, p) => a + p.attrs[k], 0);
-  const weakest = (['MECHANICS', 'AWARENESS', 'TEAMWORK', 'MENTAL'] as const).map((f) => [f, sum(f.toLowerCase() as 'mechanics')] as const)
-    .sort((a, b) => a[1] - b[1])[0]![0];
-  const tired = fatigue >= data.staff.decisions.restFatigue;
+  const d = data.staff.decisions;
+  const avg = (k: 'mechanics' | 'awareness' | 'teamwork' | 'mental') => roster.reduce((a, p) => a + p.attrs[k], 0) / roster.length;
+  const ranked = (['MECHANICS', 'AWARENESS', 'TEAMWORK', 'MENTAL'] as const).map((f) => [f, avg(f.toLowerCase() as 'mechanics')] as const).sort((a, b) => a[1] - b[1]);
+  const [weakest, low] = ranked[0]!;
+  const strongest = ranked[ranked.length - 1]![0];
+  // Mechanics wins games; another attribute only when it lags far behind.
+  const lagging = avg('mechanics') - low >= d.trainLagGap;
+  const focus = lagging ? weakest : 'MECHANICS';
+  const tired = fatigue >= d.restFatigue;
   const slip = rng.chance(mistakeChance(data, s));
   state.rngState = rng.state();
-  const plan = tired && !slip ? 'REST' : weakest;
-  const reason = tired ? (slip ? `全队平均疲劳 ${Math.round(fatigue)}，本该休息，但他想多练一周` : `全队平均疲劳 ${Math.round(fatigue)}，该休息了`) : `全队${FOCUS_LABEL[weakest]}最弱`;
+  // A slip: training on although the squad is tired, or polishing what is already the best.
+  const plan = tired ? (slip ? focus : 'REST') : slip ? strongest : focus;
+  const reason = tired ? (slip ? `全队平均疲劳 ${Math.round(fatigue)}，本该休息，但他想多练一周` : `全队平均疲劳 ${Math.round(fatigue)}，该休息了`)
+    : slip && plan !== focus ? `他想把全队最强的${FOCUS_LABEL[strongest]}练得更强，本该练${FOCUS_LABEL[focus]}`
+    : lagging ? `全队${FOCUS_LABEL[weakest]}比操作低 ${Math.round(avg('mechanics') - low)} 分，先补短板` : '操作最影响比赛，主练操作';
   if (state.training === plan) return;
   decide(state, data, 'COACH', { kind: 'TRAINING', text: `本周训练：${FOCUS_LABEL[plan]}`, reason, cost: 0, payload: { plan }, run: () => { state.training = plan; return { ok: true, value: plan }; } });
 }
@@ -216,11 +224,11 @@ export function coachMatchDay(state: GameState, data: GameData): void {
   const d = data.staff.decisions;
   const rng = rngFromState(state.rngState);
   const slip = rng.chance(mistakeChance(data, s));
-  state.rngState = rng.state();
   const known = opp.style !== 'RANDOM' && opp.style !== 'PLAYER';
   const counter = known ? d.tacticCounter[opp.style as Tactic] : undefined;
   const right: Tactic = counter ?? d.defaultTactic;
-  const tactic: Tactic = slip ? (state.lineup?.tactic ?? 'STEADY_MACRO') : right;
+  const tactic: Tactic = slip ? rng.pick(TACTICS) : right;
+  state.rngState = rng.state();
   const lu = recommendLineup(state, data, tactic);
   if (!lu.ok) return;
   const same = JSON.stringify(state.lineup) === JSON.stringify(lu.value);
@@ -228,7 +236,7 @@ export function coachMatchDay(state: GameState, data: GameData): void {
   const name = (t: Tactic) => `「${data.match.tactics[t].name}」`;
   const usual = known ? `${opp.name}惯用${name(opp.style as Tactic)}` : `${opp.name}的打法不固定`;
   const plan = counter ? `，用${name(right)}克制` : `，用最稳的${name(right)}`;
-  const reason = usual + (slip && tactic !== right ? `${plan.replace('，用', '，本该用')}，他没看准，沿用原来的打法` : plan);
+  const reason = usual + (slip && tactic !== right ? `${plan.replace('，用', '，本该用')}，他没看准，改打${name(tactic)}` : plan);
   decide(state, data, 'COACH', {
     kind: 'TACTIC', text: `对阵${opp.name}：「${data.match.tactics[tactic].name}」，按位置和熟练度排首发`, reason, cost: 0, payload: { tactic, opponent: opp.id },
     run: () => setLineup(state, data, lu.value),
@@ -241,7 +249,7 @@ export function coachMatchDay(state: GameState, data: GameData): void {
 function managerScore(data: GameData, s: StaffMember, p: Player): number {
   const d = data.staff.decisions;
   const look = perceived(data, s, p);
-  if (s.style === 'CAUTIOUS') return look / Math.sqrt(Math.max(1, p.salaryPerWeek)) * 10;
+  if (s.style === 'CAUTIOUS') return look - (p.salaryPerWeek / 1000) * d.cautiousSalaryWeight; // ability first, cheaper when close
   if (s.style === 'YOUTH' && p.age <= d.youthAgeMax) return look + Math.max(0, (p.potential ?? look) - playerOverall(p)) * d.youthPotentialWeight;
   return look;
 }
@@ -307,10 +315,9 @@ export function managerWeek(state: GameState, data: GameData): void {
   }
 }
 
-/** Highest weekly salary this manager pays: a fifth of the week's income after staff wages, scaled by style. */
+/** Highest weekly salary this manager pays: a fifth of a typical week's income, scaled by style. */
 function salaryCap(state: GameState, data: GameData, s: StaffMember): number {
-  const income = expectedWeeklyIncome(state, data) - weeklyMoney(state, data).staff;
-  return (income / data.economy.minRoster) * data.staff.decisions.salaryCap[s.style];
+  return (expectedWeeklyIncome(state, data) / data.economy.minRoster) * data.staff.decisions.salaryCap[s.style];
 }
 
 /**

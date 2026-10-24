@@ -22,7 +22,7 @@ export function mainSkill(data: GameData, s: StaffMember): number {
 
 function salaryFor(data: GameData, skill: number): number {
   const m = data.staff.market;
-  return roundTo(m.salaryBase + Math.max(0, skill - m.skillMin) * m.salaryPerSkill, 50);
+  return roundTo(m.salaryBase + Math.max(0, skill - m.skillMin) * m.salaryPerSkill, 10);
 }
 
 function uniqueName(state: GameState, data: GameData, rng: Rng): string {
