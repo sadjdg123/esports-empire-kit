@@ -1,7 +1,7 @@
 // Management game state (P0): one player club, 5 AI clubs, a 10-round league.
 // Everything here is plain JSON so it can be saved as-is.
 
-import type { ClubId, ClubStyle, FacilityId, ManagementStyle, Player, PlayerId, Side, SponsorGoal, Tactic, TeamLineup, TrainingFocus } from '../core/types';
+import type { Authority, ClubId, ClubStyle, FacilityId, ManagementStyle, Player, PlayerId, Side, SponsorGoal, StaffId, StaffMember, StaffRole, Tactic, TeamLineup, TrainingFocus } from '../core/types';
 
 /** The player's training choice: a fixed focus, or AUTO (rest when tired, otherwise rotate). */
 export type TrainingPlan = TrainingFocus | 'AUTO';
@@ -169,6 +169,51 @@ export interface GameState {
   chemistry: Record<string, number>; // pairKey(a, b) -> 0-100, how well two players play together
   hallOfFame: HallOfFameEntry[];
   awards: SeasonAward[];
+  // P3
+  staff: Record<StaffId, StaffMember>; // candidates and the player's hires
+  staffMarket: StaffId[]; // candidates this off-season
+  delegation: Delegation;
+  pending: PendingDecision[]; // waiting for the player's yes or no
+  decisionLog: DecisionEntry[]; // newest last, capped (staff.json delegation.logMax)
+  nextDecisionId: number;
+}
+
+/** Who runs what on the player's club, and how freely (P3). */
+export interface Delegation {
+  roles: Record<StaffRole, { staffId: StaffId | null; authority: Authority }>;
+  limit: number; // under SMALL, deals up to this much are done without asking
+  protectTop: number; // the strongest starters staff may not sell
+}
+
+/** Something a staff member wants to do that needs the player's approval (T32). */
+export interface PendingDecision {
+  id: number;
+  role: StaffRole;
+  staffId: StaffId;
+  kind: string; // e.g. 'SIGN', 'SELL', 'RENEW', 'FACILITY'
+  text: string; // what, in a few words
+  reason: string;
+  cost: number; // money it moves (negative = spend)
+  season: number;
+  day: number;
+  expiresDay: number;
+  payload: Record<string, string | number>; // what to do when approved
+  big: boolean; // pauses the calendar (selling a core player, going over budget)
+}
+
+/** One line of the decision log (T31): what was done, why, what it cost, and later how it went. */
+export interface DecisionEntry {
+  id: number;
+  season: number;
+  day: number;
+  role: StaffRole;
+  staffName: string;
+  kind: string;
+  text: string;
+  reason: string;
+  cost: number;
+  status: 'DONE' | 'ADVICE' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
+  result?: string;
 }
 
 /** A retired player worth remembering (T27). */

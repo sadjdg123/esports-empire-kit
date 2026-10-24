@@ -620,6 +620,67 @@ export interface AiConfig {
   talent: TalentConfig;
 }
 
+// ---------------------------------------------------------------------------
+// Staff and delegation (P3)
+
+/** A hired manager's job: players (MANAGER), training / lineup / tactics (COACH), money (FINANCE). */
+export type StaffRole = 'MANAGER' | 'COACH' | 'FINANCE';
+export const STAFF_ROLES: readonly StaffRole[] = ['MANAGER', 'COACH', 'FINANCE'];
+/** How a staff member leans: careful with money and risk, bold, or betting on youth. */
+export type StaffStyle = 'CAUTIOUS' | 'BOLD' | 'YOUTH';
+export const STAFF_STYLES: readonly StaffStyle[] = ['CAUTIOUS', 'BOLD', 'YOUTH'];
+/** How much a role may do alone: only advise (SELF), small things within the limit (SMALL), everything (FULL). */
+export type Authority = 'SELF' | 'SMALL' | 'FULL';
+export const AUTHORITIES: readonly Authority[] = ['SELF', 'SMALL', 'FULL'];
+export type StaffId = string;
+
+export interface StaffSkills {
+  scouting: number; // judging players: signings, renewals, transfers (0-100)
+  leading: number; // running the team: training, lineup, tactics
+  money: number; // budgets, sponsors, facilities
+}
+
+export interface StaffMember {
+  id: StaffId;
+  name: string;
+  role: StaffRole;
+  skills: StaffSkills;
+  style: StaffStyle;
+  salaryPerWeek: number;
+  signingFee: number;
+  origin: 'MARKET' | 'RETIRED'; // retired players can become coaches
+  formerPlayerId?: PlayerId;
+  hired?: { season: number; until: number }; // on the player's club, with the last season of the contract
+}
+
+/** staff.json (P3). Values marked 〔待确认〕 in the task book. */
+export interface StaffConfig {
+  roles: Record<StaffRole, { name: string; description: string; skill: keyof StaffSkills }>;
+  styles: Record<StaffStyle, { name: string; description: string }>;
+  authorityNames: Record<Authority, string>;
+  market: {
+    perRole: number; // candidates per role each off-season
+    skillMin: number;
+    skillMax: number;
+    mainSkillBonus: number; // the role's own skill is this much higher on average
+    salaryBase: number;
+    salaryPerSkill: number; // weekly salary = base + (main skill - skillMin) * this, rounded
+    signingFeeWeeks: number;
+    contractYears: number;
+    releaseFeeShare: number; // share of the remaining contract paid when firing
+    retiredCoachMinPeak: number; // retirees with a career peak this high may become coach candidates
+    retiredCoachPerSeason: number;
+    namePrefixes: string[];
+    nameSuffixes: string[];
+  };
+  delegation: {
+    defaultLimit: number; // largest single deal done without asking, under SMALL
+    protectTop: number; // the strongest starters nobody may sell without the player
+    pendingExpireWeeks: number;
+    logMax: number; // decision log entries kept
+  };
+}
+
 export interface GameData {
   heroes: HeroDef[];
   players: Player[]; // free agents
@@ -631,5 +692,6 @@ export interface GameData {
   ai: AiConfig;
   facilities: FacilitiesConfig;
   traits: TraitsConfig;
+  staff: StaffConfig;
   heroById: Record<HeroId, HeroDef>;
 }

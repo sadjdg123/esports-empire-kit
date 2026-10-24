@@ -3,9 +3,9 @@
 
 import { loadGameData } from '../core/config';
 import { personalityFor } from '../core/personality';
-import { FACILITY_IDS } from '../core/types';
+import { AUTHORITIES, FACILITY_IDS, STAFF_ROLES } from '../core/types';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 /**
  * What the save layer needs to know about the game state. The full type lives
@@ -107,8 +107,25 @@ function migrateV2toV3(save: Obj): Obj {
   return save;
 }
 
+/** P2 (v3) -> P3 (v4): nobody hired, every role run by the player, empty queue and log. Plays exactly as before. */
+function migrateV3toV4(save: Obj): Obj {
+  const g = save.game as Obj;
+  const d = loadGameData().staff.delegation;
+  g.staff ??= {};
+  g.staffMarket ??= [];
+  g.delegation ??= {
+    roles: Object.fromEntries(STAFF_ROLES.map((r) => [r, { staffId: null, authority: 'SELF' }])),
+    limit: d.defaultLimit,
+    protectTop: d.protectTop,
+  };
+  g.pending ??= [];
+  g.decisionLog ??= [];
+  g.nextDecisionId ??= 1;
+  return save;
+}
+
 /** Registered upgrades, keyed by the version they upgrade from. */
-export const MIGRATIONS: Record<number, Migration> = { 1: migrateV1toV2, 2: migrateV2toV3 };
+export const MIGRATIONS: Record<number, Migration> = { 1: migrateV1toV2, 2: migrateV2toV3, 3: migrateV3toV4 };
 
 export class SaveError extends Error {}
 
@@ -166,6 +183,20 @@ export function checkSave(save: SaveFile): string | null {
   }
   if (typeof g.chemistry !== 'object' || g.chemistry === null || Array.isArray(g.chemistry)) return '游戏数据缺少 chemistry';
   for (const k of ['hallOfFame', 'awards']) if (!Array.isArray(g[k])) return `游戏数据缺少 ${k}`;
+  // P3 (v4)
+  if (typeof g.staff !== 'object' || g.staff === null || Array.isArray(g.staff)) return '游戏数据缺少 staff';
+  for (const k of ['staffMarket', 'pending', 'decisionLog']) if (!Array.isArray(g[k])) return `游戏数据缺少 ${k}`;
+  if (!isNum(g.nextDecisionId)) return '游戏数据缺少 nextDecisionId';
+  const del = g.delegation as Record<string, unknown> | undefined;
+  const roles = del?.roles as Record<string, Record<string, unknown>> | undefined;
+  if (!del || !roles || !isNum(del.limit) || !isNum(del.protectTop)) return '委任设置损坏';
+  const staff = g.staff as Record<string, unknown>;
+  for (const r of STAFF_ROLES) {
+    const slot = roles[r];
+    if (!slot || !AUTHORITIES.includes(slot.authority as never)) return `委任设置损坏（${r}）`;
+    if (slot.staffId !== null && (typeof slot.staffId !== 'string' || !staff[slot.staffId])) return `找不到负责人 ${String(slot.staffId)}`;
+  }
+  for (const id of g.staffMarket as unknown[]) if (typeof id !== 'string' || !staff[id]) return `找不到负责人候选 ${String(id)}`;
   return null;
 }
 

@@ -150,3 +150,20 @@ describe('P1 data', () => {
     expect(issues).toContain('season.json.matchWeekday: must be less than daysPerWeek');
   });
 });
+
+describe('staff.json (T29)', () => {
+  it('loads, with every role, style and permission level named', () => {
+    const d = loadGameData();
+    for (const r of ['MANAGER', 'COACH', 'FINANCE'] as const) expect(d.staff.roles[r].name).toBeTruthy();
+    for (const s of ['CAUTIOUS', 'BOLD', 'YOUTH'] as const) expect(d.staff.styles[s].name).toBeTruthy();
+    for (const a of ['SELF', 'SMALL', 'FULL'] as const) expect(d.staff.authorityNames[a]).toBeTruthy();
+  });
+  it('rejects impossible skill ranges and an unknown role skill', () => {
+    const raw = structuredClone(defaultRawData()) as { staff: { market: { skillMin: number }; roles: { COACH: { skill: string } } } };
+    raw.staff.market.skillMin = 95;
+    raw.staff.roles.COACH.skill = 'charm';
+    const issues = validateRawData(raw as never);
+    expect(issues.some((i) => i.includes('skillMin'))).toBe(true);
+    expect(issues.some((i) => i.includes('roles.COACH.skill'))).toBe(true);
+  });
+});

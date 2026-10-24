@@ -199,7 +199,7 @@ describe('P1 (v2) save -> v3 (T21)', () => {
     const r = deserialize(v2);
     if (!r.ok) throw new Error(r.error);
     const g = r.save.game as GameState;
-    expect(r.save.version).toBe(3);
+    expect(r.save.version).toBe(SAVE_VERSION);
     expect(g.calendar.season).toBe(2);
     const fresh = newGame('对照', '#123456', 1, data);
     for (const [id, p] of Object.entries(g.players)) {
@@ -233,5 +233,55 @@ describe('P1 (v2) save -> v3 (T21)', () => {
     bad.game.club.facilities.TRAINING = 7;
     const r = deserialize(JSON.stringify(bad));
     expect(r.ok).toBe(false);
+  });
+});
+
+describe('P2 (v3) save -> v4 (T29)', () => {
+  const v3 = readFileSync(new URL('./fixtures/p2-save-v3.json', import.meta.url), 'utf8');
+
+  it('upgrades a real P2 save: nobody hired, every role run by the player, empty queue and log', () => {
+    const r = deserialize(v3);
+    if (!r.ok) throw new Error(r.error);
+    const g = r.save.game as GameState;
+    expect(r.save.version).toBe(SAVE_VERSION);
+    expect(g.calendar.season).toBe(2);
+    expect(g.staff).toEqual({});
+    expect(g.staffMarket).toEqual([]);
+    expect(g.pending).toEqual([]);
+    expect(g.decisionLog).toEqual([]);
+    for (const role of ['MANAGER', 'COACH', 'FINANCE'] as const) expect(g.delegation.roles[role]).toEqual({ staffId: null, authority: 'SELF' });
+    expect(g.delegation.limit).toBe(data.staff.delegation.defaultLimit);
+    // Everything from P2 is kept.
+    const before = JSON.parse(v3).game;
+    expect(g.funds).toBe(before.funds);
+    expect(g.awards).toEqual(before.awards);
+    expect(Object.keys(g.players).sort()).toEqual(Object.keys(before.players).sort());
+  });
+
+  it('the upgraded save plays on into the next season', () => {
+    const r = deserialize(v3);
+    if (!r.ok) throw new Error(r.error);
+    const g = r.save.game as GameState;
+    for (let i = 0; i < 30; i++) {
+      if (advanceDay(g, data).pause === 'MATCH_DAY') { const c = commitMatchDay(g, data); if (!c.ok) break; }
+    }
+    expect(g.calendar.season).toBe(3);
+  }, 60_000);
+
+  it('a new game starts with nobody hired', () => {
+    const s = newGame('委任', '#123456', 1, data);
+    expect(s.delegation.roles.COACH).toEqual({ staffId: null, authority: 'SELF' });
+    expect(s.nextDecisionId).toBe(1);
+  });
+
+  it('rejects a save whose delegation points at a missing staff member or uses an unknown level', () => {
+    const r = deserialize(v3);
+    if (!r.ok) throw new Error(r.error);
+    const bad = structuredClone(r.save) as unknown as { game: GameState };
+    bad.game.delegation.roles.MANAGER = { staffId: 'ghost', authority: 'FULL' };
+    expect(deserialize(JSON.stringify(bad)).ok).toBe(false);
+    const bad2 = structuredClone(r.save) as unknown as { game: { delegation: { roles: Record<string, { authority: string }> } } };
+    bad2.game.delegation.roles.COACH!.authority = 'BOSS';
+    expect(deserialize(JSON.stringify(bad2)).ok).toBe(false);
   });
 });

@@ -39,6 +39,7 @@ const SHOTS = 'docs/reports/v1';
       if (!(await input.count()) || await row.locator('button:has-text("报价")').isDisabled()) continue;
       const v = Number(await input.inputValue());
       await input.fill(String(Math.round((v * 1.4) / 500) * 500));
+      if (await row.locator('button:has-text("报价")').isDisabled()) continue; // the higher bid is more than the club has
       await row.locator('button:has-text("报价")').click(); await confirm();
       const t = await toast();
       if (t.includes('成交')) return t;

@@ -5,9 +5,9 @@
 import { validateLineup } from '../core/config';
 import { personalityFor } from '../core/personality';
 import { createRng, hashString, type Rng } from '../core/rng';
-import { FACILITY_IDS, type ClubId, type FacilityId, type GameData, type Player, type PlayerId, type Tactic, type TeamLineup } from '../core/types';
+import { FACILITY_IDS, STAFF_ROLES, type ClubId, type FacilityId, type GameData, type Player, type PlayerId, type Tactic, type TeamLineup } from '../core/types';
 import { autoLineup } from '../sim/scenario';
-import { PLAYER_CLUB_ID, type ClubState, type Fixture, type GameState, type LedgerEntry } from './state';
+import { PLAYER_CLUB_ID, type ClubState, type Delegation, type Fixture, type GameState, type LedgerEntry } from './state';
 
 export type Result<T = void> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -92,6 +92,22 @@ export function newGame(name: string, color: string, seed: number, data: GameDat
     chemistry: {},
     hallOfFame: [],
     awards: [],
+    staff: {},
+    staffMarket: [],
+    delegation: startingDelegation(data),
+    pending: [],
+    decisionLog: [],
+    nextDecisionId: 1,
+  };
+}
+
+/** Nobody hired, every role run by the player (P3). */
+export function startingDelegation(data: GameData): Delegation {
+  const d = data.staff.delegation;
+  return {
+    roles: Object.fromEntries(STAFF_ROLES.map((r) => [r, { staffId: null, authority: 'SELF' }])) as Delegation['roles'],
+    limit: d.defaultLimit,
+    protectTop: d.protectTop,
   };
 }
 

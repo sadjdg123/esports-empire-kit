@@ -1,0 +1,93 @@
+{
+  "roles": {
+    "MANAGER": {
+      "name": "经理",
+      "description": "签人、续约、买卖选手",
+      "skill": "scouting"
+    },
+    "COACH": {
+      "name": "教练",
+      "description": "训练安排、阵容、战术",
+      "skill": "leading"
+    },
+    "FINANCE": {
+      "name": "财务",
+      "description": "赞助、设施、备用金",
+      "skill": "money"
+    }
+  },
+  "styles": {
+    "CAUTIOUS": {
+      "name": "保守",
+      "description": "花钱谨慎，宁可稳一点"
+    },
+    "BOLD": {
+      "name": "激进",
+      "description": "敢花钱，追求马上变强"
+    },
+    "YOUTH": {
+      "name": "重青训",
+      "description": "喜欢年轻、有潜力的人"
+    }
+  },
+  "authorityNames": {
+    "SELF": "亲自管",
+    "SMALL": "小事自己办",
+    "FULL": "全权托管"
+  },
+  "market": {
+    "perRole": 3,
+    "skillMin": 30,
+    "skillMax": 90,
+    "mainSkillBonus": 12,
+    "salaryBase": 400,
+    "salaryPerSkill": 30,
+    "signingFeeWeeks": 4,
+    "contractYears": 2,
+    "releaseFeeShare": 0.5,
+    "retiredCoachMinPeak": 75,
+    "retiredCoachPerSeason": 1,
+    "namePrefixes": [
+      "老",
+      "大",
+      "小",
+      "阿",
+      "陈",
+      "林",
+      "周",
+      "吴",
+      "许",
+      "沈",
+      "顾",
+      "韩",
+      "陆",
+      "程",
+      "方",
+      "秦"
+    ],
+    "nameSuffixes": [
+      "叔",
+      "哥",
+      "姐",
+      "掌柜",
+      "参谋",
+      "算盘",
+      "眼",
+      "石",
+      "川",
+      "舟",
+      "衡",
+      "野",
+      "樵",
+      "松",
+      "岳",
+      "筹"
+    ]
+  },
+  "delegation": {
+    "defaultLimit": 30000,
+    "protectTop": 3,
+    "pendingExpireWeeks": 2,
+    "logMax": 200
+  }
+}

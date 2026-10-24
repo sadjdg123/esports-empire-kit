@@ -11,10 +11,11 @@ import growthJson from '../data/growth.json';
 import aiJson from '../data/ai.json';
 import facilitiesJson from '../data/facilities.json';
 import traitsJson from '../data/traits.json';
+import staffJson from '../data/staff.json';
 import {
-  ARCHETYPES, FACILITY_IDS, GROWTH_TYPES, LANES, MANAGEMENT_STYLES, ROLES, TACTICS, TRAINING_FOCI,
+  ARCHETYPES, AUTHORITIES, FACILITY_IDS, STAFF_ROLES, STAFF_STYLES, GROWTH_TYPES, LANES, MANAGEMENT_STYLES, ROLES, TACTICS, TRAINING_FOCI,
   type AiConfig, type ClubDef, type EconomyConfig, type FacilitiesConfig, type GameData, type GrowthConfig, type HeroDef, type MatchConfig,
-  type TraitsConfig,
+  type StaffConfig, type TraitsConfig,
   type Player, type Role, type SeasonConfig, type TeamLineup, type TrainingFocus,
 } from './types';
 
@@ -29,6 +30,7 @@ export interface RawGameData {
   ai: unknown;
   facilities: unknown;
   traits: unknown;
+  staff: unknown;
 }
 
 export class DataValidationError extends Error {
@@ -578,6 +580,31 @@ function checkTraits(c: Checker, raw: unknown): void {
   });
 }
 
+function checkStaff(c: Checker, raw: unknown): void {
+  const p = 'staff.json';
+  const o = c.obj(raw, p);
+  if (!o) return;
+  const roles = c.obj(o.roles, `${p}.roles`);
+  if (roles) {
+    for (const r of STAFF_ROLES) {
+      const ro = c.obj(roles[r], `${p}.roles.${r}`);
+      if (!ro) continue;
+      for (const k of ['name', 'description']) if (typeof ro[k] !== 'string' || !ro[k]) c.fail(`${p}.roles.${r}.${k}`, 'expected text');
+      if (!['scouting', 'leading', 'money'].includes(ro.skill as string)) c.fail(`${p}.roles.${r}.skill`, 'expected scouting, leading or money');
+    }
+  }
+  const styles = c.obj(o.styles, `${p}.styles`);
+  if (styles) for (const s of STAFF_STYLES) { const so = c.obj(styles[s], `${p}.styles.${s}`); if (so && (typeof so.name !== 'string' || !so.name)) c.fail(`${p}.styles.${s}.name`, 'expected text'); }
+  const names = c.obj(o.authorityNames, `${p}.authorityNames`);
+  if (names) for (const a of AUTHORITIES) if (typeof names[a] !== 'string' || !names[a]) c.fail(`${p}.authorityNames.${a}`, 'expected text');
+  const m = checkNumbers(c, o.market, `${p}.market`, ['perRole', 'skillMin', 'skillMax', 'mainSkillBonus', 'salaryBase', 'salaryPerSkill', 'signingFeeWeeks', 'contractYears', 'releaseFeeShare', 'retiredCoachMinPeak', 'retiredCoachPerSeason']);
+  if (m) {
+    if ((m.skillMin as number) > (m.skillMax as number) || (m.skillMax as number) > 100) c.fail(`${p}.market`, 'skills must be skillMin <= skillMax <= 100');
+    for (const k of ['namePrefixes', 'nameSuffixes']) c.arr(m[k], `${p}.market.${k}`, 1);
+  }
+  checkNumbers(c, o.delegation, `${p}.delegation`, ['defaultLimit', 'protectTop', 'pendingExpireWeeks', 'logMax']);
+}
+
 /** Validates raw JSON values; returns a list of human-readable issues (empty = valid). */
 export function validateRawData(raw: RawGameData): string[] {
   const c = new Checker();
@@ -593,6 +620,7 @@ export function validateRawData(raw: RawGameData): string[] {
   checkAi(c, raw.ai);
   checkFacilities(c, raw.facilities);
   checkTraits(c, raw.traits);
+  checkStaff(c, raw.staff);
   return c.issues;
 }
 
@@ -614,6 +642,7 @@ export function loadGameData(raw: RawGameData = defaultRawData()): GameData {
     ai: raw.ai as AiConfig,
     facilities: raw.facilities as FacilitiesConfig,
     traits: raw.traits as TraitsConfig,
+    staff: raw.staff as StaffConfig,
     heroById,
   };
 }
@@ -622,7 +651,7 @@ export function loadGameData(raw: RawGameData = defaultRawData()): GameData {
 export function defaultRawData(): RawGameData {
   return structuredClone({
     heroes: heroesJson, players: playersJson, clubs: clubsJson, economy: economyJson, match: matchJson, season: seasonJson, growth: growthJson, ai: aiJson,
-    facilities: facilitiesJson, traits: traitsJson,
+    facilities: facilitiesJson, traits: traitsJson, staff: staffJson,
   });
 }
 
