@@ -31,6 +31,7 @@ import { MatchPage } from './pages/Match';
 import { ReportPage } from './pages/Report';
 import { SchedulePage } from './pages/Schedule';
 import { SettingsPage } from './pages/Settings';
+import { ReportsPage } from './pages/Reports';
 import { StaffPage } from './pages/Staff';
 import { StartPage } from './pages/Start';
 import { TrainingPage } from './pages/Training';
@@ -39,7 +40,7 @@ import './styles.css';
 
 export type Page =
   | 'start' | 'home' | 'overview' | 'inbox' | 'market' | 'lineup' | 'training' | 'contracts' | 'schedule' | 'finance' | 'history'
-  | 'report' | 'settings' | 'match' | 'menu' | 'matchday' | 'seasonend' | 'facilities' | 'staff';
+  | 'report' | 'settings' | 'match' | 'menu' | 'matchday' | 'seasonend' | 'facilities' | 'staff' | 'reports';
 
 export interface PageProps {
   game: GameState;
@@ -266,6 +267,7 @@ export function App() {
           {win === 'finance' && <FinancePage {...props} />}
           {win === 'facilities' && <FacilitiesPage {...props} />}
           {win === 'staff' && <StaffPage {...props} />}
+          {win === 'reports' && <ReportsPage {...props} />}
           {win === 'history' && <HistoryPage {...props} />}
           {win === 'report' && <ReportPage {...props} round={reportRound} lastWeek={lastWeek} />}
           {win === 'settings' && <SettingsPage {...props} onReplace={(g) => { setGame(g); gameRef.current = g; setLastWeek(null); setRunning(false); setWin(null); }} onNewGame={() => go('start')} />}

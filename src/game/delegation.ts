@@ -70,6 +70,8 @@ function spare(state: GameState, data: GameData, spend = 0, extraWeekly = 0): nu
 
 export function addDecision(state: GameState, data: GameData, entry: Omit<DecisionEntry, 'id' | 'season' | 'day'>): DecisionEntry {
   const e: DecisionEntry = { id: state.nextDecisionId++, season: state.calendar.season, day: state.calendar.day, ...entry };
+  const p = entry.ref ? state.players[entry.ref] : undefined;
+  if (p) e.since = { played: p.stats?.played ?? 0, wins: p.stats?.wins ?? 0 };
   state.decisionLog.push(e);
   const max = data.staff.delegation.logMax;
   if (state.decisionLog.length > max) state.decisionLog = state.decisionLog.slice(-max);

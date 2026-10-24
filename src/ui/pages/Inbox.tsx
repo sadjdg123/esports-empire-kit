@@ -32,7 +32,7 @@ export function InboxPage(props: PageProps) {
       <div className="row between">
         <h2>收件箱</h2>
         <div className="filters">
-          {(['ALL', 'OFFER', 'CONTRACT', 'FINANCE', 'MATCH', 'SEASON'] as const).map((k) => (
+          {(['ALL', 'OFFER', 'CONTRACT', 'FINANCE', 'MATCH', 'SEASON', 'STAFF'] as const).map((k) => (
             <button key={k} className={filter === k ? 'chip on' : 'chip'} onClick={() => setFilter(k)}>{k === 'ALL' ? '全部' : KIND_NAME[k]}</button>
           ))}
         </div>

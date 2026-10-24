@@ -214,6 +214,7 @@ export interface DecisionEntry {
   cost: number;
   status: 'DONE' | 'ADVICE' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
   ref?: string; // a player the result is about (signings, renewals)
+  since?: { played: number; wins: number }; // that player's career games when it was decided (T33)
   result?: string;
 }
 

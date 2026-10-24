@@ -14,3 +14,4 @@ export * from './chemistry';
 export * from './advice';
 export * from './staff';
 export * from './delegation';
+export * from './report-staff';

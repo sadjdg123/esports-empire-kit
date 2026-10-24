@@ -39,7 +39,7 @@ function Skills({ s }: { s: StaffMember }) {
 }
 
 /** Staff (P3, T30): hire a manager, a coach and a finance chief, and decide how freely each may act. */
-export function StaffPage({ game, data, act, flash, ask }: PageProps) {
+export function StaffPage({ game, data, act, flash, ask, go }: PageProps) {
   const cfg = data.staff;
   const hire = (s: StaffMember) => {
     ask(`聘请${cfg.roles[s.role].name} ${s.name}？签约费 ${money(s.signingFee)}，之后每周工资 ${money(s.salaryPerWeek)}，合同 ${cfg.market.contractYears} 个赛季。`, '聘请', () => {
@@ -80,6 +80,7 @@ export function StaffPage({ game, data, act, flash, ask }: PageProps) {
       <section className="card wide">
         <h2>负责人</h2>
         <p className="dim">雇人替你管日常的事。每个岗位可以选：亲自管（他只给建议）、小事自己办（额度内自己做，超出的交给你批）、全权托管。现在负责人每周工资合计 {money(staffWages(game))}。</p>
+        <button className="small" onClick={() => go('reports')}>📊 看报表和决策日志</button>
         <div className="row wrap">
           <label className="small-text">单笔额度
             <select value={game.delegation.limit} onChange={(e) => limits(Number(e.target.value), game.delegation.protectTop)}>

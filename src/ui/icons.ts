@@ -14,6 +14,8 @@ const ROWS: Record<string, string[]> = {
   report: ['............', '.oooooooooo.', '.orrrrorrro.', '.orwwrorwwo.', '.orwwrorwwo.', '.orrrrorrro.', '.orwwrorwwo.', '.orrrrorrro.', '.oooooooooo.', '............', '............', '............'],
   history: ['.oooooooooo.', 'oyoyyyyyyoyo', 'oyoyyyyyyoyo', '.ooyyyyyyoo.', '...oyyyyo...', '....oyyo....', '.....oo.....', '.....yy.....', '....oyyo....', '...oooooo...', '...onnnno...', '...oooooo...'],
   home: ['.....oo.....', '....orro....', '...orrrro...', '..orrrrrro..', '.orrrrrrrro.', 'oooooooooooo', '.onnnnnnnno.', '.onwwnnoono.', '.onwwnnoono.', '.onnnnnoono.', '.oooooooooo.', '............'],
+  // A bar chart on a board (P3 group reports).
+  reports: ['oooooooooooo', 'owwwwwwwwwwo', 'owwwwwwwwrwo', 'owwwwwwwwrwo', 'owwwwwbwwrwo', 'owwwwwbwwrwo', 'owweewbwwrwo', 'owweewbwwrwo', 'owweewbwwrwo', 'oooooooooooo', '.....oo.....', '....oooo....'],
   // A person with a tie and a clipboard (P3 staff).
   staff: ['....oooo....', '...osssso...', '...osoosso..', '...ossssso..', '....oooo....', '..ookrkkoo..', '.okkkrkkkko.', '.okkkrkkkoww', '.okkkkkkkoww', '..oooooooo..', '...oo..oo...', '............'],
   facilities: ['............', '....oooo....', '...okkkko...', '...o....o...', 'oooooooooooo', 'orrrrrrrrrro', 'orrrryyrrrro', 'oooooyyooooo', 'orrrrrrrrrro', 'orrrrrrrrrro', 'oooooooooooo', '............'],

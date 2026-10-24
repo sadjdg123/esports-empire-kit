@@ -294,3 +294,12 @@ button.link.name { padding: 0; margin: 0; color: var(--text); font-weight: 600; 
 .pending-buttons { gap: 10px; margin-top: 6px; }
 .pending-buttons button { flex: 1; min-height: 44px; font-size: 16px; }
 .hud-pending { padding: 2px 10px; font-size: 13px; background: var(--bad); color: #fff; border-radius: 10px; }
+.report-money { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 6px; }
+.report-money td, .report-money th { padding: 3px 4px; border-bottom: 1px dashed var(--line); text-align: left; }
+.report-money .num { text-align: right; white-space: nowrap; }
+.report-money .sum-row td { border-bottom: 1px solid var(--line); font-weight: 600; }
+.log-entry { padding: 6px 0; border-bottom: 1px dashed var(--line); cursor: pointer; }
+.log-entry.open { background: var(--panel-2); }
+.log-detail { margin-top: 4px; padding-left: 6px; line-height: 1.5; }
+.tabs { grid-column: 1 / -1; }
+.tabs .chip { flex: 1; min-height: 40px; font-size: 15px; }
