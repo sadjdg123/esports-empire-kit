@@ -1,0 +1,172 @@
+{
+  "name": "爆破战",
+  "roundsToWin": 7,
+  "halfRounds": 6,
+  "roundSec": 100,
+  "bombSec": 35,
+  "roles": {
+    "ENTRY": {
+      "name": "突破手",
+      "description": "进攻时第一个冲进点位"
+    },
+    "AWP": {
+      "name": "狙击手",
+      "description": "防守时架住远点，先手开枪"
+    },
+    "IGL": {
+      "name": "指挥",
+      "description": "决定全队打法发挥出几成"
+    },
+    "SUPPORT": {
+      "name": "支援",
+      "description": "队友倒下时补枪"
+    },
+    "LURK": {
+      "name": "自由人",
+      "description": "绕后偷人，残局更强"
+    }
+  },
+  "attrs": {
+    "aim": "枪法",
+    "reaction": "反应",
+    "positioning": "身位",
+    "teamwork": "配合",
+    "mental": "心态"
+  },
+  "tactics": {
+    "RUSH": {
+      "name": "快攻",
+      "description": "开局直接冲点，打对面一个措手不及",
+      "entryBonus": 0.05,
+      "executeSec": 18,
+      "tradeBonus": 0.05,
+      "retakeBonus": -0.03
+    },
+    "DEFAULT": {
+      "name": "默认控图",
+      "description": "先分散拿信息，再决定打哪边",
+      "entryBonus": 0.0,
+      "executeSec": 45,
+      "tradeBonus": 0.0,
+      "retakeBonus": 0.0
+    },
+    "FAKE": {
+      "name": "假打转点",
+      "description": "佯攻一个点，把防守骗过去再打另一边",
+      "entryBonus": -0.03,
+      "executeSec": 55,
+      "tradeBonus": 0.0,
+      "retakeBonus": 0.0
+    },
+    "SLOW": {
+      "name": "慢打残局",
+      "description": "拖到最后再动手，靠残局和回防赢",
+      "entryBonus": 0.02,
+      "executeSec": 62,
+      "tradeBonus": 0.03,
+      "retakeBonus": 0.1
+    }
+  },
+  "tacticEdge": {
+    "RUSH": {
+      "SLOW": 0.05
+    },
+    "SLOW": {
+      "FAKE": 0.09
+    },
+    "FAKE": {
+      "DEFAULT": 0.05
+    },
+    "DEFAULT": {
+      "RUSH": 0.07
+    }
+  },
+  "power": {
+    "weights": {
+      "aim": 0.4,
+      "reaction": 0.25,
+      "positioning": 0.2,
+      "teamwork": 0.05,
+      "mental": 0.1
+    },
+    "roleFocus": {
+      "ENTRY": {
+        "aim": 0.1,
+        "reaction": 0.1
+      },
+      "AWP": {
+        "aim": 0.12,
+        "positioning": 0.08
+      },
+      "IGL": {
+        "teamwork": 0.1,
+        "mental": 0.1
+      },
+      "SUPPORT": {
+        "teamwork": 0.12,
+        "positioning": 0.08
+      },
+      "LURK": {
+        "positioning": 0.1,
+        "mental": 0.1
+      }
+    },
+    "duelScale": 60,
+    "defenderHold": 0.05,
+    "postPlantHold": 0.05,
+    "awpOpening": 0.06,
+    "offRole": 0.88,
+    "secondaryRole": 0.96,
+    "formPerPoint": 0.004,
+    "numbersPerMan": 0.05,
+    "tradeBase": 0.3,
+    "tradePerTeamwork": 0.004,
+    "tradeAdvantage": 0.1,
+    "supportTrade": 0.12,
+    "iglBase": 0.5,
+    "iglPerPoint": 0.01,
+    "lurkFlank": 0.22,
+    "lurkClutch": 0.08,
+    "clutchMentalPer": 0.004,
+    "behindMentalPer": 0.002,
+    "fakeBase": 0.3,
+    "fakePerPoint": 0.006,
+    "fakePull": 2,
+    "siteDefenders": 2,
+    "rotateSec": 14,
+    "plantSec": 4,
+    "defuseSec": 7,
+    "duelSecMin": 2,
+    "duelSecMax": 7
+  },
+  "economy": {
+    "start": 4000,
+    "win": 16000,
+    "lossBase": 7000,
+    "lossStep": 2500,
+    "lossMax": 14500,
+    "plantBonus": 1500,
+    "killBonus": 300,
+    "max": 60000,
+    "loadouts": [
+      {
+        "id": "ECO",
+        "name": "省钱局",
+        "cost": 0,
+        "power": 0.8
+      },
+      {
+        "id": "FORCE",
+        "name": "半起",
+        "cost": 10000,
+        "power": 0.92
+      },
+      {
+        "id": "FULL",
+        "name": "全枪全甲",
+        "cost": 20000,
+        "power": 1.0
+      }
+    ]
+  }
+}

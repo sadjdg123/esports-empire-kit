@@ -3,7 +3,7 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 // Pure-logic layers must stay runnable in Node: no UI libs, no browser globals.
-const PURE_LOGIC_DIRS = ['src/core/**', 'src/sim/**', 'src/game/**', 'src/save/**'];
+const PURE_LOGIC_DIRS = ['src/core/**', 'src/sim/**', 'src/sim-fps/**', 'src/sim-card/**', 'src/game/**', 'src/save/**'];
 
 const BANNED_BROWSER_GLOBALS = [
   'window', 'document', 'localStorage', 'sessionStorage', 'navigator',
