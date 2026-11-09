@@ -1,0 +1,249 @@
+{
+  "name": "牌局",
+  "teamSize": 3,
+  "gamesToWin": 2,
+  "seriesToWin": 2,
+  "life": 20,
+  "maxTurns": 12,
+  "attrs": {
+    "calc": "计算",
+    "read": "读牌",
+    "macro": "运营",
+    "mental": "心态"
+  },
+  "decks": {
+    "AGGRO": {
+      "name": "快攻",
+      "description": "前几回合抢血，拖久了就没牌",
+      "pressure": [
+        4,
+        4,
+        3,
+        3,
+        3,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "guard": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "heal": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "MIDRANGE": {
+      "name": "中速",
+      "description": "每回合都不亏，没有明显短板",
+      "pressure": [
+        1,
+        2,
+        3,
+        3,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "guard": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "heal": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "CONTROL": {
+      "name": "控制",
+      "description": "前期解场回血，后期用大牌压死",
+      "pressure": [
+        0,
+        1,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        7,
+        7,
+        7
+      ],
+      "guard": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "heal": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    "COMBO": {
+      "name": "组合技",
+      "description": "憋到关键回合，一套带走",
+      "pressure": [
+        1,
+        1,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "guard": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "heal": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  "combo": {
+    "turn": 6,
+    "base": 0.22,
+    "perTurn": 0.12,
+    "perSkill": 0.004,
+    "disrupt": {
+      "AGGRO": 0.05,
+      "MIDRANGE": 0.12,
+      "CONTROL": 0.15,
+      "COMBO": 0.1
+    },
+    "disruptPerRead": 0.003
+  },
+  "edge": {
+    "AGGRO": {
+      "MIDRANGE": 1.03,
+      "COMBO": 1.1
+    },
+    "MIDRANGE": {
+      "CONTROL": 0.97
+    },
+    "CONTROL": {},
+    "COMBO": {
+      "CONTROL": 0.95
+    }
+  },
+  "skill": {
+    "weights": {
+      "calc": 0.4,
+      "read": 0.25,
+      "macro": 0.2,
+      "mental": 0.15
+    },
+    "proficiencyShare": 0.25,
+    "perPoint": 0.01,
+    "swing": 0.35,
+    "misplayBase": 0.14,
+    "misplayPerCalc": 0.0015,
+    "misplayFactor": 0.5,
+    "readBase": 0.12,
+    "readPer": 0.003,
+    "readGuard": 0.5,
+    "lateTurn": 7,
+    "lateMacroPer": 0.004,
+    "behindMentalPer": 0.1,
+    "formPerPoint": 0.004,
+    "secondPlayerLife": 2,
+    "drawLuck": 0.3
+  }
+}
