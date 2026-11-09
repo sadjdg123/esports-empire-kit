@@ -6,7 +6,7 @@ import { money } from '../labels';
 
 const KIND_MONEY: Record<LedgerKind, string> = {
   SALARY: '选手工资', SPONSOR: '赞助', PRIZE: '奖金', SIGNING: '签约费', RELEASE: '解约', TRANSFER: '转会', LEAGUE: '联赛分成',
-  MERCH: '周边', TRAINING: '训练', FACILITY: '设施', UPKEEP: '设施维护', STAFF: '负责人',
+  MERCH: '周边', TRAINING: '训练', FACILITY: '设施', UPKEEP: '设施维护', STAFF: '负责人', BRANCH: '分部开办与运营',
 };
 const KIND_DECISION: Record<string, string> = {
   SIGN: '签人', RENEW: '续约', SELL: '卖人', REJECT: '拒绝报价', TRAINING: '训练', TACTIC: '战术', SPONSOR: '赞助', RESCUE: '救急', FACILITY: '设施',

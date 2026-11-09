@@ -3,6 +3,8 @@
 
 import type { Authority, ClubId, ClubStyle, FacilityId, ManagementStyle, Player, PlayerId, Side, SponsorGoal, StaffId, StaffMember, StaffRole, Tactic, TeamLineup, TrainingFocus } from '../core/types';
 
+import type { BranchKind, BranchState } from './branch-types';
+
 /** The player's training choice: a fixed focus, or AUTO (rest when tired, otherwise rotate). */
 export type TrainingPlan = TrainingFocus | 'AUTO';
 
@@ -115,13 +117,14 @@ export interface FixtureResult {
   checksum: string;
 }
 
-export type LedgerKind = 'SALARY' | 'SPONSOR' | 'PRIZE' | 'SIGNING' | 'RELEASE' | 'TRANSFER' | 'LEAGUE' | 'MERCH' | 'TRAINING' | 'FACILITY' | 'UPKEEP' | 'STAFF';
+export type LedgerKind = 'SALARY' | 'SPONSOR' | 'PRIZE' | 'SIGNING' | 'RELEASE' | 'TRANSFER' | 'LEAGUE' | 'MERCH' | 'TRAINING' | 'FACILITY' | 'UPKEEP' | 'STAFF' | 'BRANCH';
 
 export interface LedgerEntry {
   week: number; // round index the entry belongs to (0-based); -1 = before the season
   kind: LedgerKind;
   amount: number; // + income, - expense
   note: string;
+  branch?: 'FPS' | 'CARD'; // P4: money of another division (absent = the MOBA club)
 }
 
 export interface StoredReport {
@@ -170,6 +173,10 @@ export interface GameState {
   hallOfFame: HallOfFameEntry[];
   awards: SeasonAward[];
   // P3
+  // P4
+  branches: Partial<Record<BranchKind, BranchState>>; // the other divisions, once opened
+  goals: Record<string, { season: number; day: number }>; // milestones reached, by goal id
+  counters: { wins: number; profitSeasons: number; triples: number }; // running totals the milestones count
   staff: Record<StaffId, StaffMember>; // candidates and the player's hires
   staffMarket: StaffId[]; // candidates this off-season
   delegation: Delegation;

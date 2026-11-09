@@ -2,6 +2,7 @@
 // prizes, running costs and reputation. The player's money moves through
 // the ledger; AI clubs follow the same rules but only keep a balance.
 
+import { branchSponsorBonus } from './branches';
 import type { ClubId, GameData, SponsorDef, SponsorGoal } from '../core/types';
 import { addLedger, clubById, contractStartSeason, rosterOf, weekOfSeason, weeklySalaries, type Result } from './game';
 import { postMessage } from './messages';
@@ -145,7 +146,8 @@ export function weeklyMoney(state: GameState, data: GameData, clubId: ClubId = P
   const f = data.economy.finance;
   const club = clubById(state, clubId);
   const salaries = rosterOf(state, clubId).reduce((a, p) => a + p.salaryPerWeek, 0);
-  const sponsor = clubId === PLAYER_CLUB_ID ? (activeSponsor(state)?.weekly ?? 0) : bestSponsorFor(data, sponsorStanding(state, data, clubId)).weekly;
+  // A group with more divisions is worth more to its sponsor (P4).
+  const sponsor = clubId === PLAYER_CLUB_ID ? Math.round((activeSponsor(state)?.weekly ?? 0) * (1 + branchSponsorBonus(state, data))) : bestSponsorFor(data, sponsorStanding(state, data, clubId)).weekly;
   const inLeague = state.calendar.phase === 'REGULAR' || state.calendar.phase === 'PLAYOFFS';
   const league = inLeague ? f.leagueShareWeekly : 0;
   const merch = Math.round((f.merchBase + club.reputation * f.merchPerReputation) * (1 + (seasonWinRate(state, clubId) - 0.5) * f.merchWinRateEffect)

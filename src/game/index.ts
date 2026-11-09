@@ -15,3 +15,5 @@ export * from './advice';
 export * from './staff';
 export * from './delegation';
 export * from './report-staff';
+export * from './branch-types';
+export * from './branches';

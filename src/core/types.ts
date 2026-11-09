@@ -712,5 +712,21 @@ export interface GameData {
   facilities: FacilitiesConfig;
   traits: TraitsConfig;
   staff: StaffConfig;
+  // P4: the other divisions, each with its own match rules
+  fps: import('../sim-fps/types').FpsConfig;
+  card: import('../sim-card/types').CardConfig;
+  branches: import('../game/branch-types').BranchesConfig;
+  goals: GoalDef[];
   heroById: Record<HeroId, HeroDef>;
+}
+
+/** A long-term milestone (P4, T41). `kind` and `target` say what is counted. */
+export interface GoalDef {
+  id: string;
+  name: string;
+  description: string;
+  kind: string;
+  target: number;
+  reward: number; // money, once
+  reputation: number; // reputation, once
 }

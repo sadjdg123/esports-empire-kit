@@ -12,6 +12,10 @@ import aiJson from '../data/ai.json';
 import facilitiesJson from '../data/facilities.json';
 import traitsJson from '../data/traits.json';
 import staffJson from '../data/staff.json';
+import branchesJson from '../data/branches.json';
+import goalsJson from '../data/goals.json';
+import { fpsConfig } from '../sim-fps/config';
+import { cardConfig } from '../sim-card/config';
 import {
   ARCHETYPES, AUTHORITIES, FACILITY_IDS, STAFF_ROLES, STAFF_STYLES, GROWTH_TYPES, LANES, MANAGEMENT_STYLES, ROLES, TACTICS, TRAINING_FOCI,
   type AiConfig, type ClubDef, type EconomyConfig, type FacilitiesConfig, type GameData, type GrowthConfig, type HeroDef, type MatchConfig,
@@ -31,6 +35,8 @@ export interface RawGameData {
   facilities: unknown;
   traits: unknown;
   staff: unknown;
+  branches?: unknown;
+  goals?: unknown;
 }
 
 export class DataValidationError extends Error {
@@ -656,6 +662,10 @@ export function loadGameData(raw: RawGameData = defaultRawData()): GameData {
     facilities: raw.facilities as FacilitiesConfig,
     traits: raw.traits as TraitsConfig,
     staff: raw.staff as StaffConfig,
+    fps: fpsConfig,
+    card: cardConfig,
+    branches: (raw.branches ?? branchesJson) as GameData['branches'],
+    goals: (raw.goals ?? goalsJson) as GameData['goals'],
     heroById,
   };
 }
@@ -664,7 +674,7 @@ export function loadGameData(raw: RawGameData = defaultRawData()): GameData {
 export function defaultRawData(): RawGameData {
   return structuredClone({
     heroes: heroesJson, players: playersJson, clubs: clubsJson, economy: economyJson, match: matchJson, season: seasonJson, growth: growthJson, ai: aiJson,
-    facilities: facilitiesJson, traits: traitsJson, staff: staffJson,
+    facilities: facilitiesJson, traits: traitsJson, staff: staffJson, branches: branchesJson, goals: goalsJson,
   });
 }
 

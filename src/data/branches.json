@@ -1,0 +1,292 @@
+{
+  "kinds": {
+    "FPS": {
+      "name": "射击分部",
+      "game": "爆破战",
+      "open": {
+        "reputation": 30,
+        "cost": 80000
+      },
+      "squad": 5,
+      "rosterMax": 7,
+      "matchWeekday": 2,
+      "weeklyUpkeep": 800,
+      "leagueShareWeekly": 5500,
+      "prizeWin": 3500,
+      "prizeLoss": 1000,
+      "finalPrize": {
+        "champion": 30000,
+        "runnerUp": 14000
+      },
+      "sponsorBonus": 0.15,
+      "reputation": {
+        "win": 0.25,
+        "loss": -0.1,
+        "champion": 4,
+        "runnerUp": 1.5
+      },
+      "salary": {
+        "base": 300,
+        "perPoint": 40,
+        "from": 40
+      },
+      "signingFeeWeeks": 4,
+      "contractYears": 2,
+      "marketSize": 14,
+      "age": {
+        "min": 17,
+        "max": 27,
+        "peak": 23,
+        "retire": 29
+      },
+      "growth": {
+        "perWeek": 0.35,
+        "focusBonus": 0.5,
+        "declinePerSeason": 1.5,
+        "restForm": 2
+      },
+      "teams": [
+        {
+          "id": "f_lingfeng",
+          "name": "凌锋战队",
+          "shortName": "凌锋",
+          "color": "#d9534f",
+          "level": 68,
+          "tactic": "RUSH"
+        },
+        {
+          "id": "f_yaoguang",
+          "name": "曜光枪械社",
+          "shortName": "曜光",
+          "color": "#f0ad4e",
+          "level": 64,
+          "tactic": "DEFAULT"
+        },
+        {
+          "id": "f_shuangren",
+          "name": "霜刃小队",
+          "shortName": "霜刃",
+          "color": "#5bc0de",
+          "level": 60,
+          "tactic": "SLOW"
+        },
+        {
+          "id": "f_tiewei",
+          "name": "铁围电竞",
+          "shortName": "铁围",
+          "color": "#777f8c",
+          "level": 56,
+          "tactic": "FAKE"
+        },
+        {
+          "id": "f_chenxing",
+          "name": "晨星青年队",
+          "shortName": "晨星",
+          "color": "#8e6fd1",
+          "level": 52,
+          "tactic": "RANDOM"
+        }
+      ],
+      "namePool": [
+        "Kite",
+        "北辰",
+        "Flint",
+        "砂砾",
+        "Vex",
+        "苍梧",
+        "Onyx",
+        "阿澈",
+        "Riff",
+        "松间",
+        "Quartz",
+        "白榆",
+        "Mako",
+        "行舟",
+        "Zephyr",
+        "青梧",
+        "Tarn",
+        "听澜",
+        "Ember",
+        "栖梧",
+        "Slate",
+        "观潮",
+        "Juno",
+        "南柯",
+        "Pike",
+        "折桂",
+        "Rook",
+        "怀瑾",
+        "Fable",
+        "云岫",
+        "Dusk",
+        "照夜",
+        "Cinder",
+        "扶摇",
+        "Lumen",
+        "溪午",
+        "Bram",
+        "迟暮",
+        "Wren",
+        "山岚"
+      ]
+    },
+    "CARD": {
+      "name": "卡牌分部",
+      "game": "牌局",
+      "open": {
+        "reputation": 25,
+        "cost": 50000
+      },
+      "squad": 3,
+      "rosterMax": 5,
+      "matchWeekday": 3,
+      "weeklyUpkeep": 500,
+      "leagueShareWeekly": 3600,
+      "prizeWin": 2200,
+      "prizeLoss": 700,
+      "finalPrize": {
+        "champion": 20000,
+        "runnerUp": 9000
+      },
+      "sponsorBonus": 0.1,
+      "reputation": {
+        "win": 0.2,
+        "loss": -0.08,
+        "champion": 3,
+        "runnerUp": 1
+      },
+      "salary": {
+        "base": 300,
+        "perPoint": 40,
+        "from": 40
+      },
+      "signingFeeWeeks": 4,
+      "contractYears": 2,
+      "marketSize": 10,
+      "age": {
+        "min": 17,
+        "max": 33,
+        "peak": 26,
+        "retire": 35
+      },
+      "growth": {
+        "perWeek": 0.35,
+        "focusBonus": 0.5,
+        "declinePerSeason": 1.2,
+        "restForm": 2
+      },
+      "teams": [
+        {
+          "id": "c_mojuan",
+          "name": "墨卷牌社",
+          "shortName": "墨卷",
+          "color": "#3b3f58",
+          "level": 68,
+          "tactic": "RANDOM"
+        },
+        {
+          "id": "c_qiying",
+          "name": "棋影俱乐部",
+          "shortName": "棋影",
+          "color": "#b5651d",
+          "level": 64,
+          "tactic": "RANDOM"
+        },
+        {
+          "id": "c_xingzhou",
+          "name": "星舟电竞",
+          "shortName": "星舟",
+          "color": "#2e86ab",
+          "level": 60,
+          "tactic": "RANDOM"
+        },
+        {
+          "id": "c_baize",
+          "name": "白泽牌手会",
+          "shortName": "白泽",
+          "color": "#7cb518",
+          "level": 56,
+          "tactic": "RANDOM"
+        },
+        {
+          "id": "c_duqiao",
+          "name": "渡桥青年队",
+          "shortName": "渡桥",
+          "color": "#c05299",
+          "level": 52,
+          "tactic": "RANDOM"
+        }
+      ],
+      "namePool": [
+        "Sable",
+        "知微",
+        "Orrin",
+        "晚晴",
+        "Pell",
+        "砚秋",
+        "Thistle",
+        "闻笛",
+        "Corvin",
+        "临渊",
+        "Maple",
+        "疏影",
+        "Quill_R",
+        "拾光",
+        "Halden",
+        "听雪",
+        "Nim",
+        "归鸿",
+        "Brisa",
+        "半夏",
+        "Tolle",
+        "怀素",
+        "Edda",
+        "清和",
+        "Voss",
+        "观棋",
+        "Lark",
+        "若谷",
+        "Ishen",
+        "朝暮"
+      ]
+    }
+  },
+  "aiLevel": {
+    "min": 48,
+    "max": 72,
+    "driftPerSeason": 3,
+    "spread": 5
+  },
+  "marketLevel": {
+    "min": 40,
+    "max": 74
+  },
+  "formSwing": 3,
+  "reportsKept": 12,
+  "logKept": 60,
+  "director": {
+    "candidates": 3,
+    "skillMin": 30,
+    "skillMax": 95,
+    "salaryBase": 150,
+    "salaryPerSkill": 6,
+    "signingFeeWeeks": 4,
+    "perceptionNoise": 18,
+    "mistakeAtZero": 0.4,
+    "namePool": [
+      "老韩",
+      "阿默",
+      "顾问叶",
+      "小满",
+      "程工",
+      "陆舟",
+      "方野",
+      "秦川",
+      "许衡",
+      "沈岳",
+      "林樵",
+      "周筹"
+    ],
+    "trainSwitchGap": 3
+  }
+}

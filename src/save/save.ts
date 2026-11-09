@@ -5,7 +5,7 @@ import { loadGameData } from '../core/config';
 import { personalityFor } from '../core/personality';
 import { AUTHORITIES, FACILITY_IDS, STAFF_ROLES } from '../core/types';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 /**
  * What the save layer needs to know about the game state. The full type lives
@@ -125,7 +125,16 @@ function migrateV3toV4(save: Obj): Obj {
 }
 
 /** Registered upgrades, keyed by the version they upgrade from. */
-export const MIGRATIONS: Record<number, Migration> = { 1: migrateV1toV2, 2: migrateV2toV3, 3: migrateV3toV4 };
+/** P3 (v4) -> P4 (v5): no other divisions yet, no milestones reached; the game plays as before. */
+function migrateV4toV5(save: Obj): Obj {
+  const g = save.game as Obj;
+  g.branches ??= {};
+  g.goals ??= {};
+  g.counters ??= { wins: 0, profitSeasons: 0, triples: 0 };
+  return save;
+}
+
+export const MIGRATIONS: Record<number, Migration> = { 1: migrateV1toV2, 2: migrateV2toV3, 3: migrateV3toV4, 4: migrateV4toV5 };
 
 export class SaveError extends Error {}
 
@@ -183,6 +192,8 @@ export function checkSave(save: SaveFile): string | null {
   }
   if (typeof g.chemistry !== 'object' || g.chemistry === null || Array.isArray(g.chemistry)) return '游戏数据缺少 chemistry';
   for (const k of ['hallOfFame', 'awards']) if (!Array.isArray(g[k])) return `游戏数据缺少 ${k}`;
+  // P4 (v5)
+  for (const k of ['branches', 'goals', 'counters']) if (typeof g[k] !== 'object' || g[k] === null || Array.isArray(g[k])) return `游戏数据缺少 ${k}`;
   // P3 (v4)
   if (typeof g.staff !== 'object' || g.staff === null || Array.isArray(g.staff)) return '游戏数据缺少 staff';
   for (const k of ['staffMarket', 'pending', 'decisionLog']) if (!Array.isArray(g[k])) return `游戏数据缺少 ${k}`;

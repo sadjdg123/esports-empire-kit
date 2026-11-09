@@ -23,6 +23,7 @@ import { aiUpgradeFacilities } from './facilities';
 import { announceRetirements, awardSeasonMvp, retirePlayers, retirementNoticeDue } from './career';
 import { chemistryFromMatch, chemistryNewSeason, groupChemistry } from './chemistry';
 import { refreshStaffMarket, rollStaffContracts } from './staff';
+import { branchesDay, branchesNewSeason, branchesPayDay } from './branches';
 import { coachMatchDay, coachTraining, expirePending, postStaffWeekSummary, settleDecisionResults, settleMatchDecision, staffWeek } from './delegation';
 import { postMessage } from './messages';
 import { applyDailyRecovery, applyMatchEffects, applyTrainingWeek } from './training';
@@ -226,6 +227,7 @@ export function startNewSeason(state: GameState, data: GameData): boolean {
   postMessage(state, 'SEASON', '自由市场更新', `${talent.joined} 名新秀进入自由市场${talent.retired > 0 ? `；${talent.retired} 名没有球队的老将退役` : ''}${talent.left > 0 ? `；${talent.left} 名自由球员离开了联赛` : ''}。`);
   aiSignFreeAgents(state, data);
   chemistryNewSeason(state, data);
+  branchesNewSeason(state, data);
   staffWeek(state, data); // hired staff set the new season up
   return remindExpiring(state);
 }
@@ -261,8 +263,10 @@ export function advanceDay(state: GameState, data: GameData): DayResult {
   }
   applyDailyRecovery(state, data);
   expirePending(state, data);
+  branchesDay(state, data); // the other divisions play on their own week days
   if (day % cfg.daysPerWeek === cfg.payWeekday) {
     runPayDay(state, data); // before training: this week's training is paid for
+    branchesPayDay(state, data);
     coachTraining(state, data); // a hired coach picks this week's training first
     applyTrainingWeek(state, data);
     if (retirementNoticeDue(state, data)) announceRetirements(state, data);

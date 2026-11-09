@@ -1,0 +1,16 @@
+[
+  { "id": "first_win", "name": "第一场胜利", "description": "赢下任意一场正式比赛", "kind": "WINS", "target": 1, "reward": 3000, "reputation": 1 },
+  { "id": "playoffs", "name": "打进季后赛", "description": "MOBA 常规赛进前 4", "kind": "MOBA_PLAYOFFS", "target": 1, "reward": 8000, "reputation": 2 },
+  { "id": "first_title", "name": "第一个冠军", "description": "MOBA 联赛夺冠", "kind": "MOBA_TITLES", "target": 1, "reward": 20000, "reputation": 4 },
+  { "id": "profit", "name": "第一个盈利赛季", "description": "一个赛季结束时的钱比开始时多", "kind": "PROFIT_SEASONS", "target": 1, "reward": 5000, "reputation": 1 },
+  { "id": "star", "name": "培养出明星", "description": "队里有一名能力 80 以上的 MOBA 选手", "kind": "STAR_OVR", "target": 80, "reward": 8000, "reputation": 2 },
+  { "id": "mvp", "name": "赛季 MVP", "description": "你的选手当选 MOBA 赛季 MVP", "kind": "MVPS", "target": 1, "reward": 8000, "reputation": 2 },
+  { "id": "staffed", "name": "学会放手", "description": "经理、教练、财务三个岗位都有人", "kind": "STAFF_HIRED", "target": 3, "reward": 5000, "reputation": 1 },
+  { "id": "second_branch", "name": "第二个分部", "description": "开出射击或卡牌分部", "kind": "BRANCHES", "target": 1, "reward": 10000, "reputation": 3 },
+  { "id": "group", "name": "电竞集团", "description": "三个项目都有队伍", "kind": "BRANCHES", "target": 2, "reward": 20000, "reputation": 5 },
+  { "id": "branch_title", "name": "分部也夺冠", "description": "射击或卡牌分部拿到联赛冠军", "kind": "BRANCH_TITLES", "target": 1, "reward": 15000, "reputation": 3 },
+  { "id": "dynasty", "name": "王朝", "description": "MOBA 联赛累计 3 个冠军", "kind": "MOBA_TITLES", "target": 3, "reward": 40000, "reputation": 6 },
+  { "id": "triple", "name": "三冠集团", "description": "同一个赛季三个项目全部夺冠", "kind": "TRIPLE", "target": 1, "reward": 80000, "reputation": 10 },
+  { "id": "top", "name": "集团排名第一", "description": "声望达到 90", "kind": "REPUTATION", "target": 90, "reward": 50000, "reputation": 0 },
+  { "id": "legend", "name": "名人堂", "description": "有一名效力过你俱乐部的选手进入名人堂", "kind": "HALL_OF_FAME", "target": 1, "reward": 10000, "reputation": 2 }
+]
