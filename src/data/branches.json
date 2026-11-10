@@ -18,7 +18,7 @@
         "champion": 30000,
         "runnerUp": 14000
       },
-      "sponsorBonus": 0.15,
+      "sponsorBonus": 0.08,
       "reputation": {
         "win": 0.25,
         "loss": -0.1,
@@ -40,7 +40,7 @@
         "retire": 29
       },
       "growth": {
-        "perWeek": 0.35,
+        "perWeek": 0.14,
         "focusBonus": 0.5,
         "declinePerSeason": 1.5,
         "restForm": 2
@@ -51,7 +51,7 @@
           "name": "凌锋战队",
           "shortName": "凌锋",
           "color": "#d9534f",
-          "level": 68,
+          "level": 70,
           "tactic": "RUSH"
         },
         {
@@ -59,7 +59,7 @@
           "name": "曜光枪械社",
           "shortName": "曜光",
           "color": "#f0ad4e",
-          "level": 64,
+          "level": 68,
           "tactic": "DEFAULT"
         },
         {
@@ -67,7 +67,7 @@
           "name": "霜刃小队",
           "shortName": "霜刃",
           "color": "#5bc0de",
-          "level": 60,
+          "level": 65,
           "tactic": "SLOW"
         },
         {
@@ -75,7 +75,7 @@
           "name": "铁围电竞",
           "shortName": "铁围",
           "color": "#777f8c",
-          "level": 56,
+          "level": 62,
           "tactic": "FAKE"
         },
         {
@@ -83,7 +83,7 @@
           "name": "晨星青年队",
           "shortName": "晨星",
           "color": "#8e6fd1",
-          "level": 52,
+          "level": 59,
           "tactic": "RANDOM"
         }
       ],
@@ -148,7 +148,7 @@
         "champion": 20000,
         "runnerUp": 9000
       },
-      "sponsorBonus": 0.1,
+      "sponsorBonus": 0.06,
       "reputation": {
         "win": 0.2,
         "loss": -0.08,
@@ -170,7 +170,7 @@
         "retire": 35
       },
       "growth": {
-        "perWeek": 0.35,
+        "perWeek": 0.14,
         "focusBonus": 0.5,
         "declinePerSeason": 1.2,
         "restForm": 2
@@ -181,7 +181,7 @@
           "name": "墨卷牌社",
           "shortName": "墨卷",
           "color": "#3b3f58",
-          "level": 68,
+          "level": 70,
           "tactic": "RANDOM"
         },
         {
@@ -189,7 +189,7 @@
           "name": "棋影俱乐部",
           "shortName": "棋影",
           "color": "#b5651d",
-          "level": 64,
+          "level": 68,
           "tactic": "RANDOM"
         },
         {
@@ -197,7 +197,7 @@
           "name": "星舟电竞",
           "shortName": "星舟",
           "color": "#2e86ab",
-          "level": 60,
+          "level": 65,
           "tactic": "RANDOM"
         },
         {
@@ -205,7 +205,7 @@
           "name": "白泽牌手会",
           "shortName": "白泽",
           "color": "#7cb518",
-          "level": 56,
+          "level": 62,
           "tactic": "RANDOM"
         },
         {
@@ -213,7 +213,7 @@
           "name": "渡桥青年队",
           "shortName": "渡桥",
           "color": "#c05299",
-          "level": 52,
+          "level": 59,
           "tactic": "RANDOM"
         }
       ],
@@ -252,14 +252,14 @@
     }
   },
   "aiLevel": {
-    "min": 48,
-    "max": 72,
-    "driftPerSeason": 3,
+    "min": 56,
+    "max": 75,
+    "driftPerSeason": 4,
     "spread": 5
   },
   "marketLevel": {
-    "min": 40,
-    "max": 74
+    "min": 42,
+    "max": 72
   },
   "formSwing": 3,
   "reportsKept": 12,

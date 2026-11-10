@@ -7,8 +7,8 @@ import { buildReport } from '../../src/sim/report';
 import { buildCase, type ScenarioId } from './scenarios';
 import { STAFF_ROLES } from '../../src/core/types';
 import {
-  PLAYER_CLUB_ID, type GameState, type ManageStyle, advanceDay, autoManage, autoTraining, commitMatchDay, hireStaff, hiredStaff, newGame, playerOverall, renewStaff,
-  rosterOf, staffWeek, standings, weeklySalaries,
+  BRANCH_KINDS, PLAYER_CLUB_ID, type BranchKind, type GameState, type ManageStyle, advanceDay, autoManage, autoTraining, branchOverall, branchRoster, canOpenBranch,
+  commitMatchDay, hireDirector, hireStaff, hiredStaff, newGame, openBranch, playerOverall, renewStaff, rosterOf, staffWeek, standings, weeklySalaries,
 } from '../../src/game';
 
 export interface EconomySeason { ratio: number; wins: number; rank: number; salaries: number; afterSigning: number; reputation: number; playoff: string }
@@ -25,6 +25,14 @@ export interface LeagueRecord {
 /** One run of a club left to staff (P3, T34), or to the plain automatic manager (`level` 'auto'). */
 export interface StaffRunSeason { wins: number; losses: number; playoff: string; champion: boolean; funds: number; minFunds: number; starterAvg: number; leagueStarterAvg: number; roster: number; staffCost: number; slips: number; hired: number; championName: string }
 export interface StaffRecord { seed: number; level: string; seasons: StaffRunSeason[] }
+
+/** One run of a whole group (P4, T42): the MOBA club on the plain automatic manager, other divisions opened when possible and left to a director. */
+export interface GroupSeason {
+  funds: number; minFunds: number; reputation: number; mobaWins: number; mobaLosses: number; mobaPlayoff: string; goals: number;
+  net: Record<string, number>; // money by division this season
+  branches: Partial<Record<BranchKind, { rank: number; wins: number; result: string; champion: string; squad: number; starter: number; leagueLevel: number }>>;
+}
+export interface GroupRecord { seed: number; seasons: GroupSeason[]; opened: Partial<Record<BranchKind, number>> }
 
 export interface MatchRecord {
   i: number;
@@ -52,7 +60,7 @@ function goldAt(tl: { t: number; diff: number }[], t: number): number {
   return v;
 }
 
-const { scenario, from, to, repeat, mode } = workerData as { scenario: ScenarioId; from: number; to: number; repeat: boolean; mode?: 'economy' | 'league' | 'staff'; strategy?: string; seasons?: number };
+const { scenario, from, to, repeat, mode } = workerData as { scenario: ScenarioId; from: number; to: number; repeat: boolean; mode?: 'economy' | 'league' | 'staff' | 'group'; strategy?: string; seasons?: number };
 const data = loadGameData();
 
 /**
@@ -73,7 +81,58 @@ function hireAt(s: GameState, skill: number): void {
   }
 }
 
-if (mode === 'staff') {
+if (mode === 'group') {
+  const rows: GroupRecord[] = [];
+  const skill = Number(workerData.level ?? 60); // the director hired: the candidate closest to this skill
+  for (let seed = from; seed < to; seed++) {
+    const s = newGame('集团', '#3a7bd5', 50_000 + seed, data);
+    const rec: GroupRecord = { seed, seasons: [], opened: {} };
+    for (let k = 0; k < (workerData.seasons as number); k++) {
+      autoManage(s, data, 'balanced');
+      // Open a division once the group can afford it with a cushion, and hand it to a director.
+      for (const kind of BRANCH_KINDS) {
+        const cfg = data.branches.kinds[kind];
+        if (!s.branches[kind] && canOpenBranch(s, data, kind).ok && s.funds >= cfg.open.cost + 80000 && openBranch(s, data, kind).ok) rec.opened[kind] = s.calendar.season;
+        const b = s.branches[kind];
+        if (b && !b.director) {
+          const c = [...b.candidates].sort((x, y) => Math.abs(x.skill - skill) - Math.abs(y.skill - skill))[0];
+          if (c) hireDirector(s, data, kind, c.id);
+        }
+      }
+      let minFunds = s.funds, wins = 0, losses = 0;
+      for (let guard = 0; guard < 400 && s.calendar.phase !== 'FINISHED'; guard++) {
+        autoTraining(s);
+        const pause = advanceDay(s, data).pause;
+        minFunds = Math.min(minFunds, s.funds);
+        if (pause !== 'MATCH_DAY') continue;
+        let c = commitMatchDay(s, data);
+        if (!c.ok) { autoManage(s, data, 'balanced'); c = commitMatchDay(s, data); }
+        if (!c.ok) throw new Error(c.error);
+        if (c.value.playerResult?.winner === PLAYER_CLUB_ID) wins++;
+        else if (c.value.playerResult) losses++;
+      }
+      const h = s.history[s.history.length - 1]!;
+      const net: Record<string, number> = {};
+      for (const e of s.ledger) net[e.branch ?? 'MOBA'] = (net[e.branch ?? 'MOBA'] ?? 0) + e.amount;
+      const season: GroupSeason = { funds: s.funds, minFunds, reputation: s.club.reputation, mobaWins: wins, mobaLosses: losses, mobaPlayoff: h.playerPlayoff, goals: Object.keys(s.goals).length, net, branches: {} };
+      for (const kind of BRANCH_KINDS) {
+        const b = s.branches[kind];
+        const bh = b?.history.find((x) => x.season === h.season);
+        if (!b || !bh) continue;
+        const mean = (xs: number[]) => xs.reduce((a, x) => a + x, 0) / Math.max(1, xs.length);
+        season.branches[kind] = {
+          rank: bh.rank, wins: bh.wins, result: bh.result, champion: bh.champion, squad: b.roster.length,
+          starter: mean(branchRoster(b).map((p) => branchOverall(data, kind, p)).sort((x, y) => y - x).slice(0, data.branches.kinds[kind].squad)),
+          leagueLevel: mean(b.teams.map((t) => mean(t.roster.map((id) => branchOverall(data, kind, b.players[id]!))))),
+        };
+      }
+      rec.seasons.push(season);
+      advanceDay(s, data);
+    }
+    rows.push(rec);
+  }
+  parentPort!.postMessage(rows);
+} else if (mode === 'staff') {
   const level = workerData.level as string; // 'auto' or a skill 0-100
   const rows: StaffRecord[] = [];
   for (let seed = from; seed < to; seed++) {

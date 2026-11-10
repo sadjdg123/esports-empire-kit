@@ -11,7 +11,7 @@ const BANNED_BROWSER_GLOBALS = [
 ].map((name) => ({ name, message: 'Pure-logic modules must not touch browser globals.' }));
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'coverage'] },
+  { ignores: ['dist', 'release', 'node_modules', 'coverage'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

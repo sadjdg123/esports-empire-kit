@@ -13,7 +13,8 @@
     "test": "vitest run",
     "lint": "eslint .",
     "typecheck": "tsc -b",
-    "sim": "tsx tools/sim-cli.ts"
+    "sim": "tsx tools/sim-cli.ts",
+    "pack": "node tools/pack-offline.mjs"
   },
   "dependencies": {
     "phaser": "4.2.1",

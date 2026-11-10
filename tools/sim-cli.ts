@@ -3,6 +3,8 @@
 //   npm run sim -- --n 1000 [--threads 4] [--only G4,G5] [--no-write]  balance report (GDD 16.1)
 //   npm run sim -- --economy [--n 100]                              economy calibration (T07, T16)
 //   npm run sim -- --league [--seasons 20] [--seeds 8] [--write [--out file.md]]  multi-season league health (T17, T20)
+//   npm run sim -- --group [--seasons 20] [--seeds 16] [--write [--out file.md]]  the whole group over many seasons (T42)
+//   npm run sim -- --branches [--n 2000] [--write [--out file.md]]  balance checks of the shooter and card engines (T42)
 //   npm run sim -- --staff [--seasons 20] [--seeds 16] [--levels auto,90,55,20] [--write [--out file.md]]  clubs left to staff (T34)
 import { loadGameData } from '../src/core/config';
 import { ROLES, type Tactic } from '../src/core/types';
@@ -249,7 +251,89 @@ async function staffSim(): Promise<void> {
   }
 }
 
+/** The whole group over many seasons: money, each division's results, who wins the titles (T42). */
+async function groupSim(): Promise<void> {
+  const { availableParallelism } = await import('node:os');
+  const { Worker } = await import('node:worker_threads');
+  const seasons = Number(arg('seasons') ?? 20);
+  const seeds = Number(arg('seeds') ?? 16);
+  const level = arg('level') ?? '60';
+  const threads = Math.min(seeds, Number(arg('threads') ?? availableParallelism()));
+  const chunk = Math.ceil(seeds / threads);
+  type Rec = import('./balance/worker').GroupRecord;
+  const t0 = Date.now();
+  const rows = (await Promise.all(Array.from({ length: threads }, (_, k) => new Promise<Rec[]>((resolve, reject) => {
+    const w = new Worker(new URL('./balance/worker-boot.mjs', import.meta.url), { workerData: { mode: 'group', seasons, level, from: k * chunk, to: Math.min(seeds, (k + 1) * chunk) } });
+    w.once('message', resolve);
+    w.once('error', reject);
+  })))).flat();
+  const start = 100000;
+  const med = (xs: number[]) => { const v = [...xs].sort((a, b) => a - b); return v.length ? v[Math.floor(v.length / 2)]! : 0; };
+  const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
+  const kinds = ['FPS', 'CARD'] as const;
+  const name = { FPS: '射击', CARD: '卡牌' } as const;
+  const all = rows.flatMap((r) => r.seasons);
+  const lines: string[] = [];
+  const out = (s2: string) => { console.log(s2); lines.push(s2); };
+  console.log(`集团长期运行：${rows.length} 局 × ${seasons} 个赛季，用时 ${Math.round((Date.now() - t0) / 1000)} 秒`);
+  const at = (k: number) => (med(rows.map((r) => r.seasons[Math.min(k, seasons - 1)]!.funds)) / start).toFixed(2);
+  out(`- 资金（开局倍数，各局中位数）：第 1 季 ${at(0)} · 第 5 季 ${at(4)} · 第 10 季 ${at(9)} · 第 ${seasons} 季 ${at(seasons - 1)}；第 ${seasons} 季最少 ${(Math.min(...rows.map((r) => r.seasons[seasons - 1]!.funds)) / start).toFixed(2)}、最多 ${(Math.max(...rows.map((r) => r.seasons[seasons - 1]!.funds)) / start).toFixed(2)}；全程最低点 ${(Math.min(...all.map((x) => x.minFunds)) / start).toFixed(2)}`);
+  const mw = all.reduce((a, x) => a + x.mobaWins, 0), ml = all.reduce((a, x) => a + x.mobaLosses, 0);
+  out(`- MOBA：胜率 ${((mw / (mw + ml)) * 100).toFixed(1)}% · 每局冠军 ${(all.filter((x) => x.mobaPlayoff === 'CHAMPION').length / rows.length).toFixed(2)} 次 · 每季净收支平均 ${Math.round(mean(all.map((x) => x.net.MOBA ?? 0)))}`);
+  for (const k of kinds) {
+    const played = all.map((x) => x.branches[k]).filter((x): x is NonNullable<typeof x> => !!x);
+    const opened = rows.map((r) => r.opened[k]).filter((x): x is number => x !== undefined);
+    if (played.length === 0) { out(`- ${name[k]}分部：没有一局开得起`); continue; }
+    const champs = new Map<string, number>();
+    for (const x of played) champs.set(x.result === 'CHAMPION' ? '玩家' : x.champion, (champs.get(x.result === 'CHAMPION' ? '玩家' : x.champion) ?? 0) + 1);
+    const netK = all.filter((x) => x.branches[k]).map((x) => x.net[k] ?? 0);
+    out(`- ${name[k]}分部：${opened.length}/${rows.length} 局开了（中位第 ${med(opened)} 季）· 胜率 ${((played.reduce((a, x) => a + x.wins, 0) / (played.length * 10)) * 100).toFixed(1)}% · 平均名次 ${mean(played.map((x) => x.rank)).toFixed(1)} · 夺冠 ${((played.filter((x) => x.result === 'CHAMPION').length / played.length) * 100).toFixed(0)}% 的赛季 · 首发能力 ${mean(played.map((x) => x.starter)).toFixed(1)}（对手 ${mean(played.map((x) => x.leagueLevel)).toFixed(1)}）· 每季净收支平均 ${Math.round(mean(netK))}（最差 ${Math.round(Math.min(...netK))}）· 人数不够的赛季 ${played.filter((x) => x.squad < (k === 'FPS' ? 5 : 3)).length}`);
+    out(`  - 冠军分布：${[...champs].sort((a, b) => b[1] - a[1]).map(([n, v]) => `${n} ${v}`).join('、')}`);
+  }
+  out(`- 阶段目标：第 ${seasons} 季平均达成 ${mean(rows.map((r) => r.seasons[seasons - 1]!.goals)).toFixed(1)} 个（共 ${data.goals.length} 个）· 声望平均 ${mean(rows.map((r) => r.seasons[seasons - 1]!.reputation)).toFixed(0)}`);
+  if (process.argv.includes('--write')) {
+    const { writeFileSync } = await import('node:fs');
+    const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const path = arg('out') ?? `docs/reports/group-${day}.md`;
+    const md = [`# 集团 ${seasons} 赛季长期运行报告 ${day}`, '', `> 命令：\`npm run sim -- --group --seasons ${seasons} --seeds ${seeds} --write\` · ${rows.length} 局，每局从新开档连续打 ${seasons} 个赛季。MOBA 用"普通经营"自动策略；钱够开办费再加 8 万时开分部，雇能力最接近 ${level} 的总监全权代管。`, '', ...lines, '',
+      '## 逐赛季（所有局）', '', '| 赛季 | 资金中位（倍） | 开了射击的局 | 射击平均名次 | 开了卡牌的局 | 卡牌平均名次 | MOBA 胜率 |', '|---|---|---|---|---|---|---|'];
+    for (let k = 0; k < seasons; k++) {
+      const xs = rows.map((r) => r.seasons[k]!);
+      const br = (kind: 'FPS' | 'CARD') => xs.map((x) => x.branches[kind]).filter((x): x is NonNullable<typeof x> => !!x);
+      const w = xs.reduce((a, x) => a + x.mobaWins, 0), l = xs.reduce((a, x) => a + x.mobaLosses, 0);
+      md.push(`| ${k + 1} | ${(med(xs.map((x) => x.funds)) / start).toFixed(2)} | ${br('FPS').length} | ${br('FPS').length ? mean(br('FPS').map((x) => x.rank)).toFixed(1) : '—'} | ${br('CARD').length} | ${br('CARD').length ? mean(br('CARD').map((x) => x.rank)).toFixed(1) : '—'} | ${((w / Math.max(1, w + l)) * 100).toFixed(0)}% |`);
+    }
+    writeFileSync(path, md.join('\n') + '\n');
+    console.log(`  报告已写入 ${path}`);
+  }
+}
+
+/** F1-F6 and C1-C7: the gates of the two new match engines. */
+async function branchChecks(): Promise<void> {
+  const { runBranchChecks } = await import('./balance/branches-check');
+  const n = Number(arg('n') ?? 2000);
+  const t0 = Date.now();
+  const r = runBranchChecks(n);
+  const ok = r.checks.every((c) => c.pass);
+  console.log(`新分部平衡检查：每项 ${n} 场，用时 ${Math.round((Date.now() - t0) / 1000)} 秒 → ${ok ? '✅ 全部通过' : '❌ 有未通过'}`);
+  for (const c of r.checks) console.log(`  ${c.id} ${c.what}：${c.result}（标准：${c.standard}）${c.pass ? '✅' : '❌'}`);
+  process.exitCode = ok ? 0 : 1;
+  if (process.argv.includes('--write')) {
+    const { writeFileSync } = await import('node:fs');
+    const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const path = arg('out') ?? `docs/reports/branches-${day}.md`;
+    const tbl = (rows: string[][]) => [`| ${rows[0]!.join(' | ')} |`, `|${rows[0]!.map(() => '---').join('|')}|`, ...rows.slice(1).map((x) => `| ${x.join(' | ')} |`)];
+    const md = [`# 新分部平衡报告 ${day}`, '', `> 命令：\`npm run sim -- --branches --n ${n} --write\` · 每项 ${n} 场，双方轮流换边`, '', `**总结论**：${ok ? '✅ F1–F6、C1–C7 全部通过' : '❌ 有未通过的项'}`, '',
+      '| 编号 | 检查内容 | 实际结果 | 标准 | 结论 |', '|---|---|---|---|---|', ...r.checks.map((c) => `| ${c.id} | ${c.what} | ${c.result} | ${c.standard} | ${c.pass ? '✅' : '❌'} |`), '',
+      '## 射击：打法对阵胜率（行对列，整场比赛）', '', ...tbl(r.fpsTactics), '', '## 卡牌：卡组对阵胜率（行对列，一台三局两胜）', '', ...tbl(r.cardDecks), ''];
+    writeFileSync(path, md.join('\n'));
+    console.log(`  报告已写入 ${path}`);
+  }
+}
+
 if (process.argv.includes('--one')) one();
+else if (process.argv.includes('--branches')) void branchChecks();
+else if (process.argv.includes('--group')) void groupSim();
 else if (process.argv.includes('--league')) void league();
 else if (process.argv.includes('--staff')) void staffSim();
 else if (process.argv.includes('--economy')) void economy();

@@ -4,7 +4,7 @@
 > 多 Agent 模式下，每个 Agent 只改自己负责的行。
 
 **当前阶段**：P4 最后一波（任务书：docs/10_P4_TASKS.md，Q17–Q23 按推荐，D68；中间不设关卡）
-**当前任务**：T42 总平衡、长期验收、离线包
+**当前任务**：全部阶段已做完，等门哥试玩后定先改什么（docs/reports/FINAL.md）
 **最近更新**：2026-11-10
 
 | 任务 | 名称 | 负责 | 状态 | 完成日期 | 备注 |
@@ -90,4 +90,4 @@
 | T39 | 分部界面与比赛画面 | Claude Code | ✅ 完成 | 2026-11-10 | 汇报：docs/reports/T39.md；D72 |
 | T40 | 分部总监与集团报表 | Claude Code | ✅ 完成 | 2026-11-10 | 汇报：docs/reports/T40.md；D72 |
 | T41 | 阶段目标 | Claude Code | ✅ 完成 | 2026-11-10 | 汇报：docs/reports/T41.md；D72 |
-| T42 | 总平衡、长期验收、离线包 | | ⬜ | | |
+| T42 | 总平衡、长期验收、离线包 | Claude Code | ✅ 完成 | 2026-11-10 | 汇报：docs/reports/T42.md；D73；总结：docs/reports/FINAL.md |
