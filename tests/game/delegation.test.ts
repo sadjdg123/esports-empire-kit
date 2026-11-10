@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../../src/core/config';
 import type { Authority, StaffRole } from '../../src/core/types';
 import {
-  PLAYER_CLUB_ID, advanceDay, approvePending, coachMatchDay, coachTraining, commitMatchDay, expirePending, financeWeek, hireStaff, managerWeek, newGame,
+  PLAYER_CLUB_ID, advanceDay, approvePending, coachMatchDay, coachTraining, commitMatchDay, describePendingContext, expirePending, financeWeek, hireStaff, managerWeek, newGame,
   protectedPlayers, rejectPending, rosterOf, runPending, signValueSquad, staffWeek, type DayResult, type GameState,
 } from '../../src/game';
 
@@ -82,7 +82,11 @@ describe('manager (T31)', () => {
     s.offers.push({ id: 900, season: 1, day: 0, buyer, seller: PLAYER_CLUB_ID, playerId: star, fee: 10_000_000, status: 'PENDING' });
     managerWeek(s, data);
     expect(s.club.roster).toContain(star);
-    expect(s.pending.find((p) => p.kind === 'SELL')).toMatchObject({ big: true });
+    const sellPending = s.pending.find((p) => p.kind === 'SELL')!;
+    expect(sellPending).toMatchObject({ big: true });
+    const ctx = describePendingContext(s, data, sellPending);
+    expect(ctx.trigger).toContain('核心主力');
+    expect(ctx.fundsAfter).toBe(Math.round(s.funds + sellPending.cost));
   });
 });
 

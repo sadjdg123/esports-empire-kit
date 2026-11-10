@@ -332,5 +332,9 @@ button.link.name { padding: 0; margin: 0; color: var(--text); font-weight: 600; 
 .bar.life { height: 14px; border-radius: 7px; background: #eadfc6; overflow: hidden; display: block; }
 .bar.life i { display: block; height: 100%; transition: width 0.3s; }
 .goal { padding: 8px 0; border-bottom: 1px dashed var(--line); }
-.goal.done { opacity: 0.75; }
+.goal.done { opacity: 0.78; }
+.goal-progress { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; margin-top: 4px; }
+.goal-progress .bar { height: 10px; border-radius: 5px; background: #eadfc6; overflow: hidden; display: block; }
+.goal-progress .bar i { display: block; height: 100%; background: linear-gradient(90deg, #3a7bd5, #3e9d5d); transition: width 0.25s; }
+
 .goal .skill-row { grid-template-columns: 34px 1fr auto; }

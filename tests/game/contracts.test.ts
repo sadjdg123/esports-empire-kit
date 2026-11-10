@@ -3,7 +3,7 @@ import { loadGameData } from '../../src/core/config';
 import {
   PLAYER_CLUB_ID, acceptRenewal, advanceDay, aiRosterTarget, aiSignFreeAgents, autoManage, emergencySalaryCap, askingPrice, bidForPlayer, commitMatchDay, counterRenewal, declineRenewal,
   expiringPlayers, fairSalary, generateAiOffers, marketValue, newGame, openNegotiation, playerOverall, releaseFeeFor,
-  releasePlayer, respondToOffer, signPlayer, signValueSquad, type GameState,
+  releasePlayer, renewalHint, respondToOffer, signPlayer, signValueSquad, type GameState,
 } from '../../src/game';
 
 const data = loadGameData();
@@ -81,8 +81,11 @@ describe('contracts', () => {
     expect(counterRenewal(s, data, p2!.id, 999999, 2).ok).toBe(false); // only one counter
     expect(declineRenewal(s, data, p2!.id).ok).toBe(true);
 
-    const n3 = openNegotiation(s, data, p3!.id);
-    const fair = counterRenewal(s, data, p3!.id, n3.ok ? n3.value.ask : 0, 1);
+    p3!.traits = ['GREEDY'];
+    const hint = renewalHint(s, data, p3!);
+    expect(hint.factors.some((f) => f.includes('爱钱'))).toBe(true);
+    expect(hint.minAccept).toBeLessThanOrEqual(hint.ask);
+    const fair = counterRenewal(s, data, p3!.id, hint.minAccept, 1);
     expect(fair.ok && fair.value.accepted).toBe(true);
     expect(p3!.contractUntil).toBe(2);
   });

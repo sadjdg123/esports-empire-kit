@@ -142,6 +142,22 @@ export interface StoredReport {
   goldDiffTimeline: { t: number; diff: number }[]; // from the player's point of view
 }
 
+export interface TrainingSummary {
+  season: number;
+  week: number; // 1-based week of the season when this training ran
+  focus: TrainingFocus;
+  chemistryGain: number; // per-pair chemistry gained when training TEAMWORK
+  players: {
+    playerId: PlayerId;
+    name: string;
+    ovrDelta: number;
+    focusAttrDelta: number;
+    masteryGains: { heroId: string; delta: number }[];
+    fatigueAfter: number;
+    fatigueDelta: number;
+  }[];
+}
+
 export interface GameState {
   seed: number;
   week: number; // next round to play (0-based); equals totalRounds when the season is over
@@ -161,6 +177,7 @@ export interface GameState {
   // P1
   calendar: Calendar;
   training: TrainingPlan; // the player's weekly training; AUTO decides each Monday (F1)
+  lastTraining?: TrainingSummary; // F4: summary of the player club's most recent Monday training
   inbox: InboxMessage[];
   nextMessageId: number;
   history: SeasonRecord[];

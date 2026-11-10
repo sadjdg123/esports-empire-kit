@@ -2,7 +2,7 @@ import { Fragment, useState } from 'react';
 import { ROLES, type Player, type Role } from '../../core/types';
 import {
   PLAYER_CLUB_ID, acceptRenewal, bidForPlayer, clubById, counterRenewal, declineRenewal, facilityValue, marketValue, negotiationFor, openNegotiation,
-  playerOverall, releaseFeeFor, releasePlayer, renewalAsk, respondToOffer, rosterOf, transferWindowOpen,
+  playerOverall, releaseFeeFor, releasePlayer, renewalAsk, renewalHint, respondToOffer, rosterOf, transferWindowOpen,
 } from '../../game';
 import type { PageProps } from '../App';
 import { Ovr, PlayerName, Roles, Traits } from '../components/PlayerBits';
@@ -22,8 +22,9 @@ function Renewal({ p, props }: { p: Player; props: PageProps }) {
   const k = data.economy.contracts;
   const n = negotiationFor(game, p.id);
   const ask = n?.ask ?? renewalAsk(data, p, facilityValue(game, data, PLAYER_CLUB_ID, 'OFFICE'));
+  const hint = renewalHint(game, data, p);
   const [years, setYears] = useState(k.defaultYears);
-  const [offer, setOffer] = useState(() => Math.round((ask * 0.95) / 50) * 50);
+  const [offer, setOffer] = useState(() => hint.minAccept);
   if (p.retiring) return <span className="bad">本赛季结束后退役</span>;
   if (n?.status === 'AGREED') return <span className="good">已续约到第 {p.contractUntil} 赛季</span>;
   if (n?.status === 'REFUSED') return <span className="bad">已谈崩，赛季结束后离队</span>;
@@ -42,6 +43,10 @@ function Renewal({ p, props }: { p: Player; props: PageProps }) {
   return (
     <div className="renewal">
       <div>他想要周薪 <b>{money(ask)}</b>（现在 {money(p.salaryPerWeek)}）</div>
+      <div className="dim small-text">要价构成：{hint.factors.join(' · ')}</div>
+      {!n?.countered && (
+        <div className="dim small-text">还价提示：按当前士气，最低大约能接受 <b>{money(hint.minAccept)}</b>（只可还价一次，压太低会扣士气）</div>
+      )}
       <div className="row">
         <YearsPicker value={years} set={setYears} max={k.maxYears} />
         <button className="primary small" onClick={accept}>接受开价</button>

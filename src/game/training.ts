@@ -102,17 +102,46 @@ export function updateForm(p: Player, g: GrowthConfig, rng: Rng, randomDelta: nu
   p.form = clamp(Math.round(pulled), -10, 10) || 0;
 }
 
+const FOCUS_ATTR: Partial<Record<TrainingFocus, keyof PlayerAttributes>> = {
+  MECHANICS: 'mechanics', AWARENESS: 'awareness', TEAMWORK: 'teamwork', MENTAL: 'mental',
+};
+
 /** Weekly routine on pay day: every rostered player trains; everyone's form moves. */
 export function applyTrainingWeek(state: GameState, data: GameData): void {
   const g = data.growth;
   for (const club of [state.club, ...state.aiClubs]) {
     const focus = trainingFocusOf(state, data, club.id);
     const boost = trainingBoost(state, data, club.id);
+    const isPlayer = club.id === PLAYER_CLUB_ID && club.roster.length > 0;
+    const before = isPlayer ? new Map(club.roster.map((id) => {
+      const p = state.players[id]!;
+      return [id, { ovr: playerOverall(p), attrs: { ...p.attrs }, mastery: { ...p.heroMastery }, fatigue: p.fatigue ?? 0 }];
+    })) : null;
     for (const id of [...club.roster].sort()) {
       const p = state.players[id]!;
       trainPlayer(p, focus, g, playerTrainingBoost(data, p, boost));
     }
     chemistryFromTraining(state, data, club, focus);
+    if (before) {
+      const attrKey = FOCUS_ATTR[focus];
+      state.lastTraining = {
+        season: state.calendar.season,
+        week: Math.floor(state.calendar.day / data.season.daysPerWeek) + 1,
+        focus,
+        chemistryGain: focus === 'TEAMWORK' && club.roster.length >= 2 ? g.chemistry.perTeamworkWeek : 0,
+        players: club.roster.map((id) => {
+          const p = state.players[id]!;
+          const b = before.get(id)!;
+          const ovrDelta = round2(playerOverall(p) - b.ovr);
+          const focusAttrDelta = attrKey ? round2(p.attrs[attrKey] - b.attrs[attrKey]) : ovrDelta;
+          const masteryGains = Object.entries(p.heroMastery)
+            .map(([heroId, v]) => ({ heroId, delta: round2(v - (b.mastery[heroId] ?? DEFAULT_MASTERY)) }))
+            .filter((m) => m.delta > 0);
+          const fatigueAfter = p.fatigue ?? 0;
+          return { playerId: id, name: p.name, ovrDelta, focusAttrDelta, masteryGains, fatigueAfter, fatigueDelta: round2(fatigueAfter - b.fatigue) };
+        }),
+      };
+    }
   }
   // Free agents do not train, but still age.
   for (const id of [...state.market].sort()) {

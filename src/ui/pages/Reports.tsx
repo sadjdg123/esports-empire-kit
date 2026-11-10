@@ -35,9 +35,9 @@ function Entry({ e }: { e: DecisionEntry }) {
   return (
     <li className={`log-entry ${open ? 'open' : ''}`} onClick={() => setOpen(!open)}>
       <div><b className="tag">{STATUS[e.status]}</b> {e.text}</div>
+      <div className="dim small-text">为什么：{e.reason}{e.result ? ` · 结果：${e.result}` : ''}</div>
       {open && (
         <div className="small-text log-detail">
-          <div>为什么：{e.reason}</div>
           <div>钱：{e.cost === 0 ? '不花钱' : e.cost > 0 ? `进账 ${money(e.cost)}` : `花费 ${money(-e.cost)}`}</div>
           {(e.result || HAS_RESULT.has(e.kind)) && <div>结果：{e.result ?? (e.status === 'ADVICE' ? '只是建议' : '还没有结果')}</div>}
           <div className="dim">{e.staffName} · 第 {e.season} 赛季 第 {Math.floor(e.day / 7) + 1} 周</div>

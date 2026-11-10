@@ -1,5 +1,5 @@
 import { AUTHORITIES, STAFF_ROLES, type Authority, type StaffMember, type StaffRole } from '../../core/types';
-import { approvePending, fireStaff, hireStaff, hiredStaff, mainSkill, rejectPending, renewStaff, setAuthority, setDelegationLimits, staffReleaseFee, staffWages } from '../../game';
+import { approvePending, describePendingContext, fireStaff, hireStaff, hiredStaff, mainSkill, rejectPending, renewStaff, setAuthority, setDelegationLimits, staffReleaseFee, staffWages } from '../../game';
 import type { PageProps } from '../App';
 import { Portrait } from '../components/Portrait';
 import { lookFor } from '../../render/pixel/chibi';
@@ -98,18 +98,26 @@ export function StaffPage({ game, data, act, flash, ask, go }: PageProps) {
         <section className="card wide pending">
           <h2>待你拍板 <span className="badge">{game.pending.length}</span></h2>
           <ul className="plain">
-            {game.pending.map((p) => (
-              <li key={p.id} className={`pending-item ${p.big ? 'big' : ''}`}>
-                <div className="small-text dim">{cfg.roles[p.role].name} {game.staff[p.staffId]?.name ?? ''}{p.big ? ' · 大事' : ''} · {Math.max(0, p.expiresDay - game.calendar.day)} 天后作废</div>
-                <div><b>{p.text}</b></div>
-                <div className="small-text">{p.reason}</div>
-                <div className="small-text">{p.cost === 0 ? '不花钱' : p.cost > 0 ? `进账 ${money(p.cost)}` : `花费 ${money(-p.cost)}`}</div>
-                <div className="row pending-buttons">
-                  <button className="primary" onClick={() => decide(p.id, true)}>批准</button>
-                  <button onClick={() => decide(p.id, false)}>驳回</button>
-                </div>
-              </li>
-            ))}
+            {game.pending.map((p) => {
+              const ctx = describePendingContext(game, data, p);
+              return (
+                <li key={p.id} className={`pending-item ${p.big ? 'big' : ''}`}>
+                  <div className="small-text dim">{cfg.roles[p.role].name} {game.staff[p.staffId]?.name ?? ''}{p.big ? ' · 大事' : ''} · {Math.max(0, p.expiresDay - game.calendar.day)} 天后作废</div>
+                  <div><b>{p.text}</b></div>
+                  <div className="small-text">为什么：{p.reason}</div>
+                  {ctx.detail && <div className="small-text dim">{ctx.detail}</div>}
+                  <div className="small-text warn-text">{ctx.trigger}</div>
+                  <div className="small-text">
+                    {p.cost === 0 ? '不花钱' : p.cost > 0 ? `进账 ${money(p.cost)}` : `花费 ${money(-p.cost)}`}
+                    {p.cost !== 0 && <span className="dim">（批准后资金：{money(game.funds)} → <b className={ctx.fundsAfter < 0 ? 'bad' : ''}>{money(ctx.fundsAfter)}</b>）</span>}
+                  </div>
+                  <div className="row pending-buttons">
+                    <button className="primary" onClick={() => decide(p.id, true)}>批准</button>
+                    <button onClick={() => decide(p.id, false)}>驳回</button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}

@@ -151,4 +151,16 @@ describe('fatigue and morale', () => {
     commitMatchDay(s, data);
     expect(s.players[starters[0]!]!.stats!.played).toBe(1);
   });
+
+  it('records lastTraining summary for the player club on pay day (F4)', () => {
+    const s = newGame('训练战报', '#3a7bd5', 5, data);
+    expect(signValueSquad(s, data).ok).toBe(true);
+    s.training = 'TEAMWORK';
+    for (let i = 0; i < 8 && !s.lastTraining; i++) advanceDay(s, data);
+    expect(s.lastTraining).toBeDefined();
+    expect(s.lastTraining!.focus).toBe('TEAMWORK');
+    expect(s.lastTraining!.chemistryGain).toBe(data.growth.chemistry.perTeamworkWeek);
+    expect(s.lastTraining!.players).toHaveLength(s.club.roster.length);
+    expect(s.lastTraining!.players.some((p) => p.ovrDelta > 0)).toBe(true);
+  });
 });

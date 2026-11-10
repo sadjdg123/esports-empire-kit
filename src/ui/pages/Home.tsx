@@ -4,7 +4,7 @@ import {
 } from '../../game';
 import type { Page } from '../App';
 import type { PageProps } from '../App';
-import { STYLE_NAME, money } from '../labels';
+import { FOCUS_NAME, STYLE_NAME, money } from '../labels';
 
 export function HomePage({ game, data, go, act, flash, toNextMatch, lastWeek }: PageProps & { lastWeek: WeekSummary | null }) {
   const table = standings(game);
@@ -36,6 +36,7 @@ export function HomePage({ game, data, go, act, flash, toNextMatch, lastWeek }: 
     flash('新赛季开始了：休赛期可以签人、调整阵容');
   };
   const lastReport = game.reports[game.reports.length - 1];
+  const lastTrain = game.lastTraining?.season === game.calendar.season ? game.lastTraining : undefined;
   const myRow = table.find((r) => r.clubId === PLAYER_CLUB_ID)!;
 
   return (
@@ -108,6 +109,18 @@ export function HomePage({ game, data, go, act, flash, toNextMatch, lastWeek }: 
             <p className="dim">本周资金 {money(lastWeek.fundsBefore)} → {money(lastWeek.fundsAfter)}</p>
           )}
           <button className="link" onClick={() => go('report', { reportRound: lastReport.round })}>查看战报 →</button>
+        </section>
+      )}
+
+      {lastTrain && (
+        <section className="card">
+          <h3>第 {lastTrain.week} 周训练：{FOCUS_NAME[lastTrain.focus]}</h3>
+          <p className="small-text">
+            {lastTrain.focus === 'REST'
+              ? '全队休息一周，疲劳大幅恢复。'
+              : lastTrain.players.map((p) => `${p.name} ${p.ovrDelta >= 0 ? `+${p.ovrDelta}` : p.ovrDelta}`).join(' · ')}
+          </p>
+          <button className="link" onClick={() => go('training')}>查看训练详情 →</button>
         </section>
       )}
     </div>

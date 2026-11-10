@@ -299,7 +299,9 @@ export function managerWeek(state: GameState, data: GameData): void {
       if (!(needed ? affordable || ask <= salaryCap(state, data, s) : affordable && ask <= salaryCap(state, data, s))) continue;
       staying++;
       decide(state, data, 'MANAGER', {
-        kind: 'RENEW', text: `和 ${p.name} 续约，周薪 ${ask}`, reason: `他是队里最值得留的 ${d.rosterTarget} 个人之一`, cost: -ask * data.economy.signingFeeWeeks,
+        kind: 'RENEW', text: `和 ${p.name} 续约，周薪 ${ask}`,
+        reason: `他是队里最值得留的 ${d.rosterTarget} 个人之一（经理评估能力 ${Math.round(perceived(data, s, p))}，现周薪 ${p.salaryPerWeek} → ${ask}）`,
+        cost: -ask * data.economy.signingFeeWeeks,
         payload: { playerId: p.id }, ref: p.id, essential: needed, run: () => acceptRenewal(state, data, p.id, data.economy.contracts.defaultYears),
       });
     }
@@ -337,9 +339,14 @@ function signFor(state: GameState, data: GameData, s: StaffMember, role: Role, w
   if (!pick) return;
   const p = pick.p;
   const style = data.staff.styles[s.style].name;
+  const detail = s.style === 'YOUTH' && p.age <= data.staff.decisions.youthAgeMax
+    ? `（${p.age} 岁潜力 ${p.potential ?? Math.round(pick.look)}）`
+    : s.style === 'CAUTIOUS'
+      ? `（周薪 ${p.salaryPerWeek} 性价比高）`
+      : '';
   decide(state, data, 'MANAGER', {
     kind: 'SIGN', text: `签下${ROLE_LABEL[role]} ${p.name}（能力 ${Math.round(playerOverall(p))}，周薪 ${p.salaryPerWeek}）`,
-    reason: `${why}；${style}型经理看他能力约 ${Math.round(pick.look)}`, cost: -p.signingFee, payload: { playerId: p.id }, ref: p.id,
+    reason: `${why}；${style}型经理看他能力约 ${Math.round(pick.look)}${detail}`, cost: -p.signingFee, payload: { playerId: p.id }, ref: p.id,
     essential: !upgrade && state.club.roster.length < data.economy.minRoster, run: () => signPlayer(state, data, p.id),
   });
 }
@@ -361,7 +368,8 @@ export function financeWeek(state: GameState, data: GameData): void {
       const other = offers.find((o) => o.id !== best.id);
       const pick = slip() && other ? other : best;
       decide(state, data, 'FINANCE', {
-        kind: 'SPONSOR', text: `签赞助：${pick.name}（每周 ${pick.weekly}）`, reason: pick === best ? '能签到的最划算的一家' : '他更看好这家的长期合作',
+        kind: 'SPONSOR', text: `签赞助：${pick.name}（每周 ${pick.weekly}）`,
+        reason: `${pick === best ? '能签到的最划算的一家' : '他更看好这家的长期合作'}（每胜奖金 ${pick.winBonus}）`,
         cost: pick.signingBonus, payload: { sponsorId: pick.id }, run: () => signSponsor(state, data, pick.id, 1),
       });
     }
@@ -385,8 +393,10 @@ export function financeWeek(state: GameState, data: GameData): void {
         if (!next) continue;
         const ok = careless ? next.cost <= free : next.cost <= free * d.facilityShare;
         if (!ok) continue;
+        const def = facilityDef(data, room);
         decide(state, data, 'FINANCE', {
-          kind: 'FACILITY', text: `把${facilityDef(data, room).name}升一级（${next.cost}）`, reason: careless ? '他觉得现在不升就晚了，把余钱都花了' : `留够 ${reserveWeeks(state, data)} 周开销后还有余钱`,
+          kind: 'FACILITY', text: `把${def.name}升一级（${next.cost}）`,
+          reason: `${careless ? '他觉得现在不升就晚了，把余钱都花了' : `留够 ${reserveWeeks(state, data)} 周开销后还有余钱`}（${def.name}：${def.effect}）`,
           cost: -next.cost, payload: { room }, run: () => upgradeFacility(state, data, room),
         });
         break;
@@ -395,6 +405,28 @@ export function financeWeek(state: GameState, data: GameData): void {
   } finally {
     state.rngState = rng.state();
   }
+}
+
+/** Explains why a pending decision requires the player's approval and its immediate impact. */
+export function describePendingContext(state: GameState, data: GameData, p: PendingDecision): { trigger: string; fundsAfter: number; detail?: string } {
+  const offerPlayerId = p.kind === 'SELL' ? state.offers.find((o) => o.id === Number(p.payload.offerId))?.playerId : undefined;
+  const targetPlayerId = typeof p.payload.playerId === 'string' ? p.payload.playerId : offerPlayerId;
+  const isProtectedSale = p.kind === 'SELL' && !!targetPlayerId && protectedPlayers(state).has(targetPlayerId);
+  const trigger = isProtectedSale
+    ? `触发原因：要卖的是受保护的核心主力（前 ${state.delegation.protectTop} 名），必须你本人点头`
+    : p.big
+      ? `触发原因：这笔开销会动用安全备用金（需预留 ${reserveWeeks(state, data)} 周运营开销）`
+      : `触发原因：单笔金额超过授权额度（${state.delegation.limit}）`;
+  const fundsAfter = Math.round(state.funds + p.cost);
+  let detail: string | undefined;
+  if (targetPlayerId && state.players[targetPlayerId]) {
+    const pl = state.players[targetPlayerId]!;
+    detail = `${ROLE_LABEL[pl.primaryRole]} · ${pl.age} 岁 · 能力 ${Math.round(playerOverall(pl))}（潜力 ${pl.potential ?? Math.round(playerOverall(pl))}）· 周薪 ${pl.salaryPerWeek}`;
+  } else if (p.kind === 'FACILITY' && typeof p.payload.room === 'string') {
+    const def = facilityDef(data, p.payload.room as never);
+    detail = `房间效果：${def.effect}`;
+  }
+  return { trigger, fundsAfter, detail };
 }
 
 /** All staff decisions of a pay day (the coach's training runs earlier). True if something big now waits for the player. */

@@ -134,6 +134,33 @@ export function declineRenewal(state: GameState, data: GameData, playerId: Playe
   return ok(undefined);
 }
 
+export interface RenewalHint {
+  fair: number;
+  ask: number;
+  minAccept: number;
+  factors: string[];
+}
+
+/** Explains why a player is asking for `ask` and the lowest counter-offer he will accept. */
+export function renewalHint(state: GameState, data: GameData, p: Player): RenewalHint {
+  const k = data.economy.contracts;
+  const neutral = data.growth.moraleNeutral;
+  const morale = p.morale ?? neutral;
+  const office = facilityValue(state, data, PLAYER_CLUB_ID, 'OFFICE');
+  const fair = fairSalary(data, p);
+  const ask = negotiationFor(state, p.id)?.ask ?? renewalAsk(data, p, office);
+  const ratio = k.counterAcceptRatio - (morale - neutral) * k.counterMoralePer;
+  const minAccept = Math.max(50, Math.ceil((ask * ratio) / 50) * 50);
+  const factors: string[] = [`能力 ${Math.round(playerOverall(p))} 对应公允周薪 ${fair}`];
+  const traits = p.traits ?? [];
+  if (traits.includes('GREEDY')) factors.push('性格「爱钱」要价上浮');
+  if (traits.includes('MODEST')) factors.push('性格「务实」要价优惠');
+  if (morale < neutral - 5) factors.push(`士气偏低（${Math.round(morale)}）要价更高`);
+  else if (morale > neutral + 8) factors.push(`士气高（${Math.round(morale)}）更容易谈拢`);
+  if (office < 0) factors.push(`行政室减免 ${Math.round(-office * 100)}%`);
+  return { fair, ask, minAccept, factors };
+}
+
 // ---------------------------------------------------------------------------
 // Season rollover
 
