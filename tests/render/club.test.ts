@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../../src/core/config';
-import { acceptRenewal, newGame, signValueSquad, type GameState } from '../../src/game';
+import { acceptRenewal, newGame, openBranch, signBranchPlayer, signValueSquad, type GameState } from '../../src/game';
 import { activitySummary, clubActivities, TIRED_AT } from '../../src/render/club/activities';
 import { postMessage } from '../../src/game/messages';
 import { markersFor } from '../../src/render/club/markers';
@@ -94,5 +94,20 @@ describe('club base markers (furniture that needs the player)', () => {
     expect(markersFor(s, data)).toEqual({});
     s.training = 'AUTO'; // rests by itself
     expect(markersFor(s, data)).toEqual({});
+  });
+
+  it('an open branch without a full squad puts an alert on the roof sign (group hotspot)', () => {
+    const s = calm(club());
+    s.funds = 500000;
+    s.club.reputation = 500;
+    s.calendar.phase = 'REGULAR';
+    expect(openBranch(s, data, 'CARD').ok).toBe(true);
+    for (const m of s.inbox) m.read = true;
+    expect(markersFor(s, data).group).toBe('bang');
+    const b = s.branches.CARD!;
+    while (b.roster.length < data.branches.kinds.CARD.squad) {
+      expect(signBranchPlayer(s, data, 'CARD', b.market[0]!).ok).toBe(true);
+    }
+    expect(markersFor(s, data).group).toBeUndefined();
   });
 });

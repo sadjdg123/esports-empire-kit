@@ -36,6 +36,7 @@ export interface SceneExtras {
   finals: number; // lost finals (silver cups)
   facilities?: Partial<Record<FacilityId, number>>; // room levels (T22): more furniture at higher levels
   staff?: string[]; // ids of hired staff (P3): each gets a seat at the staff desk in the office
+  branches?: ('FPS' | 'CARD')[]; // opened sister divisions (P4): shown as plaques flanking the roof sign
 }
 
 const z0 = (f: Floor) => (f === 1 ? FH : 0);
@@ -60,7 +61,7 @@ interface Figure {
 
 interface Spot { i: number; j: number; f: Floor; pose: 'sit' | 'sleep' | 'sofa' | 'stand' }
 
-const DESKS: Pt[] = [[0.5, 0.5], [2.0, 0.5], [3.5, 0.5], [5.0, 0.5], [0.5, 2.6], [2.0, 2.6], [3.5, 2.6], [5.0, 2.6]];
+const DESKS: Pt[] = [[0.45, 0.4], [2.0, 0.4], [3.55, 0.4], [5.1, 0.4], [0.45, 2.7], [2.0, 2.7], [3.55, 2.7], [5.1, 2.7]];
 const SEAT = (d: Pt): Pt => [d[0] + 0.55, d[1] + 1.15];
 const BEDS: Pt[] = [[0.35, 3.2], [2.15, 3.2]];
 const SPOTS: Record<Activity, Spot[]> = {
@@ -333,7 +334,7 @@ export class ClubScene {
 
   /** Everything that does not move is drawn once, and again only when the club colour or the trophies change. */
   private build(): void {
-    const key = `${this.color}|${this.extras.titles}|${this.extras.finals}|${JSON.stringify(this.extras.facilities ?? {})}`; // staff are drawn live, not baked
+    const key = `${this.color}|${this.extras.titles}|${this.extras.finals}|${JSON.stringify(this.extras.facilities ?? {})}|${JSON.stringify(this.extras.branches ?? [])}`; // staff are drawn live, not baked
     if (key === this.builtFor) return;
     this.builtFor = key;
     this.sky = this.capture(() => {
@@ -729,6 +730,20 @@ export class ClubScene {
       this.box(6.0, 2.15, 0.15, 0.15, 3, '#f4f4f4', 10, 1);
     }, { hotspot: 'contracts' });
     add(1, 5.65 + 3.3 + 0.3, () => this.box(5.45, 3.55, 0.4, 0.08, 8, '#6d4c8a', 5, 1));
+    // Roof sign and sister-division plaques: tapping opens the Group / Branches window.
+    add(1, 0.005, () => {
+      this.back(2.0, 6.0, WALL2 + 2, WALL2 + 13, '#5a3a22', 1);
+      this.back(2.15, 5.85, WALL2 + 4, WALL2 + 11, '#7a5232', 1, false);
+      const branches = this.extras.branches ?? [];
+      if (branches.includes('FPS')) {
+        this.back(1.05, 1.85, WALL2 + 2, WALL2 + 11, '#3b3f4c', 1);
+        this.back(1.15, 1.75, WALL2 + 4, WALL2 + 9, '#d9574a', 1, false);
+      }
+      if (branches.includes('CARD')) {
+        this.back(6.15, 6.95, WALL2 + 2, WALL2 + 11, '#5a3a22', 1);
+        this.back(6.25, 6.85, WALL2 + 4, WALL2 + 9, '#f2b84b', 1, false);
+      }
+    }, { hotspot: 'group' });
     // Staff desk (P3): a long low desk with three laptops; hired staff sit behind it.
     add(1, STAFF_DESK_DEPTH, () => {
       this.box(5.5, 4.45, 2.45, 0.35, 9, '#9a6a3e', 0, 1);
@@ -913,7 +928,10 @@ export class ClubScene {
     for (const [name, m] of Object.entries(this.markers) as [Hotspot, Marker][]) {
       const p = this.props.find((x) => x.hotspot === name);
       if (!p) continue;
-      this.bubble(p.x + p.img.width / 2, p.y - 1 - bounce, m);
+      // Tall wall props (like the ground-floor tactics whiteboard) keep their marker on the prop
+      // rather than floating into the upper floor above them.
+      const my = p.img.height > 26 ? p.y + 8 : p.y - 1;
+      this.bubble(p.x + p.img.width / 2, my - bounce, m);
     }
   }
 }

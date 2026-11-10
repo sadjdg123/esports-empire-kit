@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../../src/core/config';
 import type { HeroDef, RenderSnapshot, SnapshotUnit } from '../../src/core/types';
 import { FIGHT_ZOOM, approachCam, cameraTarget, groundBox } from '../../src/render/camera';
-import { MAX_OFFSET, SPACING, approach, formationOffsets, type FormUnit } from '../../src/render/formation';
+import { LABEL_H, MAX_OFFSET, SPACING, approach, formationOffsets, labelOffsets, type FormUnit, type LabelBox } from '../../src/render/formation';
 import { NumberBatcher, matchFx, skillStyle } from '../../src/render/matchFx';
 import { DIGIT_CHARS, DIGIT_H, DIGIT_W, digitStrip } from '../../src/render/pixel/digits';
 import { MatchPlayer } from '../../src/render/player';
@@ -46,6 +46,26 @@ describe('formation (where heroes are drawn)', () => {
     for (let i = 0; i < 120; i++) o = approach(o, { dx: 30, dy: -10 }, 1 / 60);
     expect(o.dx).toBeCloseTo(30, 1);
     expect(o.dy).toBeCloseTo(-10, 1);
+  });
+
+  it('nearby hero name labels nudge or stack so they never overlap', () => {
+    const labels: LabelBox[] = [
+      { id: 'a', x: 300, y: 200, w: 38 }, // e.g. "8 惊蛰"
+      { id: 'b', x: 320, y: 202, w: 94 }, // e.g. "8 Lanternfish"
+      { id: 'c', x: 310, y: 201, w: 48 },
+    ];
+    const off = labelOffsets(labels);
+    const placed = labels.map((l) => ({ ...l, x: l.x + off.get(l.id)!.dx, y: l.y + off.get(l.id)!.dy }));
+    for (let i = 0; i < placed.length; i++) {
+      for (let j = i + 1; j < placed.length; j++) {
+        const a = placed[i]!;
+        const b = placed[j]!;
+        const overlapX = Math.abs(a.x - b.x) < (a.w + b.w) / 2;
+        const overlapY = Math.abs(a.y - b.y) < LABEL_H;
+        expect(overlapX && overlapY).toBe(false);
+      }
+    }
+    expect(labelOffsets([...labels].reverse())).toEqual(off);
   });
 });
 

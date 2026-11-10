@@ -4,7 +4,7 @@
 import Phaser from 'phaser';
 import type { GameData, MatchEvent, RenderSnapshot, SnapshotUnit } from '../core/types';
 import { approachCam, cameraTarget, groundBox, type Cam } from './camera';
-import { approach, formationOffsets, type FormUnit, type Offset } from './formation';
+import { approach, formationOffsets, labelOffsets, type FormUnit, type LabelBox, type Offset } from './formation';
 import { FxPainter, type Pt } from './FxPainter';
 import { heroPose, updateHeroAnims, type HeroAnim } from './heroAnim';
 import { NumberBatcher, RANGED_FROM, matchFx } from './matchFx';
@@ -73,6 +73,7 @@ interface HeroView {
   side: 'BLUE' | 'RED';
   glow: number; // the hero's effect colour
   offset: Offset; // where it is drawn relative to where the match has it (world units)
+  labelOffset: Offset; // screen-pixel nudge so nearby hero labels do not overlap
   flashUntil: number;
   maxHp: number;
 }
@@ -93,6 +94,7 @@ export class MatchScene extends Phaser.Scene {
   private batcher = new NumberBatcher();
   private lastSnap!: RenderSnapshot;
   private nodeXY = new Map<string, { x: number; y: number }>();
+  private popupSlots = new Map<string, { until: number; count: number }>();
   private fight: Set<string> | null = null; // player ids in the current teamfight
   private cam: Cam = { zoom: 1, x: VIEW / 2, y: VIEW / 2 };
   private groundKey = '';
@@ -267,6 +269,15 @@ export class MatchScene extends Phaser.Scene {
     const teamColor = (side: 'BLUE' | 'RED' | null) => (side ? hex(colors[side]) : 0xcccccc);
     const seenCreeps = new Set<string>();
     const heroAt = this.placeHeroes(prev, cur, alpha, dt);
+    const boxes: LabelBox[] = [];
+    for (const u of cur.units) {
+      if (u.kind !== 'HERO' || !u.alive) continue;
+      const p = heroAt.get(u.id)!;
+      const v = this.heroes.get(u.id);
+      const text = `${u.level ?? 1} ${this.opts.names[u.playerId ?? ''] ?? ''}`;
+      boxes.push({ id: u.id, x: sx(p.x), y: sy(p.y) - HERO_TOP - 8, w: v?.label.width || Math.max(36, text.length * 7) });
+    }
+    const labelTargets = labelOffsets(boxes);
 
     for (const u of cur.units) {
       const { x, y } = u.kind === 'HERO' ? heroAt.get(u.id)! : this.unitXY(prev, cur, u, alpha);
@@ -303,7 +314,7 @@ export class MatchScene extends Phaser.Scene {
           break;
         }
         case 'HERO':
-          this.drawHero(u, X, Y, now, g, teamColor(u.side ?? 'BLUE'));
+          this.drawHero(u, X, Y, now, dt, g, teamColor(u.side ?? 'BLUE'), labelTargets.get(u.id) ?? { dx: 0, dy: 0 });
           break;
       }
     }
@@ -318,7 +329,7 @@ export class MatchScene extends Phaser.Scene {
     this.moveCamera(cur, heroAt, dt);
   }
 
-  private drawHero(u: SnapshotUnit, X: number, Y: number, now: number, g: Phaser.GameObjects.Graphics, team: number): void {
+  private drawHero(u: SnapshotUnit, X: number, Y: number, now: number, dt: number, g: Phaser.GameObjects.Graphics, team: number, labelTarget: Offset): void {
     const side = u.side ?? 'BLUE';
     let view = this.heroes.get(u.id);
     if (!view) {
@@ -332,6 +343,7 @@ export class MatchScene extends Phaser.Scene {
         side,
         glow: hex(heroPalette(heroId, '#000000', archetype).x ?? '#ffffff'),
         offset: { dx: 0, dy: 0 },
+        labelOffset: labelTarget,
         flashUntil: 0,
         maxHp: u.maxHp,
       };
@@ -342,6 +354,7 @@ export class MatchScene extends Phaser.Scene {
       view.level = u.level ?? 1;
       view.label.setText(`${view.level} ${this.opts.names[u.playerId ?? ''] ?? ''}`);
     }
+    view.labelOffset = u.alive ? approach(view.labelOffset, labelTarget, dt, 10) : { dx: 0, dy: 0 };
     const anim = this.heroAnims.get(u.id);
     const pose = anim ? heroPose(anim, now) : { frame: 'stand' as const, flip: side === 'RED', alpha: u.alive ? 1 : 0, bob: 0 };
     const flash = now < view.flashUntil && u.alive;
@@ -354,7 +367,7 @@ export class MatchScene extends Phaser.Scene {
       .setDepth(1 + Y / 1000)
       .setTint(flash ? 0xffffff : u.stunned ? 0xaaaaff : 0xffffff)
       .setTintMode(flash ? Phaser.TintModes.FILL : Phaser.TintModes.MULTIPLY);
-    view.label.setPosition(X, Y - HERO_TOP - 8).setAlpha(u.alive ? 1 : 0);
+    view.label.setPosition(X + view.labelOffset.dx, Y - HERO_TOP - 8 + view.labelOffset.dy).setAlpha(u.alive ? 1 : 0);
     this.where.set(u.id, { x: X, y: Y - CHEST });
     if (u.alive) {
       // Team-coloured ring under the feet, so the sides stay easy to tell apart.
@@ -462,9 +475,14 @@ export class MatchScene extends Phaser.Scene {
     else if (ev.type === 'OBJECTIVE_TAKEN') text = `拿下${String(ev.detail?.objectiveName ?? '')}`;
     else if (ev.type === 'TEAMFIGHT_START') text = '团战！';
     else return;
+    const now = this.time.now;
+    const prev = this.popupSlots.get(ev.nodeId!);
+    const slot = prev && now < prev.until ? prev.count + 1 : 0;
+    this.popupSlots.set(ev.nodeId!, { until: now + 900, count: slot });
     const color = ev.side ? this.opts.colors[ev.side] : '#ffe27a';
-    const t = this.add.text(sx(pos.x), sy(pos.y) - 24, text, { fontSize: ev.type === 'KILL' ? '13px' : '16px', color, fontFamily: 'sans-serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(13);
-    this.tweens.add({ targets: t, y: t.y - 26, alpha: 0, duration: 1400, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
+    const y0 = sy(pos.y) - 34 - (slot % 3) * 18;
+    const t = this.add.text(sx(pos.x), y0, text, { fontSize: ev.type === 'KILL' ? '13px' : '16px', color, fontFamily: 'sans-serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(13);
+    this.tweens.add({ targets: t, y: y0 - 26, alpha: 0, duration: 1400, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
   }
 }
 

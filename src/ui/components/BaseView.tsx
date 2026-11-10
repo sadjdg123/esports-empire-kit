@@ -35,7 +35,15 @@ export function BaseView({ game, data, markers, cheer, onPlayer, onHotspot }: {
   const finals = game.history.filter((h) => h.playerPlayoff === 'FINAL').length;
   const rooms = JSON.stringify(game.club.facilities);
   const staff = STAFF_ROLES.map((r) => game.delegation.roles[r].staffId).filter((x): x is string => !!x).join(',');
-  useEffect(() => { sceneRef.current?.setExtras({ titles, finals, facilities: JSON.parse(rooms), staff: staff ? staff.split(',') : [] }); }, [titles, finals, rooms, staff]);
+  const branches = Object.keys(game.branches).join(',');
+  useEffect(() => {
+    sceneRef.current?.setExtras({
+      titles, finals,
+      facilities: JSON.parse(rooms),
+      staff: staff ? staff.split(',') : [],
+      branches: branches ? (branches.split(',') as ('FPS' | 'CARD')[]) : [],
+    });
+  }, [titles, finals, rooms, staff, branches]);
 
   const tap = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -46,7 +54,7 @@ export function BaseView({ game, data, markers, cheer, onPlayer, onHotspot }: {
 
   return (
     <div className="base-stage">
-      <canvas ref={canvasRef} className="base-canvas" onClick={tap} aria-label="俱乐部基地。点白板排阵容，点电脑训练，点信箱看消息，点告示牌签人，点办公桌谈合同，点电视看赛程，点奖杯柜看历史，点小人看选手。" />
+      <canvas ref={canvasRef} className="base-canvas" onClick={tap} aria-label="俱乐部基地。点白板排阵容，点电脑训练，点信箱看消息，点告示牌签人，点办公桌谈合同，点电视看赛程，点奖杯柜看历史，点屋顶招牌看集团分部，点小人看选手。" />
       <span className="roof-sign">{game.club.name}</span>
     </div>
   );

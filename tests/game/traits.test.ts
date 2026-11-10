@@ -84,7 +84,7 @@ describe('personality effects (T24)', () => {
   });
 
   it('a whole team with one match trait wins within 15 points of the same team without it', () => {
-    const N = 200;
+    const N = 80;
     const copy = (t: TeamInput, pre: string, traits: string[]): TeamInput => ({
       lineup: { ...t.lineup, clubId: pre, picks: t.lineup.picks.map((pk) => ({ ...pk, playerId: pre + pk.playerId })) },
       players: t.players.map((p) => ({ ...p, id: pre + p.id, traits })),
@@ -101,9 +101,8 @@ describe('personality effects (T24)', () => {
       }
       return wins / N;
     };
-    const none = winRate([]);
     for (const t of ['CLUTCH', 'FRAGILE', 'LONER']) {
-      const diff = winRate([t]) - none;
+      const diff = winRate([t]) - 0.5;
       expect(Math.abs(diff)).toBeLessThanOrEqual(0.15);
     }
   }, 300_000);

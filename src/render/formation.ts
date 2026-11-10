@@ -96,3 +96,46 @@ export function approach(cur: Offset, target: Offset, dt: number, rate = 6): Off
   const k = 1 - Math.exp(-rate * dt);
   return { dx: cur.dx + (target.dx - cur.dx) * k, dy: cur.dy + (target.dy - cur.dy) * k };
 }
+
+export interface LabelBox {
+  id: string;
+  x: number; // screen pixels, horizontal centre
+  y: number; // screen pixels, bottom of label
+  w: number; // label width in screen pixels
+}
+
+export const LABEL_H = 13; // label line height in screen pixels
+const LABEL_PAD = 4; // horizontal gap between neighbouring labels
+
+/**
+ * Target screen offsets (pixels) for hero name labels so two nearby heroes (e.g. "8 惊蛰" and
+ * "8 Lanternfish" walking down the same lane) never print on top of each other.
+ */
+export function labelOffsets(labels: readonly LabelBox[]): Map<string, Offset> {
+  const list = [...labels].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const placed: { x: number; y: number; w: number }[] = [];
+  const out = new Map<string, Offset>();
+  const hits = (x: number, y: number, w: number) =>
+    placed.some((p) => Math.abs(x - p.x) < (w + p.w) / 2 + LABEL_PAD && Math.abs(y - p.y) < LABEL_H);
+
+  for (const l of list) {
+    let dx = 0;
+    let dy = 0;
+    if (hits(l.x, l.y, l.w)) {
+      const near = placed.find((p) => Math.abs(l.x - p.x) < (l.w + p.w) / 2 + LABEL_PAD && Math.abs(l.y - p.y) < LABEL_H)!;
+      const dir = l.x > near.x || (l.x === near.x && placed.length % 2 === 1) ? 1 : -1;
+      const need = (l.w + near.w) / 2 + LABEL_PAD - Math.abs(l.x - near.x);
+      if (need <= 16 && !hits(l.x + dir * need, l.y, l.w)) {
+        dx = dir * need;
+      } else {
+        for (let step = 1; step <= 6; step++) {
+          if (!hits(l.x, l.y - step * LABEL_H, l.w)) { dy = -step * LABEL_H; break; }
+        }
+      }
+    }
+    placed.push({ x: l.x + dx, y: l.y + dy, w: l.w });
+    out.set(l.id, { dx, dy });
+  }
+  return out;
+}
+

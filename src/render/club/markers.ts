@@ -4,15 +4,15 @@
 import type { GameData } from '../../core/types';
 import { FACILITY_IDS } from '../../core/types';
 import {
-  PLAYER_CLUB_ID, activeSponsor, expiringPlayers, financeSummary, negotiationFor, nextFacilityLevel, readinessIssues, rosterOf, type GameState,
+  PLAYER_CLUB_ID, activeSponsor, expiringPlayers, financeSummary, negotiationFor, nextFacilityLevel, openBranches, readinessIssues, rosterOf, type GameState,
 } from '../../game';
 import { TIRED_AT } from './activities';
 
 /** Furniture the player can tap; each opens one window. */
-export type Hotspot = 'lineup' | 'training' | 'schedule' | 'contracts' | 'finance' | 'history' | 'report' | 'inbox' | 'market' | 'facilities' | 'staff';
+export type Hotspot = 'lineup' | 'training' | 'schedule' | 'contracts' | 'finance' | 'history' | 'report' | 'inbox' | 'market' | 'facilities' | 'staff' | 'group';
 export type Marker = 'bang' | 'sweat' | 'note';
 
-/** Unread mail, a short roster, a lineup that isn't ready, offers, expiring contracts, money trouble, tired players. */
+/** Unread mail, a short roster, a lineup that isn't ready, offers, expiring contracts, money trouble, tired players, under-staffed branches. */
 export function markersFor(g: GameState, data: GameData): Partial<Record<Hotspot, Marker>> {
   const m: Partial<Record<Hotspot, Marker>> = {};
   const over = g.calendar.phase === 'FINISHED';
@@ -30,5 +30,7 @@ export function markersFor(g: GameState, data: GameData): Partial<Record<Hotspot
   if (g.calendar.phase === 'PRESEASON' && g.club.roster.length >= data.economy.minRoster && affordable) m.facilities = 'note';
   // On AUTO the squad rests by itself, so tiredness needs no reminder.
   if (g.training !== 'REST' && g.training !== 'AUTO' && rosterOf(g).some((p) => (p.fatigue ?? 0) >= TIRED_AT)) m.training = 'sweat';
+  // An open branch that still lacks its minimum squad gets a reminder on the roof sign.
+  if (!over && openBranches(g).some((b) => b.roster.length < data.branches.kinds[b.kind].squad)) m.group = 'bang';
   return m;
 }

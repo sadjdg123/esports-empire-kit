@@ -65,7 +65,7 @@ export type ClockSpeed = 1 | 2 | 4;
 
 const HOTSPOT_PAGE: Record<Hotspot, Page> = {
   lineup: 'lineup', training: 'training', schedule: 'schedule', contracts: 'contracts', finance: 'finance',
-  history: 'history', report: 'report', inbox: 'inbox', market: 'market', facilities: 'facilities', staff: 'staff',
+  history: 'history', report: 'report', inbox: 'inbox', market: 'market', facilities: 'facilities', staff: 'staff', group: 'group',
 };
 const TITLES: Partial<Record<Page, [string, string]>> = {
   menu: ['菜单', 'home'], matchday: ['比赛日', 'schedule'], seasonend: ['赛季结束', 'history'],
