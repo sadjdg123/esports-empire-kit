@@ -303,3 +303,35 @@ button.link.name { padding: 0; margin: 0; color: var(--text); font-weight: 600; 
 .log-detail { margin-top: 4px; padding-left: 6px; line-height: 1.5; }
 .tabs { grid-column: 1 / -1; }
 .tabs .chip { flex: 1; min-height: 40px; font-size: 15px; }
+/* Group and divisions (P4) */
+.lineup-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.lineup-row select { flex: 1 1 120px; min-width: 0; }
+.report-money tr.me td { background: var(--panel-2); font-weight: 600; }
+.tag.good { background: #d8f0df; color: #1f6b3d; }
+.tag.bad { background: #f6d9d6; color: #9b2f2a; }
+.replay-score { display: flex; justify-content: center; align-items: baseline; gap: 10px; font-size: 16px; margin: 4px 0; flex-wrap: wrap; }
+.replay-score b { font-size: 24px; }
+.round-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.round-chip { min-width: 30px; padding: 2px 4px; font-size: 13px; border-radius: 6px; box-shadow: none; border: 2px solid transparent; }
+.round-chip.wide { min-width: 58px; }
+.round-chip.won { background: #d8f0df; color: #1f6b3d; }
+.round-chip.lost { background: #f6d9d6; color: #9b2f2a; }
+.round-chip.on { border-color: var(--wood-dark); }
+.fps-map { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin: 8px 0; }
+.fps-map .site { padding: 10px 0; text-align: center; border-radius: 8px; background: var(--panel-2); border: 2px dashed var(--line); font-weight: 700; }
+.fps-map .site.mid { font-weight: 400; color: var(--dim); }
+.fps-map .site.target { border-style: solid; border-color: var(--warn); }
+.fps-map .site.planted { background: #f6d9d6; border-color: var(--bad); }
+.fps-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fps-teams li.down { opacity: 0.35; text-decoration: line-through; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
+.feed { margin: 8px 0; max-height: 220px; overflow-y: auto; }
+.feed li { padding: 2px 0; }
+.life-row { display: grid; grid-template-columns: minmax(110px, 40%) 1fr 30px; align-items: center; gap: 6px; margin: 4px 0; }
+.bar.life { height: 14px; border-radius: 7px; background: #eadfc6; overflow: hidden; display: block; }
+.bar.life i { display: block; height: 100%; transition: width 0.3s; }
+.tabs { flex-wrap: wrap; }
+.tabs .chip { white-space: nowrap; padding: 3px 8px; flex: 1 1 auto; }
+.goal { padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.goal.done { opacity: 0.75; }
+.goal .skill-row { grid-template-columns: 34px 1fr auto; }

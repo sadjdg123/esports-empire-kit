@@ -11,6 +11,8 @@ export const MENU: { page: Page; label: string; icon: string }[] = [
   { page: 'schedule', label: '赛程', icon: 'schedule' },
   { page: 'finance', label: '财务', icon: 'finance' },
   { page: 'facilities', label: '设施', icon: 'facilities' },
+  { page: 'group', label: '集团', icon: 'group' },
+  { page: 'goals', label: '目标', icon: 'goals' },
   { page: 'staff', label: '负责人', icon: 'staff' },
   { page: 'reports', label: '报表', icon: 'reports' },
   { page: 'report', label: '战报', icon: 'report' },

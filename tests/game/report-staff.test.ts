@@ -82,3 +82,16 @@ describe('group reports (T33)', () => {
     expect(weekReport(s).money.net).toBe(0);
   });
 });
+
+describe('reports per division (T40)', () => {
+  it('the divisions add up to the whole ledger', async () => {
+    const { moneyByDivision } = await import('../../src/game');
+    const s = staffedClub(2);
+    s.ledger.push({ week: 1, kind: 'SALARY', amount: -700, note: 'x', branch: 'FPS' }, { week: 1, kind: 'LEAGUE', amount: 300, note: 'x', branch: 'CARD' });
+    const parts = moneyByDivision(s.ledger);
+    expect(parts.map((p) => p.division)).toEqual(['MOBA', 'FPS', 'CARD']);
+    expect(parts.reduce((a, p) => a + p.money.net, 0)).toBe(moneyBreakdown(s.ledger).net);
+    expect(parts[1]!.money.net).toBe(-700);
+    expect(moneyByDivision(s.ledger.filter((e) => !e.branch)).map((p) => p.division)).toEqual(['MOBA']);
+  });
+});

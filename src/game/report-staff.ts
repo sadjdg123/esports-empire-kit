@@ -27,6 +27,13 @@ export function moneyBreakdown(entries: readonly LedgerEntry[]): MoneyBreakdown 
   return b;
 }
 
+/** The same breakdown per division: the MOBA club and every other division with money moves. */
+export function moneyByDivision(entries: readonly LedgerEntry[]): { division: 'MOBA' | 'FPS' | 'CARD'; money: MoneyBreakdown }[] {
+  const order = ['MOBA', 'FPS', 'CARD'] as const;
+  return order.map((division) => ({ division, money: moneyBreakdown(entries.filter((e) => (e.branch ?? 'MOBA') === division)) }))
+    .filter((x) => x.division === 'MOBA' || x.money.totalIncome !== 0 || x.money.totalExpense !== 0);
+}
+
 const weekOfDay = (day: number) => Math.floor(day / 7);
 const isAction = (e: DecisionEntry) => e.status === 'DONE' || e.status === 'APPROVED';
 

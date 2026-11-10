@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { STAFF_ROLES, type StaffRole } from '../../core/types';
-import { reportWeeks, seasonReport, weekReport, type DecisionEntry, type LedgerKind, type MoneyBreakdown, type StaffPerformance } from '../../game';
+import { moneyByDivision, reportWeeks, seasonReport, weekReport, type DecisionEntry, type LedgerKind, type MoneyBreakdown, type StaffPerformance } from '../../game';
 import type { PageProps } from '../App';
 import { money } from '../labels';
 
@@ -97,6 +97,7 @@ function Performance({ p, name }: { p: StaffPerformance; name: string }) {
 
 function SeasonTab({ game, data }: Pick<PageProps, 'game' | 'data'>) {
   const r = seasonReport(game);
+  const divisions = moneyByDivision(game.ledger);
   return (
     <>
       <section className="card wide">
@@ -104,6 +105,24 @@ function SeasonTab({ game, data }: Pick<PageProps, 'game' | 'data'>) {
         <p className="small-text">战绩 {r.wins} 胜 {r.losses} 负 · 资金 {money(r.fundsStart)} → <b>{money(r.fundsNow)}</b></p>
         <MoneyTable m={r.money} />
       </section>
+      {divisions.length > 1 && (
+        <section className="card wide">
+          <h3>按分部看</h3>
+          <table className="report-money">
+            <thead><tr><th>分部</th><th className="num">收入</th><th className="num">支出</th><th className="num">净</th></tr></thead>
+            <tbody>
+              {divisions.map((x) => (
+                <tr key={x.division}>
+                  <td className="keep">{x.division === 'MOBA' ? 'MOBA' : data.branches.kinds[x.division].name}</td>
+                  <td className="num good">{money(x.money.totalIncome)}</td><td className="num bad">{money(x.money.totalExpense)}</td>
+                  <td className={`num ${x.money.net < 0 ? 'bad' : 'good'}`}><b>{money(x.money.net)}</b></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="dim small-text">赞助因为分部多拿的那部分算在 MOBA 里。分部总监做过的事在各分部窗口的"总监"里看。</p>
+        </section>
+      )}
       {r.staff.map((p) => <Performance key={p.role} p={p} name={data.staff.roles[p.role].name} />)}
     </>
   );

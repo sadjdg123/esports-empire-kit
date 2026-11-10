@@ -31,6 +31,8 @@ import { MatchPage } from './pages/Match';
 import { ReportPage } from './pages/Report';
 import { SchedulePage } from './pages/Schedule';
 import { SettingsPage } from './pages/Settings';
+import { GoalsPage } from './pages/Goals';
+import { GroupPage } from './pages/Group';
 import { ReportsPage } from './pages/Reports';
 import { StaffPage } from './pages/Staff';
 import { StartPage } from './pages/Start';
@@ -40,7 +42,7 @@ import './styles.css';
 
 export type Page =
   | 'start' | 'home' | 'overview' | 'inbox' | 'market' | 'lineup' | 'training' | 'contracts' | 'schedule' | 'finance' | 'history'
-  | 'report' | 'settings' | 'match' | 'menu' | 'matchday' | 'seasonend' | 'facilities' | 'staff' | 'reports';
+  | 'report' | 'settings' | 'match' | 'menu' | 'matchday' | 'seasonend' | 'facilities' | 'staff' | 'reports' | 'group' | 'goals';
 
 export interface PageProps {
   game: GameState;
@@ -268,6 +270,8 @@ export function App() {
           {win === 'facilities' && <FacilitiesPage {...props} />}
           {win === 'staff' && <StaffPage {...props} />}
           {win === 'reports' && <ReportsPage {...props} />}
+          {win === 'group' && <GroupPage {...props} />}
+          {win === 'goals' && <GoalsPage {...props} />}
           {win === 'history' && <HistoryPage {...props} />}
           {win === 'report' && <ReportPage {...props} round={reportRound} lastWeek={lastWeek} />}
           {win === 'settings' && <SettingsPage {...props} onReplace={(g) => { setGame(g); gameRef.current = g; setLastWeek(null); setRunning(false); setWin(null); }} onNewGame={() => go('start')} />}
@@ -338,7 +342,7 @@ function dialogLine(g: GameState, act: PageProps['act'], go: PageProps['go'], tu
     const p = pid ? g.players[pid] : undefined;
     return p ? { speaker: p.name, look: lookFor(p.id, g.club.color) } : { speaker: '助理 小禾', look: ASSISTANT };
   };
-  const target: Page | null = m.kind === 'OFFER' || m.kind === 'CONTRACT' ? 'contracts' : m.kind === 'FINANCE' ? 'finance' : m.kind === 'SEASON' ? 'schedule' : m.kind === 'STAFF' ? 'staff' : null;
+  const target: Page | null = m.data?.goal ? 'goals' : m.data?.branch ? 'group' : m.kind === 'OFFER' || m.kind === 'CONTRACT' ? 'contracts' : m.kind === 'FINANCE' ? 'finance' : m.kind === 'SEASON' ? 'schedule' : m.kind === 'STAFF' ? 'staff' : m.data?.branch ? 'group' : null;
   return {
     key: `msg-${m.id}`, ...speakerFor(m), text: `${m.title}：${m.body}`,
     action: target ? { label: '去看看', run: () => { markRead(); go(target); } } : undefined,

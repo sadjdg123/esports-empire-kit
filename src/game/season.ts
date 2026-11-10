@@ -24,6 +24,7 @@ import { announceRetirements, awardSeasonMvp, retirePlayers, retirementNoticeDue
 import { chemistryFromMatch, chemistryNewSeason, groupChemistry } from './chemistry';
 import { refreshStaffMarket, rollStaffContracts } from './staff';
 import { branchesDay, branchesNewSeason, branchesPayDay } from './branches';
+import { checkGoals, countSeasonForGoals } from './goals';
 import { coachMatchDay, coachTraining, expirePending, postStaffWeekSummary, settleDecisionResults, settleMatchDecision, staffWeek } from './delegation';
 import { postMessage } from './messages';
 import { applyDailyRecovery, applyMatchEffects, applyTrainingWeek } from './training';
@@ -179,6 +180,9 @@ function finishSeason(state: GameState, data: GameData): void {
   recordCareers(state, champion);
   awardSeasonMvp(state, data);
   settleDecisionResults(state);
+  countSeasonForGoals(state);
+  checkGoals(state, data);
+  state.history[state.history.length - 1]!.fundsEnd = state.funds; // goal rewards belong to the season they were earned in
   postMessage(state, 'SEASON', `第 ${state.calendar.season} 赛季结束`,
     `${champion ? `冠军：${clubById(state, champion).name}。` : ''}你的常规赛排名第 ${rank}${champion === PLAYER_CLUB_ID ? '，并拿下了总冠军！' : '。'}继续前进就会进入新赛季的休赛期。`);
 }
@@ -264,6 +268,7 @@ export function advanceDay(state: GameState, data: GameData): DayResult {
   applyDailyRecovery(state, data);
   expirePending(state, data);
   branchesDay(state, data); // the other divisions play on their own week days
+  checkGoals(state, data);
   if (day % cfg.daysPerWeek === cfg.payWeekday) {
     runPayDay(state, data); // before training: this week's training is paid for
     branchesPayDay(state, data);
@@ -388,6 +393,7 @@ export function commitMatchDay(state: GameState, data: GameData, playerMatchResu
     playerResult = fr;
     settleMatchDecision(state, fr.winner === PLAYER_CLUB_ID);
     const won = fr.winner === PLAYER_CLUB_ID;
+    if (won) state.counters.wins++;
     const mySide = f.blue === PLAYER_CLUB_ID ? 'BLUE' : 'RED';
     const label = stage === 'LEAGUE' ? '比赛' : stage === 'SEMI' ? '季后赛半决赛' : '总决赛';
     const rep = buildReport(r, input, data, names);

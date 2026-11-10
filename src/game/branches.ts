@@ -400,6 +400,7 @@ function playToday(state: GameState, data: GameData, b: BranchState): void {
       b.results.push({ round, blue: f.blue, red: f.red, winner: r.winner, score: r.score });
       if (f.blue !== PLAYER_CLUB_ID && f.red !== PLAYER_CLUB_ID) continue;
       const won = r.winner === PLAYER_CLUB_ID;
+      if (won) state.counters.wins++;
       const opp = teamName(state, b, f.blue === PLAYER_CLUB_ID ? f.red : f.blue).name;
       money(state, b.kind, 'PRIZE', won ? cfg.prizeWin : cfg.prizeLoss, `${cfg.name}第 ${round + 1} 轮${won ? '胜' : '负'}`);
       addReputation(state, won ? cfg.reputation.win : cfg.reputation.loss);
