@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { STAFF_ROLES, type GameData } from '../../core/types';
 import type { GameState } from '../../game';
 import { activitySummary, clubActivities } from '../../render/club/activities';
@@ -6,12 +6,15 @@ import { ClubScene, SCENE_H, SCENE_W, type Hotspot, type Marker } from '../../re
 
 type CameraZone = 'all' | 'lounge' | 'training' | 'office' | 'yard';
 
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 2.6;
+
 const CAMERA_PRESETS: Record<CameraZone, { label: string; zoom: number; panX: number; panY: number }> = {
-  all: { label: '🏠 全景', zoom: 1, panX: 0, panY: 0 },
-  lounge: { label: '🛋️ 休息直播', zoom: 1.48, panX: 25, panY: 8 },
-  training: { label: '💻 训练大厅', zoom: 1.45, panX: -4, panY: 4 },
-  office: { label: '📋 行政荣誉', zoom: 1.48, panX: -28, panY: -8 },
-  yard: { label: '🌳 户外庭院', zoom: 1.38, panX: 4, panY: -20 },
+  all: { label: '🏠 全景', zoom: 1.18, panX: -1, panY: -3 },
+  lounge: { label: '🛋️ 休息直播', zoom: 1.55, panX: 22, panY: 6 },
+  training: { label: '💻 训练大厅', zoom: 1.48, panX: -3, panY: 4 },
+  office: { label: '📋 行政荣誉', zoom: 1.55, panX: -22, panY: -6 },
+  yard: { label: '🌳 户外庭院', zoom: 1.45, panX: 4, panY: -18 },
 };
 
 const HOTSPOT_SHORT: Record<Hotspot, string> = {
@@ -29,40 +32,76 @@ const HOTSPOT_SHORT: Record<Hotspot, string> = {
   group: '集团',
 };
 
-/** The club base, the main screen: single-floor Kairosoft studio with pan/drag, camera presets, and furniture labels. */
+/** The club base, the main screen: single-floor Kairosoft studio with 1:1 finger-locked pan/pinch, camera presets, and furniture labels. */
 export function BaseView({ game, data, markers, cheer, onPlayer, onHotspot }: {
   game: GameState; data: GameData; markers: Partial<Record<Hotspot, Marker>>; cheer: boolean;
   onPlayer: (id: string) => void; onHotspot: (h: Hotspot) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<ClubScene | null>(null);
   const activities = useMemo(() => clubActivities(game, data), [game, data]);
   const summaryLines = useMemo(() => activitySummary(game, activities), [game, activities]);
 
   const [zone, setZone] = useState<CameraZone>('all');
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const zoneRef = useRef<CameraZone>('all');
   const [showTags, setShowTags] = useState(false);
   const [hoverTip, setHoverTip] = useState<string | null>(null);
   const [spots, setSpots] = useState<{ hotspot: Hotspot; label: string; x: number; y: number }[]>([]);
+  const lastTouchTimeRef = useRef(0);
 
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
-  const pinchRef = useRef<{
-    active: boolean;
-    startDist: number;
-    startMidX: number;
-    startMidY: number;
-    origZoom: number;
-    origPanX: number;
-    origPanY: number;
-  }>({
-    active: false, startDist: 1, startMidX: 0, startMidY: 0, origZoom: 1, origPanX: 0, origPanY: 0,
+  // Live camera state in screen pixels (tx, ty) and scale (zoom), updated synchronously on DOM
+  // during touch/mouse gestures so there is zero React render or CSS transition lag.
+  const camRef = useRef<{ zoom: number; tx: number; ty: number }>({
+    zoom: CAMERA_PRESETS.all.zoom,
+    tx: 0,
+    ty: 0,
   });
 
-  const dragRef = useRef<{ active: boolean; moved: boolean; startX: number; startY: number; origX: number; origY: number }>({
-    active: false, moved: false, startX: 0, startY: 0, origX: 0, origY: 0,
-  });
+  const clampAndApply = useCallback((nextZoom: number, nextTx: number, nextTy: number, animate = false) => {
+    const vp = viewportRef.current;
+    const stage = stageRef.current;
+    const z = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, nextZoom));
+    const vpW = vp ? vp.clientWidth : 360;
+    const vpH = vp ? vp.clientHeight : 240;
+    const stW = stage ? stage.offsetWidth || vpW : vpW;
+    const stH = stage ? stage.offsetHeight || vpH : vpH;
+    // Strict edge clamp: scaled stage is (z * stW, z * stH), so maximum shift from center before
+    // the canvas edge reaches the viewport border is ((z * stW - vpW) / 2, (z * stH - vpH) / 2).
+    const maxTx = Math.max(0, (z * stW - vpW) / 2);
+    const maxTy = Math.max(0, (z * stH - vpH) / 2);
+    const tx = Math.max(-maxTx, Math.min(maxTx, nextTx));
+    const ty = Math.max(-maxTy, Math.min(maxTy, nextTy));
+    camRef.current = { zoom: z, tx, ty };
+    if (stage) {
+      stage.style.transition = animate ? 'transform 0.18s ease-out' : 'none';
+      stage.style.transform = `translate3d(${tx.toFixed(2)}px, ${ty.toFixed(2)}px, 0) scale(${z.toFixed(4)})`;
+    }
+  }, []);
+
+  const tapAt = useCallback((clientX: number, clientY: number): boolean => {
+    const vp = viewportRef.current;
+    const canvas = canvasRef.current;
+    if (!vp || !canvas) return false;
+    const vpRect = vp.getBoundingClientRect();
+    if (clientX < vpRect.left || clientX > vpRect.right || clientY < vpRect.top || clientY > vpRect.bottom) return false;
+    const r = canvas.getBoundingClientRect();
+    if (clientX < r.left || clientX > r.right || clientY < r.top || clientY > r.bottom) return false;
+    const hit = sceneRef.current?.tap(
+      ((clientX - r.left) / r.width) * SCENE_W,
+      ((clientY - r.top) / r.height) * SCENE_H,
+    );
+    if (hit?.kind === 'player') {
+      onPlayer(hit.id);
+      return true;
+    }
+    if (hit?.kind === 'hotspot') {
+      onHotspot(hit.name);
+      return true;
+    }
+    return false;
+  }, [onPlayer, onHotspot]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -77,8 +116,13 @@ export function BaseView({ game, data, markers, cheer, onPlayer, onHotspot }: {
     sceneRef.current = scene;
     scene.start();
     setSpots(scene.hotspotSpots());
+    const vp = viewportRef.current;
+    const w = vp ? vp.clientWidth : 360;
+    const h = vp ? vp.clientHeight : 240;
+    const preset = CAMERA_PRESETS.all;
+    clampAndApply(preset.zoom, (preset.panX / 100) * w, (preset.panY / 100) * h, false);
     return () => { scene.stop(); sceneRef.current = null; };
-  }, []);
+  }, [clampAndApply]);
 
   useEffect(() => { sceneRef.current?.setActivities(activities, game.club.color, cheer); }, [activities, game.club.color, cheer]);
   useEffect(() => { sceneRef.current?.setMarkers(markers); }, [markers]);
@@ -98,117 +142,248 @@ export function BaseView({ game, data, markers, cheer, onPlayer, onHotspot }: {
     setSpots(sceneRef.current.hotspotSpots());
   }, [titles, finals, rooms, staff, branches]);
 
-  const clampPan = (nx: number, ny: number, z: number) => {
-    if (z <= 1.02) return { x: 0, y: 0 };
-    const maxPan = Math.max(18, (z - 1) * 44 + 14);
-    return {
-      x: Math.max(-maxPan, Math.min(maxPan, nx)),
-      y: Math.max(-maxPan, Math.min(maxPan, ny)),
-    };
-  };
-
+  // Native touch (1-finger drag + 2-finger focal-point pinch-zoom) and wheel zoom on the viewport
   useEffect(() => {
     const el = viewportRef.current;
     if (!el) return;
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      setZone('all');
-      setZoom((prevZoom) => {
-        const nextZoom = Math.max(1, Math.min(2.6, prevZoom * Math.exp(-e.deltaY * 0.002)));
-        setPan((prevPan) => clampPan(prevPan.x, prevPan.y, nextZoom));
-        return nextZoom;
-      });
+
+    let touchMode: 'none' | 'single' | 'pinch' = 'none';
+    let moved = false;
+    let hadMultiTouch = false;
+    let startX = 0;
+    let startY = 0;
+    let lastX = 0;
+    let lastY = 0;
+    let prevMidX = 0;
+    let prevMidY = 0;
+    let prevDist = 1;
+    let lastTouchEnd = 0;
+    let lastTapX = 0;
+    let lastTapY = 0;
+
+    const markManualCamera = () => {
+      if (zoneRef.current !== 'all') {
+        zoneRef.current = 'all';
+        setZone('all');
+      }
     };
+
+    const onTouchStart = (e: TouchEvent) => {
+      lastTouchTimeRef.current = Date.now();
+      if (e.touches.length === 1) {
+        const t = e.touches[0]!;
+        touchMode = 'single';
+        moved = false;
+        hadMultiTouch = false;
+        startX = t.clientX;
+        startY = t.clientY;
+        lastX = t.clientX;
+        lastY = t.clientY;
+        if (stageRef.current) stageRef.current.style.transition = 'none';
+      } else if (e.touches.length >= 2) {
+        if (e.cancelable) e.preventDefault();
+        const t0 = e.touches[0]!;
+        const t1 = e.touches[1]!;
+        touchMode = 'pinch';
+        moved = true;
+        hadMultiTouch = true;
+        prevMidX = (t0.clientX + t1.clientX) / 2;
+        prevMidY = (t0.clientY + t1.clientY) / 2;
+        prevDist = Math.max(10, Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY));
+        if (stageRef.current) stageRef.current.style.transition = 'none';
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      lastTouchTimeRef.current = Date.now();
+      // Always prevent default inside the viewport so iOS Safari / WeChat WebView never hijacks
+      // a drag or pinch into page scrolling or elastic rubber-banding.
+      if (e.cancelable) e.preventDefault();
+
+      if (e.touches.length >= 2) {
+        const t0 = e.touches[0]!;
+        const t1 = e.touches[1]!;
+        const midX = (t0.clientX + t1.clientX) / 2;
+        const midY = (t0.clientY + t1.clientY) / 2;
+        const dist = Math.max(10, Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY));
+
+        if (touchMode !== 'pinch') {
+          touchMode = 'pinch';
+          hadMultiTouch = true;
+          moved = true;
+          prevMidX = midX;
+          prevMidY = midY;
+          prevDist = dist;
+          return;
+        }
+
+        const vpRect = el.getBoundingClientRect();
+        const cx = vpRect.left + vpRect.width / 2;
+        const cy = vpRect.top + vpRect.height / 2;
+        const { zoom: z0, tx: tx0, ty: ty0 } = camRef.current;
+        const z1 = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z0 * (dist / prevDist)));
+        const ratio = z1 / z0;
+        // Keep the exact building point under (prevMidX, prevMidY) locked under (midX, midY)
+        const nextTx = (midX - cx) - ratio * ((prevMidX - cx) - tx0);
+        const nextTy = (midY - cy) - ratio * ((prevMidY - cy) - ty0);
+
+        prevMidX = midX;
+        prevMidY = midY;
+        prevDist = dist;
+        markManualCamera();
+        clampAndApply(z1, nextTx, nextTy, false);
+        return;
+      }
+
+      if (e.touches.length === 1 && touchMode === 'single') {
+        const t = e.touches[0]!;
+        if (!moved) {
+          if (Math.hypot(t.clientX - startX, t.clientY - startY) <= 4) return;
+          moved = true;
+          lastX = startX;
+          lastY = startY;
+        }
+        const dx = t.clientX - lastX;
+        const dy = t.clientY - lastY;
+        lastX = t.clientX;
+        lastY = t.clientY;
+        const { zoom, tx, ty } = camRef.current;
+        markManualCamera();
+        clampAndApply(zoom, tx + dx, ty + dy, false);
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      lastTouchTimeRef.current = Date.now();
+      if (e.touches.length === 1) {
+        // Transition seamlessly from 2-finger pinch down to 1-finger pan without jumping
+        const t = e.touches[0]!;
+        touchMode = 'single';
+        lastX = t.clientX;
+        lastY = t.clientY;
+        return;
+      }
+      if (e.touches.length === 0) {
+        const now = Date.now();
+        if (!moved && !hadMultiTouch) {
+          if (e.cancelable) e.preventDefault();
+          const hit = tapAt(startX, startY);
+          if (hit) {
+            lastTouchEnd = 0;
+          } else if (now - lastTouchEnd < 280 && Math.hypot(startX - lastTapX, startY - lastTapY) < 24) {
+            // Double-tap on empty floor/sky zooms in on that spot (or resets if already zoomed in)
+            const vpRect = el.getBoundingClientRect();
+            const cx = vpRect.left + vpRect.width / 2;
+            const cy = vpRect.top + vpRect.height / 2;
+            const { zoom: z0, tx: tx0, ty: ty0 } = camRef.current;
+            if (z0 < 1.65) {
+              const z1 = 1.85;
+              const ratio = z1 / z0;
+              clampAndApply(z1, (startX - cx) - ratio * ((startX - cx) - tx0), (startY - cy) - ratio * ((startY - cy) - ty0), true);
+            } else {
+              const preset = CAMERA_PRESETS.all;
+              clampAndApply(preset.zoom, (preset.panX / 100) * vpRect.width, (preset.panY / 100) * vpRect.height, true);
+            }
+            lastTouchEnd = 0;
+          } else {
+            lastTouchEnd = now;
+            lastTapX = startX;
+            lastTapY = startY;
+          }
+        }
+        touchMode = 'none';
+      }
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      if (e.cancelable) e.preventDefault();
+      const vpRect = el.getBoundingClientRect();
+      const cx = vpRect.left + vpRect.width / 2;
+      const cy = vpRect.top + vpRect.height / 2;
+      const { zoom: z0, tx: tx0, ty: ty0 } = camRef.current;
+      const z1 = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z0 * Math.exp(-e.deltaY * 0.002)));
+      const ratio = z1 / z0;
+      const mx = e.clientX - cx;
+      const my = e.clientY - cy;
+      const nextTx = mx - ratio * (mx - tx0);
+      const nextTy = my - ratio * (my - ty0);
+      markManualCamera();
+      clampAndApply(z1, nextTx, nextTy, false);
+    };
+
+    const preventGesture = (e: Event) => {
+      if (e.cancelable) e.preventDefault();
+    };
+
+    const onResize = () => {
+      const { zoom, tx, ty } = camRef.current;
+      clampAndApply(zoom, tx, ty, false);
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: false });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd, { passive: false });
+    el.addEventListener('touchcancel', onTouchEnd, { passive: false });
     el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
-  }, []);
+    el.addEventListener('gesturestart', preventGesture, { passive: false });
+    el.addEventListener('gesturechange', preventGesture, { passive: false });
+    el.addEventListener('gestureend', preventGesture, { passive: false });
+    window.addEventListener('resize', onResize);
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', onTouchEnd);
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('gesturestart', preventGesture);
+      el.removeEventListener('gesturechange', preventGesture);
+      el.removeEventListener('gestureend', preventGesture);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [clampAndApply, tapAt]);
 
-  const applyZone = (z: CameraZone) => {
-    const preset = CAMERA_PRESETS[z];
-    setZone(z);
-    setZoom(preset.zoom);
-    setPan({ x: preset.panX, y: preset.panY });
-  };
+  // Desktop mouse drag & hover tooltip
+  const mouseRef = useRef<{ active: boolean; moved: boolean; startX: number; startY: number; lastX: number; lastY: number }>({
+    active: false, moved: false, startX: 0, startY: 0, lastX: 0, lastY: 0,
+  });
 
-  const beginPinchIfTwoFingers = () => {
-    const pts = [...pointersRef.current.values()];
-    if (pts.length >= 2) {
-      const p1 = pts[0]!;
-      const p2 = pts[1]!;
-      pinchRef.current = {
-        active: true,
-        startDist: Math.max(12, Math.hypot(p2.x - p1.x, p2.y - p1.y)),
-        startMidX: (p1.x + p2.x) / 2,
-        startMidY: (p1.y + p2.y) / 2,
-        origZoom: zoom,
-        origPanX: pan.x,
-        origPanY: pan.y,
-      };
-      dragRef.current.moved = true;
-    }
-  };
-
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.button !== undefined && e.button !== 0) return;
-    e.currentTarget.setPointerCapture?.(e.pointerId);
-    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pointersRef.current.size >= 2) {
-      beginPinchIfTwoFingers();
-      return;
-    }
-    pinchRef.current.active = false;
-    dragRef.current = {
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0 || Date.now() - lastTouchTimeRef.current < 500) return;
+    mouseRef.current = {
       active: true,
       moved: false,
       startX: e.clientX,
       startY: e.clientY,
-      origX: pan.x,
-      origY: pan.y,
+      lastX: e.clientX,
+      lastY: e.clientY,
     };
+    if (stageRef.current) stageRef.current.style.transition = 'none';
   };
 
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const canvas = canvasRef.current;
-    if (pointersRef.current.has(e.pointerId)) {
-      pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    }
-
-    if (pointersRef.current.size >= 2 && canvas) {
-      if (!pinchRef.current.active) beginPinchIfTwoFingers();
-      const pts = [...pointersRef.current.values()];
-      const p1 = pts[0]!;
-      const p2 = pts[1]!;
-      const dist = Math.max(12, Math.hypot(p2.x - p1.x, p2.y - p1.y));
-      const midX = (p1.x + p2.x) / 2;
-      const midY = (p1.y + p2.y) / 2;
-      const p = pinchRef.current;
-      const nextZoom = Math.max(1, Math.min(2.6, p.origZoom * (dist / p.startDist)));
-      const rect = canvas.getBoundingClientRect();
-      const baseW = Math.max(1, rect.width / zoom);
-      const baseH = Math.max(1, rect.height / zoom);
-      const pctX = ((midX - p.startMidX) / baseW) * 100;
-      const pctY = ((midY - p.startMidY) / baseH) * 100;
-      setZone('all');
-      setZoom(nextZoom);
-      setPan(clampPan(p.origPanX + pctX, p.origPanY + pctY, nextZoom));
-      dragRef.current.moved = true;
-      return;
-    }
-
-    const d = dragRef.current;
-    if (d.active && canvas) {
-      const dx = e.clientX - d.startX;
-      const dy = e.clientY - d.startY;
-      if (Math.hypot(dx, dy) > 6) {
-        d.moved = true;
-        const rect = canvas.getBoundingClientRect();
-        const pctX = (dx / Math.max(1, rect.width / zoom)) * 100;
-        const pctY = (dy / Math.max(1, rect.height / zoom)) * 100;
-        setZone('all');
-        setPan(clampPan(d.origX + pctX, d.origY + pctY, Math.max(1.15, zoom)));
+  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (Date.now() - lastTouchTimeRef.current < 500) return;
+    const m = mouseRef.current;
+    if (m.active) {
+      if (!m.moved) {
+        if (Math.hypot(e.clientX - m.startX, e.clientY - m.startY) <= 4) return;
+        m.moved = true;
+        m.lastX = m.startX;
+        m.lastY = m.startY;
       }
+      const dx = e.clientX - m.lastX;
+      const dy = e.clientY - m.lastY;
+      m.lastX = e.clientX;
+      m.lastY = e.clientY;
+      const { zoom, tx, ty } = camRef.current;
+      if (zoneRef.current !== 'all') {
+        zoneRef.current = 'all';
+        setZone('all');
+      }
+      clampAndApply(zoom, tx + dx, ty + dy, false);
       return;
     }
+
+    const canvas = canvasRef.current;
     if (!canvas || !sceneRef.current) return;
     const r = canvas.getBoundingClientRect();
     const sx = ((e.clientX - r.left) / r.width) * SCENE_W;
@@ -225,38 +400,23 @@ export function BaseView({ game, data, markers, cheer, onPlayer, onHotspot }: {
     }
   };
 
-  const stopPointer = (e: React.PointerEvent<HTMLDivElement>) => {
-    // A press released without dragging is a tap. It is handled here because the viewport holds the
-    // pointer capture, so the browser's click lands on the viewport, never on the canvas.
-    const single = pointersRef.current.size === 1 && pointersRef.current.has(e.pointerId);
-    if (e.type === 'pointerup' && single && dragRef.current.active && !dragRef.current.moved && !pinchRef.current.active) tapAt(e.clientX, e.clientY);
-    pointersRef.current.delete(e.pointerId);
-    if (pointersRef.current.size < 2) {
-      pinchRef.current.active = false;
+  const onMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (Date.now() - lastTouchTimeRef.current < 500) return;
+    const m = mouseRef.current;
+    if (m.active && !m.moved) {
+      tapAt(e.clientX, e.clientY);
     }
-    if (pointersRef.current.size === 1) {
-      const rem = [...pointersRef.current.values()][0]!;
-      dragRef.current = {
-        active: true,
-        moved: true,
-        startX: rem.x,
-        startY: rem.y,
-        origX: pan.x,
-        origY: pan.y,
-      };
-    } else if (pointersRef.current.size === 0) {
-      dragRef.current.active = false;
-    }
+    m.active = false;
   };
 
-  const tapAt = (clientX: number, clientY: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const r = canvas.getBoundingClientRect();
-    if (clientX < r.left || clientX > r.right || clientY < r.top || clientY > r.bottom) return;
-    const hit = sceneRef.current?.tap(((clientX - r.left) / r.width) * SCENE_W, ((clientY - r.top) / r.height) * SCENE_H);
-    if (hit?.kind === 'player') onPlayer(hit.id);
-    else if (hit?.kind === 'hotspot') onHotspot(hit.name);
+  const applyZone = (z: CameraZone) => {
+    const preset = CAMERA_PRESETS[z];
+    const vp = viewportRef.current;
+    const w = vp ? vp.clientWidth : 360;
+    const h = vp ? vp.clientHeight : 240;
+    zoneRef.current = z;
+    setZone(z);
+    clampAndApply(preset.zoom, (preset.panX / 100) * w, (preset.panY / 100) * h, true);
   };
 
   return (
@@ -267,14 +427,12 @@ export function BaseView({ game, data, markers, cheer, onPlayer, onHotspot }: {
             <button
               key={k}
               type="button"
-              className={`cam-pill ${zone === k && Math.abs(zoom - CAMERA_PRESETS[k].zoom) < 0.05 ? 'on' : ''}`}
+              className={`cam-pill ${zone === k ? 'on' : ''}`}
               onClick={() => applyZone(k)}
             >
               {CAMERA_PRESETS[k].label}
             </button>
           ))}
-        </div>
-        <div className="camera-tools">
           <button
             type="button"
             className={`cam-pill ${showTags ? 'on' : ''}`}
@@ -288,18 +446,15 @@ export function BaseView({ game, data, markers, cheer, onPlayer, onHotspot }: {
 
       <div
         ref={viewportRef}
-        className={`base-viewport ${dragRef.current.active || pinchRef.current.active ? 'dragging' : ''}`}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={stopPointer}
-        onPointerCancel={stopPointer}
-        onPointerLeave={(e) => { stopPointer(e); setHoverTip(null); }}
+        className="base-viewport"
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={() => { mouseRef.current.active = false; setHoverTip(null); }}
       >
         <div
+          ref={stageRef}
           className="base-stage"
-          style={{
-            transform: `translate(${pan.x}%, ${pan.y}%) scale(${zoom})`,
-          }}
         >
           <canvas
             ref={canvasRef}
@@ -334,3 +489,4 @@ export function BaseView({ game, data, markers, cheer, onPlayer, onHotspot }: {
     </div>
   );
 }
+

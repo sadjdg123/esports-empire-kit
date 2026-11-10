@@ -480,22 +480,21 @@ button.link.name { padding: 0; margin: 0; color: var(--text); font-weight: 700; 
   border: 3px solid var(--wood-dark);
   border-radius: 14px;
   overflow: hidden;
-  background: #76b848;
+  background: linear-gradient(180deg, #74c2f0 0%, #dff2fc 100%);
   box-shadow: inset 0 0 0 2px rgba(255, 248, 224, 0.55), 0 5px 0 rgba(58, 36, 18, 0.35);
   cursor: grab;
   user-select: none;
   touch-action: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
-.base-viewport.dragging { cursor: grabbing; }
+.base-viewport:active { cursor: grabbing; }
 .base-stage {
   position: relative;
   width: 100%;
   aspect-ratio: 300 / 200;
   transform-origin: center center;
-  transition: transform 0.08s ease-out;
-}
-.base-viewport.dragging .base-stage {
-  transition: none;
+  will-change: transform;
 }
 .base-canvas {
   display: block;
@@ -938,8 +937,12 @@ button.link.name { padding: 0; margin: 0; color: var(--text); font-weight: 700; 
   .dock-btn { padding: 4px 8px; font-size: 12.5px; }
   .dock-btn span { display: inline; }
   .caption-hint { display: none; }
+  .event-dialog { bottom: calc(var(--dock-h, 96px) + 6px); max-height: calc(100vh - var(--dock-h, 96px) - 140px); }
 }
 .table tr.renewal-row td { border-top: none; padding-top: 0; }
 /* The assistant's dialog always sits above the bottom dock; long text scrolls inside it. */
-.event-dialog { bottom: calc(var(--dock-h, 62px) + 6px); max-height: calc(100vh - var(--dock-h, 62px) - 140px); overflow-y: auto; }
+.event-dialog { z-index: 32; bottom: calc(var(--dock-h, 62px) + 6px); max-height: calc(100vh - var(--dock-h, 62px) - 140px); overflow-y: auto; }
+@media (max-width: 700px) {
+  .event-dialog { bottom: calc(var(--dock-h, 96px) + 6px); max-height: calc(100vh - var(--dock-h, 96px) - 140px); }
+}
 @media (max-width: 600px) { .base-wrap { justify-content: flex-start; } }
