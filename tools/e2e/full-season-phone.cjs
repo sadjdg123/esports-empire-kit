@@ -3,7 +3,7 @@
 // Screenshots go to docs/reports/t18/. Run as full-season-desktop.cjs.
 const { chromium } = require('playwright');
 const helpers = require('./helpers.cjs');
-const SHOTS = '/home/user/esports-empire-kit/docs/reports/v1';
+const SHOTS = 'docs/reports/v1';
 (async () => {
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });

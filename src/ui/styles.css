@@ -855,6 +855,19 @@ button.link.name { padding: 0; margin: 0; color: var(--text); font-weight: 700; 
 .round-chip.won { background: #d8f0df; color: #1f6b3d; }
 .round-chip.lost { background: #f6d9d6; color: #9b2f2a; }
 .round-chip.on { border-color: var(--wood-dark); }
+.branch-replay-canvas {
+  display: block;
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  aspect-ratio: 260 / 156;
+  margin: 8px auto;
+  image-rendering: pixelated;
+  background: #c8ba9e;
+  border: 2.5px solid var(--wood-dark);
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1.5px #f6d9a8, 0 3px 0 rgba(58, 36, 18, 0.25);
+}
 .fps-map { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin: 8px 0; }
 .fps-map .site { padding: 10px 0; text-align: center; border-radius: 8px; background: var(--panel-2); border: 2px dashed var(--line); font-weight: 700; }
 .fps-map .site.mid { font-weight: 400; color: var(--dim); }

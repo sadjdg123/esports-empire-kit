@@ -92,7 +92,7 @@
 | T41 | 阶段目标 | Claude Code | ✅ 完成 | 2026-11-10 | 汇报：docs/reports/T41.md；D72 |
 | T42 | 总平衡、长期验收、离线包 | Claude Code | ✅ 完成 | 2026-11-10 | 汇报：docs/reports/T42.md；D73；总结：docs/reports/FINAL.md |
 
-## 体验与画面升级（门哥授权，D74–D76）
+## 体验与画面升级（门哥授权，D74–D77）
 
 | 任务 | 名称 | 负责 | 状态 | 完成日期 | 备注 |
 |---|---|---|---|---|---|
@@ -100,4 +100,6 @@
 | F4 | 经营体验与报表反馈升级 | Antigravity | ✅ 完成 | 2026-11-10 | 汇报：docs/reports/F4.md；D75 |
 | V7 | 开罗风格一层可拖拽基地大平层与全界面 UI 升级 | Antigravity | ✅ 完成 | 2026-11-10 | 汇报：docs/reports/V7.md；D76 |
 | F5 | 检查 Gemini 的 F3/F4/V7，修基地点不开家具、手机对话框被挡 | Claude Code | ✅ 完成 | 2026-11-10 | 汇报：docs/reports/F5.md |
+| V8 | 射击和卡牌分部的像素比赛画面 | Antigravity | ✅ 完成 | 2026-11-10 | 汇报：docs/reports/V8.md；D77 |
+
 

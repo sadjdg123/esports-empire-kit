@@ -1,6 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GameData } from '../../core/types';
 import type { BranchReplay } from '../../game';
+import {
+  CARD_CANVAS_H,
+  CARD_CANVAS_W,
+  computeCardSceneState,
+  computeFpsSceneState,
+  FPS_CANVAS_H,
+  FPS_CANVAS_W,
+} from '../../render/branch/choreo';
+import { paintCardScene, paintFpsScene } from '../../render/branch/BranchPainter';
 import type { CardGame, CardNote, CardSide } from '../../sim-card';
 import type { FpsEvent, FpsRound, FpsSide } from '../../sim-fps';
 
@@ -49,6 +58,29 @@ function FpsReplay({ replay, data }: { replay: BranchReplay; data: GameData }) {
   const [n, setN] = useState(r.rounds.length);
   const round = r.rounds[n - 1]!;
   const { step, playing, play, end } = useStepper(round.events.length, 700, `${replay.season}:${replay.round}:${n}`);
+  const scene = useMemo(() => computeFpsSceneState(replay, n - 1, step), [replay, n, step]);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const cvs = canvasRef.current;
+    if (!cvs) return;
+    const ctx = cvs.getContext('2d');
+    if (!ctx) return;
+    let raf = 0;
+    const start = performance.now();
+    const render = (now: number) => {
+      const phase = (now - start) / 1000;
+      paintFpsScene(ctx, replay, scene, phase);
+      if (playing || scene.bomb.state === 'PLANTED' || scene.bomb.state === 'EXPLODED') {
+        raf = window.requestAnimationFrame(render);
+      }
+    };
+    render(start);
+    return () => {
+      if (raf) window.cancelAnimationFrame(raf);
+    };
+  }, [replay, scene, playing]);
+
   const name = (id: string) => replay.names[id] ?? id;
   const shown = round.events.slice(0, step);
   const dead = new Set(shown.filter((e): e is Extract<FpsEvent, { type: 'KILL' }> => e.type === 'KILL').map((e) => e.victim));
@@ -78,6 +110,17 @@ function FpsReplay({ replay, data }: { replay: BranchReplay; data: GameData }) {
         第 {round.n} 回合 · <span style={{ color: replay.teams[round.attackers].color }}>{replay.teams[round.attackers].name}</span> 进攻 {round.site} 点 ·
         装备：{(['BLUE', 'RED'] as const).map((s) => data.fps.economy.loadouts.find((l) => l.id === round.buy[s])?.name).join(' 对 ')}
       </div>
+      <canvas
+        ref={canvasRef}
+        width={FPS_CANVAS_W}
+        height={FPS_CANVAS_H}
+        className="branch-replay-canvas fps-replay-canvas"
+        aria-label={`射击第 ${round.n} 回合像素画面`}
+        data-round={round.n}
+        data-step={step}
+        data-done={done ? '1' : '0'}
+        data-score={`${scene.score.BLUE}:${scene.score.RED}`}
+      />
       <div className="fps-map" aria-hidden="true">
         <div className={`site ${round.site === 'A' ? 'target' : ''} ${planted && round.site === 'A' ? 'planted' : ''}`}>A</div>
         <div className="site mid">中路</div>
@@ -122,8 +165,32 @@ function CardReplay({ replay, data }: { replay: BranchReplay; data: GameData }) 
   const r = replay.card!;
   const games = r.series.flatMap((s) => s.games.map((g, i) => ({ s, g, i })));
   const [k, setK] = useState(games.length - 1);
-  const { s, g, i } = games[Math.min(k, games.length - 1)]!;
-  const { step, playing, play, end } = useStepper(g.turns.length, 650, `${replay.season}:${replay.round}:${k}`);
+  const clampedK = Math.min(k, games.length - 1);
+  const { s, g, i } = games[clampedK]!;
+  const { step, playing, play, end } = useStepper(g.turns.length, 650, `${replay.season}:${replay.round}:${clampedK}`);
+  const scene = useMemo(() => computeCardSceneState(replay, data, clampedK, step), [replay, data, clampedK, step]);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const cvs = canvasRef.current;
+    if (!cvs) return;
+    const ctx = cvs.getContext('2d');
+    if (!ctx) return;
+    let raf = 0;
+    const start = performance.now();
+    const render = (now: number) => {
+      const phase = (now - start) / 1000;
+      paintCardScene(ctx, replay, scene, phase);
+      if (playing) {
+        raf = window.requestAnimationFrame(render);
+      }
+    };
+    render(start);
+    return () => {
+      if (raf) window.cancelAnimationFrame(raf);
+    };
+  }, [replay, scene, playing]);
+
   const name = (id: string) => replay.names[id] ?? id;
   const who: Record<CardSide, string> = { BLUE: name(s.blue), RED: name(s.red) };
   const life = step === 0 ? startLife(g, data) : g.turns[step - 1]!.life;
@@ -143,6 +210,19 @@ function CardReplay({ replay, data }: { replay: BranchReplay; data: GameData }) 
         ))}
       </div>
       <div className="small-text">第 {s.seat + 1} 台 第 {i + 1} 局 · {g.first === 'BLUE' ? who.BLUE : who.RED} 先手</div>
+      <canvas
+        ref={canvasRef}
+        width={CARD_CANVAS_W}
+        height={CARD_CANVAS_H}
+        className="branch-replay-canvas card-replay-canvas"
+        aria-label={`卡牌第 ${s.seat + 1} 台第 ${i + 1} 局像素画面`}
+        data-seat={s.seat + 1}
+        data-game={i + 1}
+        data-step={step}
+        data-done={done ? '1' : '0'}
+        data-score={`${scene.seriesScore.BLUE}:${scene.seriesScore.RED}`}
+        data-life={`${scene.bluePlayer.life}:${scene.redPlayer.life}`}
+      />
       {(['BLUE', 'RED'] as const).map((side) => (
         <div key={side} className="life-row">
           <span className="keep small-text"><i className="dot" style={{ background: replay.teams[side].color }} />{who[side]} <span className="dim">{data.card.decks[s.decks[side]].name}</span></span>
@@ -180,3 +260,4 @@ function startLife(g: CardGame, data: GameData): Record<CardSide, number> {
   const base = data.card.life, extra = data.card.skill.secondPlayerLife;
   return { BLUE: base + (g.first === 'BLUE' ? 0 : extra), RED: base + (g.first === 'RED' ? 0 : extra) };
 }
+
