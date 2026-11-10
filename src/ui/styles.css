@@ -390,26 +390,37 @@ button.link.name { padding: 0; margin: 0; color: var(--text); font-weight: 700; 
 }
 .hud-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .hud-money {
+  margin: 0;
   font-weight: 800;
   font-size: 15px;
+  line-height: 1.35;
   background: #472a14;
   border: 1.5px solid #d49b4b;
   border-radius: 8px;
   padding: 1px 9px;
   color: #ffe680;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  text-shadow: 0 1px 0 #3a200c;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(42, 20, 6, 0.7);
 }
+.hud-money:hover:not(:disabled) { border-color: #ffe680; filter: brightness(1.08); }
+.hud-money:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.55); }
 .hud-money.warn { color: #ffd45e; border-color: #ffd45e; }
 .hud-money.danger { color: #ff8a8a; border-color: #ff6b6b; }
 .hud-rep {
+  margin: 0;
   font-weight: 800;
   font-size: 13px;
-  background: rgba(71, 42, 20, 0.72);
-  border: 1px solid rgba(227, 180, 104, 0.65);
+  line-height: 1.4;
+  background: rgba(71, 42, 20, 0.78);
+  border: 1px solid rgba(227, 180, 104, 0.75);
   border-radius: 8px;
   padding: 1px 8px;
   color: #fff2c2;
+  text-shadow: 0 1px 0 #3a200c;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.35), 0 1px 0 rgba(42, 20, 6, 0.65);
 }
+.hud-rep:hover:not(:disabled) { border-color: #ffeab3; filter: brightness(1.08); }
+.hud-rep:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45); }
 .hud-clock { display: flex; flex-wrap: wrap; gap: 3px; }
 .hud-clock button {
   margin: 1px;

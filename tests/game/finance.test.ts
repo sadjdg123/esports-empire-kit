@@ -90,13 +90,23 @@ describe('weekly money', () => {
     expect(weeklyMoney(s, data).league).toBe(0);
   });
 
-  it('the 4-week forecast adds up', () => {
+  it('the 4-week forecast adds up and includes facility upkeep and staff wages', () => {
     const s = ready(7);
+    s.funds = 250000;
+    s.club.facilities.TRAINING = 2;
+    const candidate = s.staffMarket[0]!;
+    const staffSalary = s.staff[candidate]!.salaryPerWeek;
+    s.delegation.roles[s.staff[candidate]!.role].staffId = candidate;
+    s.staffMarket = s.staffMarket.filter((id) => id !== candidate);
     while (s.calendar.phase === 'PRESEASON') advanceDay(s, data);
+    const m = weeklyMoney(s, data);
+    expect(m.upkeep).toBeGreaterThan(0);
+    expect(m.staff).toBe(staffSalary);
     const rows = cashForecast(s, data);
     expect(rows).toHaveLength(f.forecastWeeks);
     let funds = s.funds;
     for (const r of rows) {
+      expect(r.expense).toBe(-(m.salaries + m.training + m.upkeep + m.staff));
       funds += r.income + r.expense;
       expect(r.fundsAfter).toBe(Math.round(funds));
       expect(r.matches).toBe(1);

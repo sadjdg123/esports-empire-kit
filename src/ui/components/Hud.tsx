@@ -4,9 +4,10 @@ import type { ClockSpeed } from '../App';
 import { money } from '../labels';
 
 /** The Kairosoft-style status bar over the base: club badge, date, money, reputation, and clock controls. */
-export function Hud({ game, data, running, speed, setRunning, setSpeed, toNextMatch, openPending }: {
+export function Hud({ game, data, running, speed, setRunning, setSpeed, toNextMatch, openPending, openFinance, openGoals }: {
   game: GameState; data: GameData; running: boolean; speed: ClockSpeed;
-  setRunning: (v: boolean) => void; setSpeed: (v: ClockSpeed) => void; toNextMatch: () => void; openPending: () => void;
+  setRunning: (v: boolean) => void; setSpeed: (v: ClockSpeed) => void; toNextMatch: () => void;
+  openPending: () => void; openFinance: () => void; openGoals: () => void;
 }) {
   const f = financeSummary(game, data);
   const next = nextPlayerFixture(game, data);
@@ -30,14 +31,24 @@ export function Hud({ game, data, running, speed, setRunning, setSpeed, toNextMa
       </div>
       <div className="hud-row">
         <div className="hud-stats">
-          <span className={`hud-money ${level}`} title={`每周预计净收支：${f.weeklyNet >= 0 ? '+' : ''}${money(f.weeklyNet)}`}>
+          <button
+            type="button"
+            className={`hud-money ${level}`}
+            onClick={openFinance}
+            title={`点击查看财务 · 每周预计净收支：${f.weeklyNet >= 0 ? '+' : ''}${money(f.weeklyNet)}`}
+          >
             💰 {money(game.funds)}
-          </span>
-          <span className="hud-rep" title="俱乐部声望">
+          </button>
+          <button
+            type="button"
+            className="hud-rep"
+            onClick={openGoals}
+            title="点击查看俱乐部声望与阶段目标"
+          >
             ★ 声望 {Math.round(game.club.reputation)}
-          </span>
+          </button>
           {game.pending.length > 0 && (
-            <button className="hud-pending" onClick={openPending}>
+            <button type="button" className="hud-pending" onClick={openPending}>
               🔔 待批 {game.pending.length}
             </button>
           )}

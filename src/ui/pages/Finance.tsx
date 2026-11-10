@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { STAFF_ROLES, type SponsorGoal, type StaffMember } from '../../core/types';
 import {
-  activeSponsor, cashForecast, financeSummary, hiredStaff, ledgerByWeek, rescueOptions, rosterOf, signSponsor, sponsorGoalText, sponsorOffers, sponsorStanding, weeklyMoney,
+  activeSponsor, branchSponsorBonus, cashForecast, financeSummary, hiredStaff, ledgerByWeek, rescueOptions, rosterOf, signSponsor, sponsorGoalText, sponsorOffers, sponsorStanding, weeklyMoney,
 } from '../../game';
 import type { PageProps } from '../App';
 import { money } from '../labels';
@@ -26,6 +26,7 @@ export function FinancePage({ game, data, act, flash, ask }: PageProps) {
   const current = activeSponsor(game);
   const offers = sponsorOffers(game, data);
   const hired = STAFF_ROLES.map((r) => hiredStaff(game, r)).filter((s): s is StaffMember => !!s);
+  const sponsorBonus = branchSponsorBonus(game, data);
   const [years, setYears] = useState(1);
   // The office lowers what the sponsor tiers ask for (T22).
   const standing = sponsorStanding(game, data);
@@ -50,7 +51,7 @@ export function FinancePage({ game, data, act, flash, ask }: PageProps) {
           <dt>声望</dt><dd>{Math.round(game.club.reputation)}{officeBonus > 0 ? `（办公室 +${officeBonus}）` : ''}（可签第 {tier} 档赞助{nextTier ? `，${nextTier.minReputation - officeBonus} 起第 ${nextTier.tier} 档` : ''}）</dd>
           <dt>每周工资</dt><dd className="bad">{money(-m.salaries)}</dd>
           {m.staff > 0 && <><dt>负责人工资</dt><dd className="bad">{money(-m.staff)}</dd></>}
-          <dt>赞助</dt><dd className="good">{money(m.sponsor)}</dd>
+          <dt>赞助</dt><dd className="good">{money(m.sponsor)}{sponsorBonus > 0 ? `（含分部加成 +${Math.round(sponsorBonus * 100)}%）` : ''}</dd>
           <dt>联赛分成</dt><dd className="good">{money(m.league)}{m.league === 0 ? '（休赛期没有）' : ''}</dd>
           <dt>周边收入</dt><dd className="good">{money(m.merch)}</dd>
           <dt>训练开销</dt><dd className="bad">{money(-m.training)}</dd>
@@ -70,7 +71,7 @@ export function FinancePage({ game, data, act, flash, ask }: PageProps) {
       <section className="card">
         <h2>赞助</h2>
         {current ? (
-          <><p>当前：<b>{current.name}</b>，每周 {money(current.weekly)}，每赢一场 +{money(current.winBonus)}，到第 {current.untilSeason} 赛季。</p><Goals goals={current.goals} /></>
+          <><p>当前：<b>{current.name}</b>，每周 {money(current.weekly)}{sponsorBonus > 0 ? `（分部加成后实收 ${money(m.sponsor)}）` : ''}，每赢一场 +{money(current.winBonus)}，到第 {current.untilSeason} 赛季。</p><Goals goals={current.goals} /></>
         ) : (
           <p className="warn-text">还没有赞助商。常规赛开始时如果还没选，会自动签能签到的最好一家（1 个赛季）。</p>
         )}

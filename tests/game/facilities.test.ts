@@ -96,11 +96,14 @@ describe('facilities (T22)', () => {
     expect(sponsorOffers(s, data).some((o) => tier2.sponsors.some((t) => t.id === o.id))).toBe(true);
   });
 
-  it('streaming room: more merchandise income', () => {
+  it('streaming room: more merchandise income and positive net weekly gain', () => {
     const s = club();
-    const before = weeklyMoney(s, data).merch;
+    const before = weeklyMoney(s, data);
     maxOut(s, 'STREAM');
-    expect(weeklyMoney(s, data).merch).toBeCloseTo(before * 1.3, -1);
+    const boost = data.facilities.rooms.find((r) => r.id === 'STREAM')!.levels[2]!.value;
+    const after = weeklyMoney(s, data);
+    expect(after.merch).toBeCloseTo(before.merch * (1 + boost), -1);
+    expect(after.net).toBeGreaterThan(before.net);
   });
 
   it('AI clubs upgrade in the off-season from spare money, never below their reserve', () => {

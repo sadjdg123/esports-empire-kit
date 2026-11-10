@@ -276,10 +276,23 @@ export function setBranchLineup(state: GameState, data: GameData, kind: BranchKi
 export function setBranchTraining(state: GameState, kind: BranchKind, plan: string): Result<undefined> {
   const b = branchOf(state, kind);
   if (!b) return fail('这个分部还没开');
-  const allowed: string[] = kind === 'FPS' ? [...FPS_ATTRS, 'REST'] : [...CARD_ATTRS, 'REST', ...CARD_DECKS.map((d) => `DECK_${d}`)];
+  const allowed: string[] = kind === 'FPS'
+    ? ['AUTO', ...FPS_ATTRS, 'REST']
+    : ['AUTO', ...CARD_ATTRS, 'REST', ...CARD_DECKS.map((d) => `DECK_${d}`)];
   if (!allowed.includes(plan)) return fail('训练内容不对');
   b.training = plan;
   return ok(undefined);
+}
+
+/** The concrete training focus used this week when a division is set to AUTO. */
+export function effectiveBranchTraining(state: GameState, b: BranchState): string {
+  if (b.training !== 'AUTO') return b.training;
+  const squad = branchRoster(b);
+  if (squad.length > 0 && squad.reduce((a, p) => a + p.form, 0) / squad.length < -2.5) return 'REST';
+  const rotation: string[] = b.kind === 'FPS'
+    ? [...FPS_ATTRS]
+    : [...CARD_ATTRS, ...(b.lineup?.kind === 'CARD' ? [...new Set(b.lineup.seats.map((s) => `DECK_${s.deck}`))] : [])];
+  return rotation[Math.max(0, weekOfSeason(state)) % rotation.length]!;
 }
 
 // ---------------------------------------------------------------------------
@@ -475,19 +488,20 @@ function trainWeek(state: GameState, data: GameData, b: BranchState): void {
   const cfg = kindCfg(data, b.kind);
   const rng = stream(state, b.kind, `train:${weekOfSeason(state)}`);
   const attrNames: readonly string[] = b.kind === 'FPS' ? FPS_ATTRS : CARD_ATTRS;
+  const plan = effectiveBranchTraining(state, b);
   for (const p of branchRoster(b)) {
     p.form = clamp(Math.round((p.form * 0.6 + rng.int(-data.branches.formSwing, data.branches.formSwing)) * 10) / 10, -10, 10);
-    if (b.training === 'REST') { p.form = clamp(p.form + cfg.growth.restForm, -10, 10); continue; }
+    if (plan === 'REST') { p.form = clamp(p.form + cfg.growth.restForm, -10, 10); continue; }
     const past = Math.max(0, p.age - cfg.age.peak);
     const room = branchOverall(data, b.kind, p) < p.potential ? 1 : 0.15;
     const gain = cfg.growth.perWeek * Math.max(0, 1 - past * 0.25) * room;
-    if (b.training.startsWith('DECK_') && p.decks) {
-      const d = b.training.slice(5) as CardDeck;
+    if (plan.startsWith('DECK_') && p.decks) {
+      const d = plan.slice(5) as CardDeck;
       p.decks[d] = clamp(Math.round((cardProficiency({ decks: p.decks }, d) + 1.2) * 10) / 10, 0, 100);
       continue;
     }
     for (const a of attrNames) {
-      const step = a === b.training ? gain * (1 + cfg.growth.focusBonus) : gain * 0.25;
+      const step = a === plan ? gain * (1 + cfg.growth.focusBonus) : gain * 0.25;
       p.attrs[a] = clamp(Math.round((p.attrs[a]! + step) * 100) / 100, 0, 99);
     }
   }

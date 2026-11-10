@@ -102,6 +102,4 @@
 | F5 | 检查 Gemini 的 F3/F4/V7，修基地点不开家具、手机对话框被挡 | Claude Code | ✅ 完成 | 2026-11-10 | 汇报：docs/reports/F5.md |
 | V8 | 射击和卡牌分部的像素比赛画面 | Antigravity | ✅ 完成 | 2026-11-10 | 汇报：docs/reports/V8.md；D77 |
 | V9 | 全场景画面流畅度升级、基地分部庭院摆件与界面漏项修复 | Antigravity | ✅ 完成 | 2026-11-10 | 汇报：docs/reports/V9.md；D78 |
-
-
-
+| F6 | 经营数值打磨、分部自动训练与顶栏快捷入口 | Antigravity | ✅ 完成 | 2026-11-10 | 汇报：docs/reports/F6.md；D79 |

@@ -170,6 +170,7 @@ export function aiUpgrades(state: GameState, data: GameData): void {
  */
 export function aiCutCosts(state: GameState, data: GameData): void {
   if (!transferWindowOpen(state)) return;
+  const cap = emergencySalaryCap(state, data);
   for (const club of state.aiClubs) {
     if (club.funds >= 0 || club.roster.length < data.economy.minRoster) continue;
     const priciest = rosterOf(state, club.id).sort((a, b) => b.salaryPerWeek - a.salaryPerWeek || a.id.localeCompare(b.id))[0]!;
@@ -179,18 +180,34 @@ export function aiCutCosts(state: GameState, data: GameData): void {
         && payroll(state, c) + priciest.salaryPerWeek <= aiWageBudget(state, data, c) && fee <= spendable(state, data, c, priciest.salaryPerWeek))
       .sort((a, b) => spendable(state, data, b) - spendable(state, data, a) || a.id.localeCompare(b.id))[0];
     if (buyer) { completeTransfer(state, priciest.id, club, buyer, fee); continue; } // a cheap replacement is signed right after
-    if (club.roster.length <= data.economy.minRoster) continue;
-    const starters = starterIds(state, data, club);
-    const bench = rosterOf(state, club.id).filter((p) => !starters.has(p.id))
-      .map((p) => ({ p, saving: p.salaryPerWeek * remainingContractWeeks(state, data, p) - releaseFeeFor(state, data, p) }))
-      .filter((x) => x.saving > 0)
-      .sort((a, b) => b.saving - a.saving || a.p.id.localeCompare(b.p.id))[0];
-    if (!bench) continue;
-    club.funds -= releaseFeeFor(state, data, bench.p);
-    club.roster = club.roster.filter((id) => id !== bench.p.id);
-    state.market.push(bench.p.id);
-    bench.p.clubId = null;
-    delete bench.p.contractUntil;
+    if (club.roster.length > data.economy.minRoster) {
+      const starters = starterIds(state, data, club);
+      const bench = rosterOf(state, club.id).filter((p) => !starters.has(p.id))
+        .map((p) => ({ p, saving: p.salaryPerWeek * remainingContractWeeks(state, data, p) - releaseFeeFor(state, data, p) }))
+        .filter((x) => x.saving > 0)
+        .sort((a, b) => b.saving - a.saving || a.p.id.localeCompare(b.p.id))[0];
+      if (bench) {
+        club.funds -= releaseFeeFor(state, data, bench.p);
+        club.roster = club.roster.filter((id) => id !== bench.p.id);
+        state.market.push(bench.p.id);
+        bench.p.clubId = null;
+        delete bench.p.contractUntil;
+        continue;
+      }
+    }
+    // Deep in debt with no buyer: shed an expensive contract if an emergency-cap replacement saves money.
+    if (club.funds < -220_000 && priciest.salaryPerWeek > cap * 1.8) {
+      const rep = state.market.map((id) => state.players[id]!).find((p) => p.salaryPerWeek <= cap);
+      const weeks = remainingContractWeeks(state, data, priciest);
+      const saving = rep ? (priciest.salaryPerWeek - rep.salaryPerWeek) * weeks - releaseFeeFor(state, data, priciest) - rep.signingFee : 0;
+      if (rep && saving > 0) {
+        club.funds -= releaseFeeFor(state, data, priciest);
+        club.roster = club.roster.filter((id) => id !== priciest.id);
+        state.market.push(priciest.id);
+        priciest.clubId = null;
+        delete priciest.contractUntil;
+      }
+    }
   }
 }
 

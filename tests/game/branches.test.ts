@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../../src/core/config';
 import {
-  BRANCH_KINDS, PLAYER_CLUB_ID, advanceDay, autoManage, branchMarket, branchRoster, branchStandings, branchWeeklyMoney, canOpenBranch, commitMatchDay, hireDirector,
-  newGame, openBranch, recommendBranchLineup, releaseBranchPlayer, setBranchLineup, setBranchManaged, signBranchPlayer, validateBranchLineup, weeklyMoney,
-  type BranchKind, type GameState,
+  BRANCH_KINDS, PLAYER_CLUB_ID, advanceDay, autoManage, branchMarket, branchRoster, branchStandings, branchWeeklyMoney, branchesPayDay, canOpenBranch, commitMatchDay,
+  effectiveBranchTraining, hireDirector, newGame, openBranch, recommendBranchLineup, releaseBranchPlayer, setBranchLineup, setBranchManaged, setBranchTraining, signBranchPlayer,
+  validateBranchLineup, weeklyMoney, type BranchKind, type GameState,
 } from '../../src/game';
 import { deserialize, serialize } from '../../src/save/save';
 import { FPS_ROLES } from '../../src/sim-fps';
@@ -188,4 +188,31 @@ describe('division directors (T40)', () => {
     expect(b.log.every((l) => l.reason.length > 0)).toBe(true);
     expect(s.ledger.some((e) => e.branch === 'FPS' && e.kind === 'STAFF' && e.note.includes('总监工资'))).toBe(true);
   }, 240_000);
+
+  it('AUTO division training rotates weekly and rests when squad form is low', () => {
+    const s = rich(17);
+    withSquad(s, 'FPS');
+    withSquad(s, 'CARD');
+    expect(setBranchTraining(s, 'FPS', 'AUTO').ok).toBe(true);
+    expect(setBranchTraining(s, 'CARD', 'AUTO').ok).toBe(true);
+    const fps = s.branches.FPS!;
+    const card = s.branches.CARD!;
+    s.calendar.day = 0;
+    const f0 = effectiveBranchTraining(s, fps);
+    s.calendar.day = 7;
+    const f1 = effectiveBranchTraining(s, fps);
+    expect(f0).not.toBe(f1);
+    // Low squad form triggers REST automatically.
+    for (const p of branchRoster(fps)) p.form = -5;
+    expect(effectiveBranchTraining(s, fps)).toBe('REST');
+    // CARD AUTO rotates into fielded deck training too.
+    const seen = new Set<string>();
+    for (let w = 0; w < 8; w++) { s.calendar.day = w * 7; seen.add(effectiveBranchTraining(s, card)); }
+    expect([...seen].some((x) => x.startsWith('DECK_'))).toBe(true);
+    // Pay day runs cleanly and save/load keeps AUTO.
+    branchesPayDay(s, data);
+    const loaded = deserialize(serialize(s, { createdAt: '2026-11-10T00:00:00.000Z' }));
+    expect(loaded.ok).toBe(true);
+    if (loaded.ok) expect((loaded.save.game as unknown as GameState).branches.FPS!.training).toBe('AUTO');
+  });
 });

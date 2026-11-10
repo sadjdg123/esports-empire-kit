@@ -36,8 +36,8 @@
       "id": "STREAM", "name": "直播间", "effect": "周边收入 +value（比例）",
       "levels": [
         { "cost": 0, "upkeep": 0, "value": 0 },
-        { "cost": 30000, "upkeep": 350, "value": 0.15 },
-        { "cost": 70000, "upkeep": 800, "value": 0.3 }
+        { "cost": 30000, "upkeep": 220, "value": 0.28 },
+        { "cost": 70000, "upkeep": 460, "value": 0.55 }
       ]
     }
   ],

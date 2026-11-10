@@ -3,7 +3,7 @@ import { CARD_DECKS, type CardDeck } from '../../sim-card';
 import { FPS_ROLES, FPS_TACTICS, type FpsRole, type FpsTactic } from '../../sim-fps';
 import {
   PLAYER_CLUB_ID, branchActive, branchAttrName, branchExpiring, branchMarket, branchOverall, branchReleaseFee, branchRenewalAsk, branchRoster, branchStandings,
-  branchWeeklyMoney, fireDirector, hireDirector, recommendBranchLineup, releaseBranchPlayer, renewBranchPlayer, setBranchLineup, setBranchManaged, setBranchTraining,
+  branchWeeklyMoney, effectiveBranchTraining, fireDirector, hireDirector, recommendBranchLineup, releaseBranchPlayer, renewBranchPlayer, setBranchLineup, setBranchManaged, setBranchTraining,
   signBranchPlayer, validateBranchLineup, type BranchKind, type BranchLineup, type BranchPlayer,
 } from '../../game';
 import type { PageProps } from '../App';
@@ -50,7 +50,14 @@ export function BranchPage({ game, data, act, flash, ask, kind, back }: PageProp
   function homeTab() {
     const table = branchStandings(game, b);
     const m = branchWeeklyMoney(game, data, b);
-    const plans: [string, string][] = [...attrs.map((a): [string, string] => [a, `练${branchAttrName(data, kind, a)}`]), ...(kind === 'CARD' ? CARD_DECKS.map((d): [string, string] => [`DECK_${d}`, `练「${deckName(d)}」卡组`]) : []), ['REST', '休息（恢复状态）']];
+    const specificPlans: [string, string][] = [
+      ...attrs.map((a): [string, string] => [a, `练${branchAttrName(data, kind, a)}`]),
+      ...(kind === 'CARD' ? CARD_DECKS.map((d): [string, string] => [`DECK_${d}`, `练「${deckName(d)}」卡组`]) : []),
+      ['REST', '休息（恢复状态）'],
+    ];
+    const plans: [string, string][] = [['AUTO', '自动轮换（状态差自动休息）'], ...specificPlans];
+    const actual = effectiveBranchTraining(game, b);
+    const actualLabel = specificPlans.find(([v]) => v === actual)?.[1] ?? actual;
     return (
       <>
         <section className="card wide">
@@ -59,11 +66,14 @@ export function BranchPage({ game, data, act, flash, ask, kind, back }: PageProp
           {roster.length < cfg.squad && <p className="small-text bad">现在 {roster.length} 人，至少要 {cfg.squad} 人才能比赛，不够会判负。到"选手"里签人。</p>}
           <p className="small-text">每周：联赛分成 {money(m.league)} · 工资 {money(-m.salaries)} · 运营 {money(-m.upkeep)}{m.director > 0 ? ` · 总监 ${money(-m.director)}` : ''} · 合计 <b className={m.net < 0 ? 'bad' : 'good'}>{money(m.net)}</b></p>
           <p className="small-text dim">赢一场 {money(cfg.prizeWin)}，输一场 {money(cfg.prizeLoss)}；冠军 {money(cfg.finalPrize.champion)}，亚军 {money(cfg.finalPrize.runnerUp)}。常规赛前两名打总决赛。</p>
-          <label className="small-text">本周训练
-            <select value={b.training} onChange={(e) => { const r = act((d) => setBranchTraining(d, kind, e.target.value)); if (!r.ok) flash(r.error); }}>
-              {plans.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
-            </select>
-          </label>
+          <div className="row small-text">
+            <label>本周训练{' '}
+              <select value={b.training} onChange={(e) => { const r = act((d) => setBranchTraining(d, kind, e.target.value)); if (!r.ok) flash(r.error); }}>
+                {plans.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+              </select>
+            </label>
+            {b.training === 'AUTO' && <span className="dim">（本周：{actualLabel}）</span>}
+          </div>
         </section>
         {b.schedule.length > 0 && (
           <section className="card">

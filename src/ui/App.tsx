@@ -258,7 +258,11 @@ export function App() {
 
   return (
     <div className="app base-screen">
-      <Hud game={game} data={data} running={running} speed={speed} setRunning={setRunning} setSpeed={setSpeed} toNextMatch={toNextMatch} openPending={() => go('staff')} />
+      <Hud
+        game={game} data={data} running={running} speed={speed}
+        setRunning={setRunning} setSpeed={setSpeed} toNextMatch={toNextMatch}
+        openPending={() => go('staff')} openFinance={() => go('finance')} openGoals={() => go('goals')}
+      />
       {notice && <div className="notice">{notice}<button className="link" onClick={() => setNotice(null)}>知道了</button></div>}
       <BaseView
         game={game} data={data} markers={markers} cheer={game.calendar.day === cheerDay}

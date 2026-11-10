@@ -274,7 +274,7 @@ export function cashForecast(state: GameState, data: GameData): ForecastWeek[] {
     const matches = inLeague && week < regularStart + state.totalRounds ? 1 : 0;
     const prize = matches * ((eco.prizeWin + eco.prizeLoss) / 2 + (activeSponsor(state)?.winBonus ?? 0) / 2);
     const income = m.sponsor + (inLeague ? eco.finance.leagueShareWeekly : 0) + m.merch + prize;
-    const expense = -(m.salaries + m.training);
+    const expense = -(m.salaries + m.training + m.upkeep + m.staff);
     funds += income + expense;
     rows.push({ week, matches, income: Math.round(income), expense, fundsAfter: Math.round(funds) });
   }
