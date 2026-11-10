@@ -243,21 +243,39 @@ export function App() {
   }) : null;
   const [title, icon] = win ? (TITLES[win] ?? ['', 'home']) : ['', ''];
 
+  const markers = markersFor(game, data);
+
   return (
     <div className="app base-screen">
       <Hud game={game} data={data} running={running} speed={speed} setRunning={setRunning} setSpeed={setSpeed} toNextMatch={toNextMatch} openPending={() => go('staff')} />
       {notice && <div className="notice">{notice}<button className="link" onClick={() => setNotice(null)}>知道了</button></div>}
       <BaseView
-        game={game} data={data} markers={markersFor(game, data)} cheer={game.calendar.day === cheerDay}
+        game={game} data={data} markers={markers} cheer={game.calendar.day === cheerDay}
         onPlayer={setPlayerId} onHotspot={(h) => go(HOTSPOT_PAGE[h])}
       />
       {line && <EventDialog line={line} />}
-      <button className="menu-btn" onClick={() => setWin('menu')} aria-label="菜单">
-        <img src={iconUrl('home')} alt="" className="px-icon" />菜单{unread > 0 && <span className="badge">{unread}</span>}
-      </button>
+      <nav className="kairo-dock" aria-label="快捷栏">
+        {([
+          ['lineup', '阵容', 'lineup', markers.lineup],
+          ['training', '训练', 'training', markers.training],
+          ['market', '签人', 'market', markers.market],
+          ['contracts', '合同', 'contracts', markers.contracts],
+          ['schedule', '赛程', 'schedule', markers.schedule],
+          ['group', '集团', 'group', markers.group],
+        ] as const).map(([p, label, ic, mk]) => (
+          <button key={p} type="button" className="dock-btn" onClick={() => go(p)}>
+            <img src={iconUrl(ic)} alt="" className="px-icon" />
+            <span>{label}</span>
+            {mk && <i className={`dock-dot ${mk}`} />}
+          </button>
+        ))}
+        <button type="button" className="menu-btn" onClick={() => setWin('menu')} aria-label="菜单">
+          <img src={iconUrl('home')} alt="" className="px-icon" />菜单{unread > 0 && <span className="badge">{unread}</span>}
+        </button>
+      </nav>
       {win && (
         <GameWindow title={title} icon={icon} onClose={() => setWin(null)}>
-          {win === 'menu' && <MenuGrid open={(p) => go(p)} unread={unread} hasReports={game.reports.length > 0} />}
+          {win === 'menu' && <MenuGrid open={(p) => go(p)} unread={unread} hasReports={game.reports.length > 0} markers={markers} />}
           {(win === 'overview' || win === 'seasonend') && <HomePage {...props} lastWeek={lastWeek} />}
           {win === 'matchday' && <MatchDay {...props} onDone={matchDone} />}
           {win === 'inbox' && <InboxPage {...props} />}
@@ -303,7 +321,21 @@ function MatchDay({ game, data, go, act, flash, onDone }: PageProps & { onDone: 
   };
   return (
     <div className="matchday">
-      <p className="big-text">{stage}：对阵 <span className="swatch" style={{ background: opp.color }} /> <b>{opp.name}</b></p>
+      <div className="vs-banner">
+        <div className="vs-team">
+          <span className="swatch big" style={{ background: game.club.color }} />
+          <b>{game.club.name}</b>
+        </div>
+        <div className="vs-center">
+          <span className="vs-stage">{stage}</span>
+          <strong className="vs-word">VS</strong>
+        </div>
+        <div className="vs-team">
+          <span className="swatch big" style={{ background: opp.color }} />
+          <b>{opp.name}</b>
+        </div>
+      </div>
+      <p className="big-text" style={{ display: 'none' }}>{stage}：对阵 <span className="swatch" style={{ background: opp.color }} /> <b>{opp.name}</b></p>
       {issues.length > 0 ? (
         <>
           <p className="bad">还不能开赛：{issues.join('；')}</p>
@@ -328,7 +360,7 @@ function dialogLine(g: GameState, act: PageProps['act'], go: PageProps['go'], tu
   if (!tutorialSeen) {
     return {
       key: 'tutorial', speaker: '助理 小禾', look: ASSISTANT,
-      text: '老板好！基地里的东西都能点：白板排阵容，电脑定训练，门口信箱看消息，告示牌签选手，楼上办公桌谈合同，电视看赛程，奖杯柜看历史。右下角是菜单。',
+      text: '老板好！咱们的一层大平层基地已经布置好啦，可以按住画面拖动或点上方镜头切换：左边是休息与直播室，中间是训练大厅（点白板排阵容、点电脑定训练），右边是经理行政厅（谈合同、看奖杯战报），院子里能看信箱、签选手、升设施！',
       dismiss: seeTutorial,
     };
   }

@@ -3,7 +3,18 @@ import { loadGameData } from '../../src/core/config';
 import { acceptRenewal, newGame, openBranch, signBranchPlayer, signValueSquad, type GameState } from '../../src/game';
 import { activitySummary, clubActivities, TIRED_AT } from '../../src/render/club/activities';
 import { postMessage } from '../../src/game/messages';
-import { markersFor } from '../../src/render/club/markers';
+import {
+  HOTSPOT_LABELS,
+  SCENE_H,
+  SCENE_W,
+  STUDIO_CJ,
+  STUDIO_D,
+  STUDIO_L,
+  clubIso,
+  corridorRoute,
+  markersFor,
+  type Hotspot,
+} from '../../src/render/club/markers';
 
 const data = loadGameData();
 
@@ -110,4 +121,35 @@ describe('club base markers (furniture that needs the player)', () => {
     }
     expect(markersFor(s, data).group).toBeUndefined();
   });
+
+  it('projects the single-floor 3-room studio within the 300x200 viewport and routes players along the continuous corridor', () => {
+    const allHotspots: Hotspot[] = [
+      'lineup', 'training', 'schedule', 'contracts', 'finance',
+      'history', 'report', 'inbox', 'market', 'facilities', 'staff', 'group',
+    ];
+    for (const h of allHotspots) {
+      expect(HOTSPOT_LABELS[h].length).toBeGreaterThan(0);
+    }
+    const corners: [number, number][] = [
+      [0, 0], [STUDIO_L, 0], [0, STUDIO_D + 2.3], [STUDIO_L, STUDIO_D + 2.3],
+    ];
+    for (const [i, j] of corners) {
+      const [x, y] = clubIso(i, j);
+      expect(x).toBeGreaterThanOrEqual(20);
+      expect(x).toBeLessThanOrEqual(SCENE_W - 20);
+      expect(y).toBeGreaterThanOrEqual(40);
+      expect(y).toBeLessThanOrEqual(SCENE_H - 10);
+    }
+    // Cross-room travel from Lounge (i = 1.5) to Office (i = 11.5) walks along the indoor corridor (STUDIO_CJ)
+    const crossRoom = corridorRoute({ i: 1.5, j: 1.0 }, { i: 11.5, j: 3.15 });
+    expect(crossRoom).toEqual([
+      { i: 1.5, j: STUDIO_CJ },
+      { i: 11.5, j: STUDIO_CJ },
+      { i: 11.5, j: 3.15 },
+    ]);
+    // Nearby spot in the same room steps directly without detouring
+    expect(corridorRoute({ i: 5.5, j: 1.6 }, { i: 6.2, j: 1.6 })).toEqual([{ i: 6.2, j: 1.6 }]);
+  });
 });
+
+

@@ -34,3 +34,56 @@ export function markersFor(g: GameState, data: GameData): Partial<Record<Hotspot
   if (!over && openBranches(g).some((b) => b.roster.length < data.branches.kinds[b.kind].squad)) m.group = 'bang';
   return m;
 }
+
+export const SCENE_W = 300;
+export const SCENE_H = 200;
+export const STUDIO_TW = 20;
+export const STUDIO_TH = 10;
+export const STUDIO_OX = 114;
+export const STUDIO_OY = 66;
+export const STUDIO_L = 15;
+export const STUDIO_D = 6.0;
+export const STUDIO_R1 = 4.6;
+export const STUDIO_R2 = 10.2;
+export const STUDIO_CJ = 5.25;
+
+export const HOTSPOT_LABELS: Record<Hotspot, string> = {
+  lineup: '阵容白板',
+  training: '训练电脑',
+  schedule: '赛程电视',
+  contracts: '经理谈判桌',
+  finance: '财务金库',
+  history: '荣誉奖杯柜',
+  report: '战报书架',
+  inbox: '收件邮筒',
+  market: '招募告示牌',
+  facilities: '设施工具箱',
+  staff: '管理层办公桌',
+  group: '集团分部牌匾',
+};
+
+/** Isometric tile (i, j) to scene pixel (x, y) on the single-floor studio canvas. */
+export function clubIso(i: number, j: number): [number, number] {
+  return [STUDIO_OX + (i - j) * (STUDIO_TW / 2), STUDIO_OY + (i + j) * (STUDIO_TH / 2)];
+}
+
+/** Pure corridor pathfinding between two points in the single-floor 3-room studio. */
+export function corridorRoute(
+  from: { i: number; j: number },
+  to: { i: number; j: number },
+): { i: number; j: number }[] {
+  if (Math.abs(from.i - to.i) < 0.05 && Math.abs(from.j - to.j) < 0.05) return [];
+  const sameRoom =
+    (from.i < STUDIO_R1 && to.i < STUDIO_R1) ||
+    (from.i >= STUDIO_R1 && from.i < STUDIO_R2 && to.i >= STUDIO_R1 && to.i < STUDIO_R2) ||
+    (from.i >= STUDIO_R2 && to.i >= STUDIO_R2);
+  if (sameRoom && from.j < STUDIO_D && to.j < STUDIO_D && Math.abs(from.i - to.i) < 1.2) {
+    return [{ i: to.i, j: to.j }];
+  }
+  return [
+    { i: from.i, j: STUDIO_CJ },
+    { i: to.i, j: STUDIO_CJ },
+    { i: to.i, j: to.j },
+  ];
+}
+
