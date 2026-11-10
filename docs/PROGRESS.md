@@ -99,4 +99,5 @@
 | F3 | 界面与画面细节修正及测试提速 | Antigravity | ✅ 完成 | 2026-11-10 | 汇报：docs/reports/F3.md；D74 |
 | F4 | 经营体验与报表反馈升级 | Antigravity | ✅ 完成 | 2026-11-10 | 汇报：docs/reports/F4.md；D75 |
 | V7 | 开罗风格一层可拖拽基地大平层与全界面 UI 升级 | Antigravity | ✅ 完成 | 2026-11-10 | 汇报：docs/reports/V7.md；D76 |
+| F5 | 检查 Gemini 的 F3/F4/V7，修基地点不开家具、手机对话框被挡 | Claude Code | ✅ 完成 | 2026-11-10 | 汇报：docs/reports/F5.md |
 

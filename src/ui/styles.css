@@ -927,3 +927,6 @@ button.link.name { padding: 0; margin: 0; color: var(--text); font-weight: 700; 
   .caption-hint { display: none; }
 }
 .table tr.renewal-row td { border-top: none; padding-top: 0; }
+/* The assistant's dialog always sits above the bottom dock; long text scrolls inside it. */
+.event-dialog { bottom: calc(var(--dock-h, 62px) + 6px); max-height: calc(100vh - var(--dock-h, 62px) - 140px); overflow-y: auto; }
+@media (max-width: 600px) { .base-wrap { justify-content: flex-start; } }

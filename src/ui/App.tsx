@@ -110,6 +110,17 @@ export function App() {
   const loadFailed = useRef(first.outcome.status === 'failed');
   const gameRef = useRef(game);
   gameRef.current = game;
+  // The assistant's dialog floats just above the bottom dock, whose height changes with the screen width.
+  const dockRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const el = dockRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const set = () => document.documentElement.style.setProperty('--dock-h', `${Math.ceil(el.getBoundingClientRect().height)}px`);
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
 
   const flash = useCallback((text: string) => {
     setToast(text);
@@ -254,7 +265,7 @@ export function App() {
         onPlayer={setPlayerId} onHotspot={(h) => go(HOTSPOT_PAGE[h])}
       />
       {line && <EventDialog line={line} />}
-      <nav className="kairo-dock" aria-label="快捷栏">
+      <nav className="kairo-dock" aria-label="快捷栏" ref={dockRef}>
         {([
           ['lineup', '阵容', 'lineup', markers.lineup],
           ['training', '训练', 'training', markers.training],

@@ -226,6 +226,10 @@ export function BaseView({ game, data, markers, cheer, onPlayer, onHotspot }: {
   };
 
   const stopPointer = (e: React.PointerEvent<HTMLDivElement>) => {
+    // A press released without dragging is a tap. It is handled here because the viewport holds the
+    // pointer capture, so the browser's click lands on the viewport, never on the canvas.
+    const single = pointersRef.current.size === 1 && pointersRef.current.has(e.pointerId);
+    if (e.type === 'pointerup' && single && dragRef.current.active && !dragRef.current.moved && !pinchRef.current.active) tapAt(e.clientX, e.clientY);
     pointersRef.current.delete(e.pointerId);
     if (pointersRef.current.size < 2) {
       pinchRef.current.active = false;
@@ -245,13 +249,12 @@ export function BaseView({ game, data, markers, cheer, onPlayer, onHotspot }: {
     }
   };
 
-  const tap = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (dragRef.current.moved) {
-      dragRef.current.moved = false;
-      return;
-    }
-    const r = e.currentTarget.getBoundingClientRect();
-    const hit = sceneRef.current?.tap(((e.clientX - r.left) / r.width) * SCENE_W, ((e.clientY - r.top) / r.height) * SCENE_H);
+  const tapAt = (clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const r = canvas.getBoundingClientRect();
+    if (clientX < r.left || clientX > r.right || clientY < r.top || clientY > r.bottom) return;
+    const hit = sceneRef.current?.tap(((clientX - r.left) / r.width) * SCENE_W, ((clientY - r.top) / r.height) * SCENE_H);
     if (hit?.kind === 'player') onPlayer(hit.id);
     else if (hit?.kind === 'hotspot') onHotspot(hit.name);
   };
@@ -301,7 +304,6 @@ export function BaseView({ game, data, markers, cheer, onPlayer, onHotspot }: {
           <canvas
             ref={canvasRef}
             className="base-canvas"
-            onClick={tap}
             aria-label="俱乐部基地。点白板排阵容，点电脑训练，点信箱看消息，点告示牌签人，点办公桌谈合同，点电视看赛程，点奖杯柜看历史，点屋顶招牌看集团分部，点小人看选手。"
           />
           <span className="roof-sign">{game.club.name}</span>
