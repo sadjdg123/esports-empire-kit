@@ -867,12 +867,7 @@ button.link.name { padding: 0; margin: 0; color: var(--text); font-weight: 700; 
   border-radius: 10px;
   box-shadow: inset 0 0 0 1.5px #f6d9a8, 0 3px 0 rgba(58, 36, 18, 0.25);
 }
-.fps-map { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin: 8px 0; }
-.fps-map .site { padding: 10px 0; text-align: center; border-radius: 8px; background: var(--panel-2); border: 2px dashed var(--line); font-weight: 700; }
-.fps-map .site.mid { font-weight: 400; color: var(--dim); }
-.fps-map .site.target { border-style: solid; border-color: var(--warn); }
-.fps-map .site.planted { background: #f6d9d6; border-color: var(--bad); }
-.fps-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fps-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
 .fps-teams li.down { opacity: 0.35; text-decoration: line-through; }
 .feed { margin: 8px 0; max-height: 220px; overflow-y: auto; }
 .feed li { padding: 2px 0; }

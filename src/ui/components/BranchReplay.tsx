@@ -17,18 +17,40 @@ const REASON: Record<FpsRound['reason'], string> = { ELIMINATION: '全歼', EXPL
 const NOTE: Record<CardNote, string> = { MISPLAY: '失误', READ: '被读牌', STABILIZE: '稳住了', COMBO: '组合技！', COMBO_STOPPED: '组合技被拦', LETHAL: '斩杀' };
 const other = (s: FpsSide): FpsSide => (s === 'BLUE' ? 'RED' : 'BLUE');
 
-/** A stepper: `step` runs from 0 to `max`, advancing on its own while playing. */
+/** A stepper: `step` runs from 0 to `max`, advancing on its own while playing, tracking step start time for 60fps tweening. */
 function useStepper(max: number, ms: number, key: string) {
   const [step, setStep] = useState(max);
   const [playing, setPlaying] = useState(false);
-  useEffect(() => { setStep(max); setPlaying(false); }, [key, max]);
+  const stepStartRef = useRef(0);
+  useEffect(() => {
+    setStep(max);
+    setPlaying(false);
+    stepStartRef.current = performance.now();
+  }, [key, max]);
   useEffect(() => {
     if (!playing) return;
+    stepStartRef.current = performance.now();
     if (step >= max) { setPlaying(false); return; }
-    const id = window.setTimeout(() => setStep((s) => Math.min(max, s + 1)), ms);
+    const id = window.setTimeout(() => {
+      stepStartRef.current = performance.now();
+      setStep((s) => Math.min(max, s + 1));
+    }, ms);
     return () => window.clearTimeout(id);
   }, [playing, step, max, ms]);
-  return { step, playing, play: () => { setStep(0); setPlaying(true); }, end: () => { setPlaying(false); setStep(max); } };
+  return {
+    step,
+    playing,
+    stepStartRef,
+    play: () => {
+      stepStartRef.current = performance.now();
+      setStep(0);
+      setPlaying(true);
+    },
+    end: () => {
+      setPlaying(false);
+      setStep(max);
+    },
+  };
 }
 
 /** The player's latest match of a division, round by round (shooter) or turn by turn (cards). */
@@ -53,12 +75,15 @@ function ScoreLine({ replay, score }: { replay: BranchReplay; score: Record<FpsS
   );
 }
 
+const FPS_STEP_MS = 700;
+const CARD_STEP_MS = 650;
+
 function FpsReplay({ replay, data }: { replay: BranchReplay; data: GameData }) {
   const r = replay.fps!;
   const [n, setN] = useState(r.rounds.length);
   const round = r.rounds[n - 1]!;
-  const { step, playing, play, end } = useStepper(round.events.length, 700, `${replay.season}:${replay.round}:${n}`);
-  const scene = useMemo(() => computeFpsSceneState(replay, n - 1, step), [replay, n, step]);
+  const { step, playing, stepStartRef, play, end } = useStepper(round.events.length, FPS_STEP_MS, `${replay.season}:${replay.round}:${n}`);
+  const scene = useMemo(() => computeFpsSceneState(replay, n - 1, step, 1), [replay, n, step]);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -70,8 +95,12 @@ function FpsReplay({ replay, data }: { replay: BranchReplay; data: GameData }) {
     const start = performance.now();
     const render = (now: number) => {
       const phase = (now - start) / 1000;
-      paintFpsScene(ctx, replay, scene, phase);
-      if (playing || scene.bomb.state === 'PLANTED' || scene.bomb.state === 'EXPLODED') {
+      const sub = playing && step < round.events.length
+        ? Math.min(1, Math.max(0, (now - stepStartRef.current) / FPS_STEP_MS))
+        : 1;
+      const frameState = sub < 1 ? computeFpsSceneState(replay, n - 1, step, sub) : scene;
+      paintFpsScene(ctx, replay, frameState, phase);
+      if (playing || frameState.bomb.state === 'PLANTED' || frameState.bomb.state === 'EXPLODED') {
         raf = window.requestAnimationFrame(render);
       }
     };
@@ -79,12 +108,11 @@ function FpsReplay({ replay, data }: { replay: BranchReplay; data: GameData }) {
     return () => {
       if (raf) window.cancelAnimationFrame(raf);
     };
-  }, [replay, scene, playing]);
+  }, [replay, n, step, round.events.length, scene, playing, stepStartRef]);
 
   const name = (id: string) => replay.names[id] ?? id;
   const shown = round.events.slice(0, step);
   const dead = new Set(shown.filter((e): e is Extract<FpsEvent, { type: 'KILL' }> => e.type === 'KILL').map((e) => e.victim));
-  const planted = shown.some((e) => e.type === 'PLANT');
   const done = step >= round.events.length;
   const before = n > 1 ? r.rounds[n - 2]!.score : { BLUE: 0, RED: 0 };
   const side = (s: FpsSide) => r.stats.filter((p) => p.side === s);
@@ -121,11 +149,6 @@ function FpsReplay({ replay, data }: { replay: BranchReplay; data: GameData }) {
         data-done={done ? '1' : '0'}
         data-score={`${scene.score.BLUE}:${scene.score.RED}`}
       />
-      <div className="fps-map" aria-hidden="true">
-        <div className={`site ${round.site === 'A' ? 'target' : ''} ${planted && round.site === 'A' ? 'planted' : ''}`}>A</div>
-        <div className="site mid">中路</div>
-        <div className={`site ${round.site === 'B' ? 'target' : ''} ${planted && round.site === 'B' ? 'planted' : ''}`}>B</div>
-      </div>
       <div className="fps-teams">
         {(['BLUE', 'RED'] as const).map((s) => (
           <ul key={s} className="plain small-text">
@@ -167,8 +190,8 @@ function CardReplay({ replay, data }: { replay: BranchReplay; data: GameData }) 
   const [k, setK] = useState(games.length - 1);
   const clampedK = Math.min(k, games.length - 1);
   const { s, g, i } = games[clampedK]!;
-  const { step, playing, play, end } = useStepper(g.turns.length, 650, `${replay.season}:${replay.round}:${clampedK}`);
-  const scene = useMemo(() => computeCardSceneState(replay, data, clampedK, step), [replay, data, clampedK, step]);
+  const { step, playing, stepStartRef, play, end } = useStepper(g.turns.length, CARD_STEP_MS, `${replay.season}:${replay.round}:${clampedK}`);
+  const scene = useMemo(() => computeCardSceneState(replay, data, clampedK, step, 1), [replay, data, clampedK, step]);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -180,7 +203,11 @@ function CardReplay({ replay, data }: { replay: BranchReplay; data: GameData }) 
     const start = performance.now();
     const render = (now: number) => {
       const phase = (now - start) / 1000;
-      paintCardScene(ctx, replay, scene, phase);
+      const sub = playing && step > 0 && step <= g.turns.length
+        ? Math.min(1, Math.max(0, (now - stepStartRef.current) / CARD_STEP_MS))
+        : 1;
+      const frameState = sub < 1 ? computeCardSceneState(replay, data, clampedK, step, sub) : scene;
+      paintCardScene(ctx, replay, frameState, phase);
       if (playing) {
         raf = window.requestAnimationFrame(render);
       }
@@ -189,7 +216,7 @@ function CardReplay({ replay, data }: { replay: BranchReplay; data: GameData }) 
     return () => {
       if (raf) window.cancelAnimationFrame(raf);
     };
-  }, [replay, scene, playing]);
+  }, [replay, data, clampedK, step, g.turns.length, scene, playing, stepStartRef]);
 
   const name = (id: string) => replay.names[id] ?? id;
   const who: Record<CardSide, string> = { BLUE: name(s.blue), RED: name(s.red) };

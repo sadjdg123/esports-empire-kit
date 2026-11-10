@@ -33,6 +33,7 @@ export interface FpsShotFx {
   toY: number;
   color: string;
   tag: string;
+  progress: number;
 }
 
 export interface FpsSceneState {
@@ -95,12 +96,18 @@ const DEFEND_OFFSETS: [number, number][] = [
   [52, 9],
 ];
 
-/** Pure calculation of the FPS round visual state at event index `step` (0..round.events.length). */
-export function computeFpsSceneState(replay: BranchReplay, roundIndex: number, step: number): FpsSceneState {
+/** Pure calculation of the FPS round visual state at event index `step` (0..round.events.length) and intra-step `subProgress` (0..1). */
+export function computeFpsSceneState(
+  replay: BranchReplay,
+  roundIndex: number,
+  step: number,
+  subProgress = 1,
+): FpsSceneState {
   const fps = replay.fps!;
   const clampedIdx = Math.max(0, Math.min(fps.rounds.length - 1, roundIndex));
   const round = fps.rounds[clampedIdx]!;
   const clampedStep = Math.max(0, Math.min(round.events.length, step));
+  const sub = Math.max(0, Math.min(1, subProgress));
   const shown = round.events.slice(0, clampedStep);
   const done = clampedStep >= round.events.length;
   const beforeScore = clampedIdx > 0 ? fps.rounds[clampedIdx - 1]!.score : { BLUE: 0, RED: 0 };
@@ -181,6 +188,7 @@ export function computeFpsSceneState(replay: BranchReplay, roundIndex: number, s
           toY: vp.y - 6,
           color: replay.teams[currentEvent.side].color,
           tag,
+          progress: sub,
         };
         break;
       }
@@ -200,6 +208,10 @@ export function computeFpsSceneState(replay: BranchReplay, roundIndex: number, s
   }
 
   const progress = round.events.length > 0 ? clampedStep / round.events.length : 1;
+  const prevUnits = sub < 1 && clampedStep > 0
+    ? new Map(computeFpsSceneState(replay, clampedIdx, clampedStep - 1, 1).units.map((u) => [u.id, u]))
+    : null;
+  const ease = 1 - (1 - sub) * (1 - sub);
 
   const units: FpsUnitPose[] = fps.stats.map((p) => {
     const slot = (slotOf.get(p.id) ?? 0) % 5;
@@ -222,12 +234,20 @@ export function computeFpsSceneState(replay: BranchReplay, roundIndex: number, s
     const zone = lastZone.get(p.id) ?? defaultZone;
     const target = deathPos.get(p.id) ?? posAtZone(p.id, zone);
     const advance = clampedStep === 0 ? 0.22 : Math.min(1, 0.48 + progress * 0.52);
-    const x = !alive
-      ? target.x
-      : Math.round(spawn.x + (target.x - spawn.x) * advance);
-    const y = !alive
-      ? target.y
-      : Math.round(spawn.y + (target.y - spawn.y) * advance);
+    const destX = !alive ? target.x : Math.round(spawn.x + (target.x - spawn.x) * advance);
+    const destY = !alive ? target.y : Math.round(spawn.y + (target.y - spawn.y) * advance);
+
+    let x = destX;
+    let y = destY;
+    let moving = false;
+    if (sub < 1) {
+      const from = clampedStep === 0 ? spawn : prevUnits?.get(p.id);
+      if (from) {
+        x = Math.round(from.x + (destX - from.x) * ease);
+        y = Math.round(from.y + (destY - from.y) * ease);
+        moving = Math.hypot(destX - from.x, destY - from.y) >= 2 && sub < 0.95;
+      }
+    }
 
     let pose: FpsUnitPose['pose'] = 'stand';
     if (!alive) {
@@ -240,7 +260,7 @@ export function computeFpsSceneState(replay: BranchReplay, roundIndex: number, s
       pose = 'plant';
     } else if (currentEvent?.type === 'DEFUSE' && currentEvent.by === p.id) {
       pose = 'defuse';
-    } else if (clampedStep > 0 && !done) {
+    } else if (moving || (clampedStep > 0 && !done)) {
       pose = 'walk';
     }
 
@@ -301,6 +321,9 @@ export interface CardSceneState {
   seriesScore: Record<CardSide, number>;
   bluePlayer: { id: string; name: string; deck: CardDeck; deckName: string; life: number; maxLife: number };
   redPlayer: { id: string; name: string; deck: CardDeck; deckName: string; life: number; maxLife: number };
+  displayBlueLife: number;
+  displayRedLife: number;
+  subProgress: number;
   activeSide: CardSide;
   turnNumber: number;
   damage: number;
@@ -326,24 +349,32 @@ export function flattenCardGames(seriesList: CardSeries[]): { s: CardSeries; g: 
   return seriesList.flatMap((s) => s.games.map((g, i) => ({ s, g, i })));
 }
 
-/** Pure calculation of the Card duel state at game index `gameFlatIndex` and turn step `step`. */
+/** Pure calculation of the Card duel state at game index `gameFlatIndex`, turn step `step`, and intra-turn `subProgress` (0..1). */
 export function computeCardSceneState(
   replay: BranchReplay,
   data: GameData,
   gameFlatIndex: number,
   step: number,
+  subProgress = 1,
 ): CardSceneState {
   const card = replay.card!;
   const allGames = flattenCardGames(card.series);
   const clampedIdx = Math.max(0, Math.min(allGames.length - 1, gameFlatIndex));
   const { s, g, i } = allGames[clampedIdx]!;
   const clampedStep = Math.max(0, Math.min(g.turns.length, step));
+  const sub = Math.max(0, Math.min(1, subProgress));
   const done = clampedStep >= g.turns.length;
 
   const initialLife = cardStartLife(g, data);
   const currentTurn = clampedStep > 0 ? g.turns[clampedStep - 1]! : null;
+  const prevLife = clampedStep >= 2 ? g.turns[clampedStep - 2]!.life : initialLife;
   const life = currentTurn ? currentTurn.life : initialLife;
   const maxLife = data.card.life + data.card.skill.secondPlayerLife;
+
+  const hpProg = sub >= 1 ? 1 : sub <= 0.22 ? 0 : Math.min(1, (sub - 0.22) / 0.58);
+  const hpEase = 1 - (1 - hpProg) * (1 - hpProg);
+  const displayBlueLife = prevLife.BLUE + (life.BLUE - prevLife.BLUE) * hpEase;
+  const displayRedLife = prevLife.RED + (life.RED - prevLife.RED) * hpEase;
 
   // Match score across series up to this game
   const upToSeries = done && i === s.games.length - 1 ? s.seat + 1 : s.seat;
@@ -405,6 +436,9 @@ export function computeCardSceneState(
       life: life.RED,
       maxLife,
     },
+    displayBlueLife,
+    displayRedLife,
+    subProgress: sub,
     activeSide: currentTurn ? currentTurn.side : g.first,
     turnNumber: currentTurn ? currentTurn.turn : 0,
     damage: currentTurn ? currentTurn.damage : 0,

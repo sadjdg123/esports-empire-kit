@@ -1,9 +1,9 @@
 import { useState } from 'react';
+import { STAFF_ROLES, type SponsorGoal, type StaffMember } from '../../core/types';
 import {
-  activeSponsor, cashForecast, financeSummary, ledgerByWeek, rescueOptions, rosterOf, signSponsor, sponsorGoalText, sponsorOffers, sponsorStanding, weeklyMoney,
+  activeSponsor, cashForecast, financeSummary, hiredStaff, ledgerByWeek, rescueOptions, rosterOf, signSponsor, sponsorGoalText, sponsorOffers, sponsorStanding, weeklyMoney,
 } from '../../game';
 import type { PageProps } from '../App';
-import type { SponsorGoal } from '../../core/types';
 import { money } from '../labels';
 
 /** A sponsor's season goals as one line (T27). */
@@ -25,6 +25,7 @@ export function FinancePage({ game, data, act, flash, ask }: PageProps) {
   const tips = rescueOptions(game, data);
   const current = activeSponsor(game);
   const offers = sponsorOffers(game, data);
+  const hired = STAFF_ROLES.map((r) => hiredStaff(game, r)).filter((s): s is StaffMember => !!s);
   const [years, setYears] = useState(1);
   // The office lowers what the sponsor tiers ask for (T22).
   const standing = sponsorStanding(game, data);
@@ -48,6 +49,7 @@ export function FinancePage({ game, data, act, flash, ask }: PageProps) {
           <dt>当前资金</dt><dd className={game.funds < 0 ? 'bad' : ''}>{money(game.funds)}</dd>
           <dt>声望</dt><dd>{Math.round(game.club.reputation)}{officeBonus > 0 ? `（办公室 +${officeBonus}）` : ''}（可签第 {tier} 档赞助{nextTier ? `，${nextTier.minReputation - officeBonus} 起第 ${nextTier.tier} 档` : ''}）</dd>
           <dt>每周工资</dt><dd className="bad">{money(-m.salaries)}</dd>
+          {m.staff > 0 && <><dt>负责人工资</dt><dd className="bad">{money(-m.staff)}</dd></>}
           <dt>赞助</dt><dd className="good">{money(m.sponsor)}</dd>
           <dt>联赛分成</dt><dd className="good">{money(m.league)}{m.league === 0 ? '（休赛期没有）' : ''}</dd>
           <dt>周边收入</dt><dd className="good">{money(m.merch)}</dd>
@@ -105,7 +107,10 @@ export function FinancePage({ game, data, act, flash, ask }: PageProps) {
         )}
         <p className="dim small-text">比赛奖金按一半赢一半输估算。</p>
         <h3>工资明细</h3>
-        <ul className="plain">{rosterOf(game).map((p) => <li key={p.id}>{p.name}：{money(p.salaryPerWeek)}/周</li>)}</ul>
+        <ul className="plain">
+          {rosterOf(game).map((p) => <li key={p.id}>{p.name}：{money(p.salaryPerWeek)}/周</li>)}
+          {hired.map((s) => <li key={s.id}>{s.name}（{data.staff.roles[s.role].name}）：{money(s.salaryPerWeek)}/周</li>)}
+        </ul>
       </section>
 
       <section className="card wide">

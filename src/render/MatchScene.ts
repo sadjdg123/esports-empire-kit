@@ -12,7 +12,7 @@ import { DIGIT_CHARS, DIGIT_H, DIGIT_W, digitStrip } from './pixel/digits';
 import { HERO_H, heroPalette, heroRows, type HeroFrame } from './pixel/heroArt';
 import { MAP_PX, MAP_SPRITES, groundPixels, mapPalette, type MapSprite } from './pixel/mapArt';
 import { makeSprite } from './pixel/raster';
-import { lerpUnit, type MatchPlayer } from './player';
+import { lerpUnit, unitById, type MatchPlayer } from './player';
 
 export const VIEW = 720; // canvas size in pixels
 const MARGIN = 20;
@@ -68,6 +68,7 @@ function groundUrl(data: GameData): string {
 interface HeroView {
   sprite: Phaser.GameObjects.Image;
   label: Phaser.GameObjects.Text;
+  texKey: string;
   level: number;
   heroId: string;
   side: 'BLUE' | 'RED';
@@ -98,6 +99,7 @@ export class MatchScene extends Phaser.Scene {
   private fight: Set<string> | null = null; // player ids in the current teamfight
   private cam: Cam = { zoom: 1, x: VIEW / 2, y: VIEW / 2 };
   private groundKey = '';
+  private madeTextures = new Set<string>();
   private frames = 0;
   private fpsT = 0;
 
@@ -144,7 +146,10 @@ export class MatchScene extends Phaser.Scene {
   /** The texture for a map sprite, made on first use. */
   private mapTexture(name: MapSprite, side: 'BLUE' | 'RED' | null, glow?: string): string {
     const key = `map:${name}:${side ?? '-'}:${glow ?? ''}`;
-    if (!this.textures.exists(key)) this.textures.addCanvas(key, makeSprite(MAP_SPRITES[name], mapPalette(side ? this.opts.colors[side] : null, glow)));
+    if (!this.madeTextures.has(key)) {
+      if (!this.textures.exists(key)) this.textures.addCanvas(key, makeSprite(MAP_SPRITES[name], mapPalette(side ? this.opts.colors[side] : null, glow)));
+      this.madeTextures.add(key);
+    }
     return key;
   }
 
@@ -156,9 +161,11 @@ export class MatchScene extends Phaser.Scene {
     if (!img) {
       img = this.add.image(X, Y, key).setOrigin(0.5, 1).setScale(MAP_SCALE);
       this.props.set(id, img);
+    } else if (img.texture.key !== key) {
+      img.setTexture(key);
     }
     // Drawn just behind anyone standing on the same spot.
-    img.setTexture(key).setVisible(true).setPosition(X, Y + (FOOT[name] ?? 0) * MAP_SCALE - lift).setDepth(1 + (Y - 6) / 1000);
+    img.setVisible(true).setPosition(X, Y + (FOOT[name] ?? 0) * MAP_SCALE - lift).setDepth(1 + (Y - 6) / 1000);
   }
 
   /** Height of a map sprite on screen, for placing its health bar. */
@@ -177,10 +184,15 @@ export class MatchScene extends Phaser.Scene {
     const standing = u.alive ? Math.max(1, Math.ceil((CREEPS_PER_WAVE * u.hp) / u.maxHp)) : 0;
     const step = Math.floor(now / 180) % 2 === 0;
     imgs.forEach((img, i) => {
+      if (i >= standing) {
+        img.setVisible(false);
+        return;
+      }
       const dx = (i - 1) * 11;
       const dy = i === 1 ? -5 : 2;
-      img.setVisible(i < standing)
-        .setTexture(this.mapTexture(step === (i % 2 === 0) ? 'creepA' : 'creepB', u.side))
+      const key = this.mapTexture(step === (i % 2 === 0) ? 'creepA' : 'creepB', u.side);
+      if (img.texture.key !== key) img.setTexture(key);
+      img.setVisible(true)
         .setFlipX(u.side === 'RED')
         .setPosition(X + dx, Y + dy)
         .setDepth(1 + (Y + dy) / 1000);
@@ -222,9 +234,12 @@ export class MatchScene extends Phaser.Scene {
   /** The texture for one hero frame in one team colour, made on first use. */
   private heroTexture(heroId: string, side: 'BLUE' | 'RED', frame: HeroFrame): string {
     const key = `hero:${heroId}:${side}:${frame}`;
-    if (!this.textures.exists(key)) {
-      const archetype = this.opts.data.heroById[heroId]?.archetype;
-      this.textures.addCanvas(key, makeSprite(heroRows(heroId, frame, archetype), heroPalette(heroId, this.opts.colors[side], archetype)));
+    if (!this.madeTextures.has(key)) {
+      if (!this.textures.exists(key)) {
+        const archetype = this.opts.data.heroById[heroId]?.archetype;
+        this.textures.addCanvas(key, makeSprite(heroRows(heroId, frame, archetype), heroPalette(heroId, this.opts.colors[side], archetype)));
+      }
+      this.madeTextures.add(key);
     }
     return key;
   }
@@ -233,7 +248,6 @@ export class MatchScene extends Phaser.Scene {
   private placeHeroes(prev: RenderSnapshot, cur: RenderSnapshot, alpha: number, dt: number): Map<string, { x: number; y: number }> {
     const live: FormUnit[] = [];
     const pos = new Map<string, { x: number; y: number }>();
-    const before = new Map(prev.units.map((u) => [u.id, u]));
     for (const u of cur.units) {
       if (u.kind !== 'HERO') continue;
       const p = lerpUnit(prev, cur, u.id, alpha) ?? u;
@@ -249,7 +263,7 @@ export class MatchScene extends Phaser.Scene {
       const p = pos.get(u.id)!;
       if (view && u.alive) {
         const t = targets.get(u.id) ?? { dx: 0, dy: 0 };
-        const b = before.get(u.id);
+        const b = unitById(prev, u.id);
         const jumped = !b || !b.alive || Math.hypot(b.x - u.x, b.y - u.y) > JUMP;
         view.offset = jumped ? t : approach(view.offset, t, dt);
       }
@@ -274,8 +288,8 @@ export class MatchScene extends Phaser.Scene {
       if (u.kind !== 'HERO' || !u.alive) continue;
       const p = heroAt.get(u.id)!;
       const v = this.heroes.get(u.id);
-      const text = `${u.level ?? 1} ${this.opts.names[u.playerId ?? ''] ?? ''}`;
-      boxes.push({ id: u.id, x: sx(p.x), y: sy(p.y) - HERO_TOP - 8, w: v?.label.width || Math.max(36, text.length * 7) });
+      const w = v?.label.width || Math.max(36, (`${u.level ?? 1} ${this.opts.names[u.playerId ?? ''] ?? ''}`).length * 7);
+      boxes.push({ id: u.id, x: sx(p.x), y: sy(p.y) - HERO_TOP - 8, w });
     }
     const labelTargets = labelOffsets(boxes);
 
@@ -335,9 +349,11 @@ export class MatchScene extends Phaser.Scene {
     if (!view) {
       const heroId = u.heroId ?? '';
       const archetype = this.opts.data.heroById[heroId]?.archetype;
+      const initKey = this.heroTexture(heroId, side, 'stand');
       view = {
-        sprite: this.add.image(X, Y, this.heroTexture(heroId, side, 'stand')).setOrigin(0.5, 1).setScale(HERO_SCALE),
+        sprite: this.add.image(X, Y, initKey).setOrigin(0.5, 1).setScale(HERO_SCALE),
         label: this.add.text(X, Y, '', { fontSize: '11px', color: '#ffffff', fontFamily: 'sans-serif', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(11),
+        texKey: initKey,
         level: -1,
         heroId,
         side,
@@ -358,8 +374,12 @@ export class MatchScene extends Phaser.Scene {
     const anim = this.heroAnims.get(u.id);
     const pose = anim ? heroPose(anim, now) : { frame: 'stand' as const, flip: side === 'RED', alpha: u.alive ? 1 : 0, bob: 0 };
     const flash = now < view.flashUntil && u.alive;
+    const nextKey = this.heroTexture(view.heroId, side, pose.frame);
+    if (view.texKey !== nextKey) {
+      view.texKey = nextKey;
+      view.sprite.setTexture(nextKey);
+    }
     view.sprite
-      .setTexture(this.heroTexture(view.heroId, side, pose.frame))
       .setPosition(X, Y - pose.bob * HERO_SCALE)
       .setFlipX(pose.flip)
       .setAlpha(pose.alpha)
@@ -403,7 +423,7 @@ export class MatchScene extends Phaser.Scene {
         case 'heal': this.batcher.add(f.id, 0, f.amount, now); break;
         case 'death': { const at = this.where.get(f.id); if (at) this.painter.death(at); break; }
         case 'respawn': {
-          const u = snap.units.find((x) => x.id === f.id);
+          const u = unitById(snap, f.id);
           if (u) this.painter.respawn({ x: sx(u.x), y: sy(u.y) - CHEST }, team(f.id));
           break;
         }
@@ -420,7 +440,7 @@ export class MatchScene extends Phaser.Scene {
   private floatNumbers(now: number): void {
     for (const n of this.batcher.flush(now)) {
       const at = this.where.get(n.id);
-      const u = this.lastSnap.units.find((x) => x.id === n.id);
+      const u = unitById(this.lastSnap, n.id);
       if (!at || !u || (n.heal && n.value < u.maxHp * HEAL_SHOWN)) continue;
       const big = !n.heal && n.value >= u.maxHp * 0.2;
       let slot = this.numbers.find((x) => !x.text.visible);
@@ -458,11 +478,14 @@ export class MatchScene extends Phaser.Scene {
     main.centerOn(this.cam.x, this.cam.y);
     const canvas = this.game.canvas;
     const box = groundBox(this.cam, VIEW, canvas.clientWidth || VIEW);
-    const key = `${box.size.toFixed(1)}|${box.x.toFixed(1)}|${box.y.toFixed(1)}`;
+    const sz = Math.round(box.size);
+    const bx = Math.round(box.x);
+    const by = Math.round(box.y);
+    const key = `${sz}|${bx}|${by}`;
     if (key !== this.groundKey) {
       this.groundKey = key;
-      canvas.style.backgroundSize = `${box.size}px ${box.size}px`;
-      canvas.style.backgroundPosition = `${box.x}px ${box.y}px`;
+      canvas.style.backgroundSize = `${sz}px ${sz}px`;
+      canvas.style.backgroundPosition = `${bx}px ${by}px`;
     }
   }
 

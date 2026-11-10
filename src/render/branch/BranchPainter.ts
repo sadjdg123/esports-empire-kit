@@ -218,25 +218,41 @@ export function paintFpsScene(
   // Active gunfire tracer & muzzle flash
   if (state.shot && !state.done) {
     const s = state.shot;
+    const prog = s.progress ?? 1;
+    const head = prog >= 0.98 ? 1 : Math.min(1, prog * 2.5);
+    const tail = prog >= 0.98 ? 0 : Math.max(0, head - 0.55);
+    const x0 = s.fromX + (s.toX - s.fromX) * tail;
+    const y0 = s.fromY + (s.toY - s.fromY) * tail;
+    const x1 = s.fromX + (s.toX - s.fromX) * head;
+    const y1 = s.fromY + (s.toY - s.fromY) * head;
+
     ctx.save();
     ctx.strokeStyle = '#fff3a1';
     ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.moveTo(s.fromX, s.fromY);
-    ctx.lineTo(s.toX, s.toY);
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
     ctx.stroke();
 
     ctx.strokeStyle = s.color;
     ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.moveTo(s.fromX, s.fromY);
-    ctx.lineTo(s.toX, s.toY);
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
     ctx.stroke();
 
     // Muzzle flash star at shooter
-    pxRect(ctx, s.fromX - 3, s.fromY - 3, 6, 6, '#ffe45e', '#d96b18');
-    // Hit burst at victim
-    pxRect(ctx, s.toX - 4, s.toY - 4, 8, 8, '#ff4d3d', '#fff');
+    if (prog < 0.45 || prog >= 0.98) {
+      pxRect(ctx, s.fromX - 3, s.fromY - 3, 6, 6, '#ffe45e', '#d96b18');
+    }
+    // Bullet head spark while in flight
+    if (head < 1) {
+      pxRect(ctx, x1 - 2, y1 - 2, 4, 4, '#ffffff', '#ffcf40');
+    }
+    // Hit burst at victim once tracer arrives
+    if (head >= 0.85) {
+      pxRect(ctx, s.toX - 4, s.toY - 4, 8, 8, '#ff4d3d', '#fff');
+    }
     drawPixelLabel(
       ctx,
       s.tag,
@@ -482,56 +498,74 @@ export function paintCardScene(
 
   // Played cards & Turn effects on the center of the table
   if (state.turnNumber > 0) {
+    const sub = state.subProgress ?? 1;
     const isBlueTurn = state.activeSide === 'BLUE';
     const cardCount = state.notes.includes('COMBO') ? 3 : state.damage >= 6 ? 2 : 1;
     const baseX = isBlueTurn ? 102 : 144;
+    const handX = isBlueTurn ? leftX + 14 : rightX - 14;
+    const handY = seatY - 12;
+    const cardProg = Math.min(1, sub / 0.36);
+    const cardEase = 1 - (1 - cardProg) * (1 - cardProg);
+
     for (let c = 0; c < cardCount; c++) {
-      const cx = baseX + (c - (cardCount - 1) / 2) * 14;
-      const cy = 76 + (c % 2) * 4;
+      const targetX = baseX + (c - (cardCount - 1) / 2) * 14;
+      const targetY = 76 + (c % 2) * 4;
+      const cx = handX + (targetX - handX) * cardEase;
+      const cy = handY + (targetY - handY) * cardEase;
       drawPlayedCard(ctx, cx, cy, isBlueTurn ? blueCol : redCol, state.notes.includes('COMBO'));
     }
 
     // Attack projectile / slash across the table when damage > 0
-    if (state.damage > 0) {
+    if (state.damage > 0 && sub >= 0.16) {
       const fromX = isBlueTurn ? 112 : 148;
       const toX = isBlueTurn ? rightX - 6 : leftX + 6;
       const targetY = seatY - 12;
+      const atkProg = sub >= 0.98 ? 1 : Math.min(1, (sub - 0.16) / 0.42);
+      const curX = fromX + (toX - fromX) * atkProg;
+      const curY = 86 + (targetY - 86) * atkProg;
 
       ctx.save();
       ctx.strokeStyle = state.notes.includes('LETHAL') ? '#ff2a2a' : '#ffe055';
       ctx.lineWidth = state.notes.includes('LETHAL') ? 3.5 : 2;
       ctx.beginPath();
       ctx.moveTo(fromX, 86);
-      ctx.lineTo(toX, targetY);
+      ctx.lineTo(curX, curY);
       ctx.stroke();
 
-      // Impact star on target player
-      pxRect(ctx, toX - 5, targetY - 5, 10, 10, '#ff4238', '#ffe875');
+      if (atkProg < 1) {
+        pxRect(ctx, curX - 3, curY - 3, 6, 6, '#fff8c4', '#ff5a36');
+      }
+      if (atkProg >= 0.8) {
+        // Impact star on target player
+        pxRect(ctx, toX - 5, targetY - 5, 10, 10, '#ff4238', '#ffe875');
 
-      // Floating damage number badge over target player
-      drawPixelLabel(
-        ctx,
-        `-${state.damage}`,
-        isBlueTurn ? rightX : leftX,
-        seatY - 30,
-        '#c9251e',
-        '#fff9d2',
-        '#ffe066',
-        10,
-      );
+        // Floating damage number badge rising over target player
+        const floatLift = Math.round(Math.min(1, (sub - 0.45) / 0.5) * 6);
+        drawPixelLabel(
+          ctx,
+          `-${state.damage}`,
+          isBlueTurn ? rightX : leftX,
+          seatY - 28 - floatLift,
+          '#c9251e',
+          '#fff9d2',
+          '#ffe066',
+          10,
+        );
+      }
       ctx.restore();
     }
 
     // Heal sparkles & floating +HP number when healed > 0
-    if (state.healed > 0) {
+    if (state.healed > 0 && sub >= 0.2) {
       const hx = isBlueTurn ? leftX : rightX;
-      pxRect(ctx, hx - 12, seatY - 16, 4, 4, '#2ecc71', '#fff');
-      pxRect(ctx, hx + 9, seatY - 20, 4, 4, '#2ecc71', '#fff');
+      const lift = Math.round(Math.min(1, (sub - 0.2) / 0.6) * 5);
+      pxRect(ctx, hx - 12, seatY - 16 - lift, 4, 4, '#2ecc71', '#fff');
+      pxRect(ctx, hx + 9, seatY - 20 - lift, 4, 4, '#2ecc71', '#fff');
       drawPixelLabel(
         ctx,
         `+${state.healed}`,
         hx,
-        seatY - 30,
+        seatY - 28 - lift,
         '#1f7a3f',
         '#e8fff0',
         '#7ef5a5',
@@ -572,8 +606,8 @@ export function paintCardScene(
   }
 
   // Player Nameplates, Deck Tags & Pixel HP Bars (Top-Left for BLUE, Top-Right for RED)
-  drawCardPlayerHud(ctx, 6, 19, state.bluePlayer, blueCol, true);
-  drawCardPlayerHud(ctx, CARD_CANVAS_W - 110, 19, state.redPlayer, redCol, false);
+  drawCardPlayerHud(ctx, 6, 19, state.bluePlayer, state.displayBlueLife ?? state.bluePlayer.life, blueCol, true);
+  drawCardPlayerHud(ctx, CARD_CANVAS_W - 110, 19, state.redPlayer, state.displayRedLife ?? state.redPlayer.life, redCol, false);
 
   // Top Header Bar
   pxRect(ctx, 0, 0, CARD_CANVAS_W, 15, '#3b2412');
@@ -660,6 +694,7 @@ function drawCardPlayerHud(
   x: number,
   y: number,
   player: CardSceneState['bluePlayer'],
+  displayLife: number,
   color: string,
   alignLeft: boolean,
 ): void {
@@ -671,19 +706,26 @@ function drawCardPlayerHud(
   const textX = alignLeft ? x + 5 : x + 99;
   ctx.fillText(`${player.name.slice(0, 5)} · ${player.deckName}`, textX, y + 3);
 
-  // Pixel HP bar
+  // Pixel HP bar with smooth chip drain
   const barX = x + 5;
   const barY = y + 14;
   const barW = 68;
   const barH = 6;
   pxRect(ctx, barX, barY, barW, barH, '#261409', '#6e4826');
-  const ratio = Math.max(0, Math.min(1, player.life / Math.max(1, player.maxLife)));
-  if (ratio > 0) {
+  const maxL = Math.max(1, player.maxLife);
+  const chipRatio = Math.max(0, Math.min(1, displayLife / maxL));
+  const targetRatio = Math.max(0, Math.min(1, player.life / maxL));
+  if (chipRatio > targetRatio) {
+    ctx.fillStyle = '#ffe9a8';
+    ctx.fillRect(barX, barY, Math.max(2, Math.round(barW * chipRatio)), barH);
+  }
+  const mainRatio = Math.min(chipRatio, targetRatio);
+  if (mainRatio > 0) {
     ctx.fillStyle = color;
-    ctx.fillRect(barX, barY, Math.max(2, Math.round(barW * ratio)), barH);
+    ctx.fillRect(barX, barY, Math.max(2, Math.round(barW * mainRatio)), barH);
   }
   ctx.fillStyle = '#ffe580';
   ctx.font = 'bold 8.5px "PingFang SC", "Microsoft YaHei", sans-serif';
   ctx.textAlign = 'right';
-  ctx.fillText(`♥${player.life}`, x + 100, y + 12);
+  ctx.fillText(`♥${Math.round(displayLife)}`, x + 100, y + 12);
 }

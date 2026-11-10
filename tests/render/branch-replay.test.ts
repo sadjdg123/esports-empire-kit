@@ -159,4 +159,67 @@ describe('Branch replay pixel choreography (V8)', () => {
       expect(end.byTime).toBe(g.byTime);
     });
   });
+
+  it('FPS and Card subProgress (V9) smoothly interpolates positions, tracers, and HP bars without altering scores or outcomes', () => {
+    const fpsRound = fpsReplay.fps!.rounds[0]!;
+    expect(fpsRound.events.length).toBeGreaterThan(0);
+
+    for (let step = 1; step <= fpsRound.events.length; step++) {
+      const prev = computeFpsSceneState(fpsReplay, 0, step - 1, 1);
+      const s0 = computeFpsSceneState(fpsReplay, 0, step, 0);
+      const sMid = computeFpsSceneState(fpsReplay, 0, step, 0.5);
+      const s1 = computeFpsSceneState(fpsReplay, 0, step, 1);
+      const sDefault = computeFpsSceneState(fpsReplay, 0, step);
+
+      expect(s1).toEqual(sDefault);
+      expect(s0.score).toEqual(s1.score);
+      expect(sMid.score).toEqual(s1.score);
+      expect(sMid.winner).toBe(s1.winner);
+
+      if (s1.shot) {
+        expect(s0.shot?.progress).toBe(0);
+        expect(sMid.shot?.progress).toBe(0.5);
+        expect(s1.shot?.progress).toBe(1);
+      }
+
+      for (const u1 of s1.units) {
+        const uPrev = prev.units.find((u) => u.id === u1.id)!;
+        const uMid = sMid.units.find((u) => u.id === u1.id)!;
+        expect(uMid.alive).toBe(u1.alive);
+        expect(uMid.x).toBeGreaterThanOrEqual(Math.min(uPrev.x, u1.x));
+        expect(uMid.x).toBeLessThanOrEqual(Math.max(uPrev.x, u1.x));
+        expect(uMid.y).toBeGreaterThanOrEqual(Math.min(uPrev.y, u1.y));
+        expect(uMid.y).toBeLessThanOrEqual(Math.max(uPrev.y, u1.y));
+      }
+    }
+
+    const games = flattenCardGames(cardReplay.card!.series);
+    const { g } = games[0]!;
+    expect(g.turns.length).toBeGreaterThan(0);
+    const initLife = cardStartLife(g, data);
+
+    for (let step = 1; step <= g.turns.length; step++) {
+      const prevLife = step >= 2 ? g.turns[step - 2]!.life : initLife;
+      const curLife = g.turns[step - 1]!.life;
+      const c0 = computeCardSceneState(cardReplay, data, 0, step, 0);
+      const cMid = computeCardSceneState(cardReplay, data, 0, step, 0.5);
+      const c1 = computeCardSceneState(cardReplay, data, 0, step, 1);
+
+      // Integer life values stay exact regardless of subProgress
+      expect(c0.bluePlayer.life).toBe(curLife.BLUE);
+      expect(cMid.bluePlayer.life).toBe(curLife.BLUE);
+      expect(c0.redPlayer.life).toBe(curLife.RED);
+      expect(cMid.redPlayer.life).toBe(curLife.RED);
+
+      // Display life interpolates smoothly from prevLife to curLife
+      expect(c0.displayBlueLife).toBeCloseTo(prevLife.BLUE, 6);
+      expect(c0.displayRedLife).toBeCloseTo(prevLife.RED, 6);
+      expect(c1.displayBlueLife).toBeCloseTo(curLife.BLUE, 6);
+      expect(c1.displayRedLife).toBeCloseTo(curLife.RED, 6);
+      expect(cMid.displayBlueLife).toBeGreaterThanOrEqual(Math.min(prevLife.BLUE, curLife.BLUE) - 1e-9);
+      expect(cMid.displayBlueLife).toBeLessThanOrEqual(Math.max(prevLife.BLUE, curLife.BLUE) + 1e-9);
+      expect(cMid.displayRedLife).toBeGreaterThanOrEqual(Math.min(prevLife.RED, curLife.RED) - 1e-9);
+      expect(cMid.displayRedLife).toBeLessThanOrEqual(Math.max(prevLife.RED, curLife.RED) + 1e-9);
+    }
+  });
 });

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../../src/core/config';
 import { runMatch } from '../../src/sim';
 import { clubTeam } from '../../src/sim/scenario';
-import { MatchPlayer, lerpUnit } from '../../src/render/player';
+import { MatchPlayer, lerpUnit, unitById } from '../../src/render/player';
 
 const data = loadGameData();
 const input = (seed: number) => ({ seed, blue: clubTeam(data, 'chaosheng', 'EARLY_AGGRO'), red: clubTeam(data, 'tianshu', 'TEAMFIGHT_PUSH') });
@@ -54,5 +54,16 @@ describe('MatchPlayer (watch vs skip vs runMatch)', () => {
     expect(mid.x).toBeLessThanOrEqual(Math.max(a.x, hero.x) + 1e-9);
     expect(p.alpha).toBeGreaterThanOrEqual(0);
     expect(p.alpha).toBeLessThanOrEqual(1);
+  });
+
+  it('unitById caches O(1) snapshot lookups accurately across ticks', () => {
+    const p = new MatchPlayer(input(6), data);
+    for (let i = 0; i < 15; i++) {
+      const snap = p.tick();
+      for (const u of snap.units) {
+        expect(unitById(snap, u.id)).toBe(u);
+      }
+      expect(unitById(snap, '__non_existent_unit__')).toBeUndefined();
+    }
   });
 });

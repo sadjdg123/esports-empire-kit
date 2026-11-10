@@ -23,7 +23,6 @@ const PART_D = 4.3; // partition walls stop before the front corridor (j = 4.3..
 const R1 = 4.6; // Room 1 (Lounge/Stream) -> Room 2 (Training Hall) partition i
 const R2 = 10.2; // Room 2 (Training Hall) -> Room 3 (Office) partition i
 const SPEED = 3.4; // tiles per second
-const FPS = 30;
 const OUT = '#2a1a14';
 
 /** Objects you can tap, and what they open. */
@@ -35,7 +34,7 @@ export interface SceneExtras {
   finals: number; // lost finals (silver cups)
   facilities?: Partial<Record<FacilityId, number>>; // room levels (T22): more furniture at higher levels
   staff?: string[]; // ids of hired staff (P3): each gets a seat at the staff desk in the office
-  branches?: ('FPS' | 'CARD')[]; // opened sister divisions (P4): shown as plaques flanking the roof sign
+  branches?: ('FPS' | 'CARD')[]; // opened sister divisions (P4): shown as plaques flanking the roof sign & courtyard stations
 }
 
 export interface HotspotSpot {
@@ -117,7 +116,6 @@ export class ClubScene {
   private figures = new Map<string, Figure>();
   private raf = 0;
   private last = 0;
-  private acc = 0;
   private time = 0;
   private color: string;
   private extras: SceneExtras = { titles: 0, finals: 0 };
@@ -127,6 +125,7 @@ export class ClubScene {
   private sky: HTMLCanvasElement | null = null;
   private baseLayer: { img: HTMLCanvasElement; x: number; y: number } | null = null;
   private props: Prop[] = [];
+  private propsDesc: Prop[] = [];
   private builtFor = '';
 
   constructor(canvas: HTMLCanvasElement, clubColor: string, onFrame?: (ms: number) => void) {
@@ -219,9 +218,8 @@ export class ClubScene {
     }
     if (best) return { kind: 'player', id: best };
     this.build();
-    const order = [...this.props].sort((a, b) => b.depth - a.depth);
     const at = (px0: number, py0: number): Hotspot | null => {
-      for (const p of order) {
+      for (const p of this.propsDesc) {
         if (!p.hotspot) continue;
         const px = Math.floor(px0 - p.x);
         const py = Math.floor(py0 - p.y);
@@ -243,14 +241,10 @@ export class ClubScene {
     const loop = (t: number) => {
       this.raf = requestAnimationFrame(loop);
       if (document.hidden) { this.last = t; return; }
-      const dt = Math.min(0.1, (t - (this.last || t)) / 1000);
+      const dt = Math.min(0.1, Math.max(0, (t - (this.last || t)) / 1000));
       this.last = t;
-      this.acc += dt;
-      if (this.acc < 1 / FPS) return;
-      const step = this.acc;
-      this.acc = 0;
       const t0 = performance.now();
-      this.update(step);
+      this.update(dt);
       this.draw();
       this.onFrame?.(performance.now() - t0);
     };
@@ -376,6 +370,8 @@ export class ClubScene {
     this.addTrainingProps(add);
     this.addOfficeProps(add);
     this.addYardProps(add);
+    this.props.sort((a, b) => a.depth - b.depth);
+    this.propsDesc = [...this.props].reverse();
   }
 
   private draw(): void {
@@ -390,19 +386,26 @@ export class ClubScene {
     if (this.baseLayer) ctx.drawImage(this.baseLayer.img, this.baseLayer.x, this.baseLayer.y);
     this.drawWallScreens();
 
-    const items: { depth: number; draw: () => void }[] = this.props.map((p) => ({
-      depth: p.depth,
-      draw: () => { ctx.drawImage(p.img, p.x, p.y); p.anim?.(); },
-    }));
-    for (const fig of this.figures.values()) {
-      items.push({ depth: this.figureDepth(fig), draw: () => this.drawFigure(fig) });
+    const dyn: { depth: number; fig?: Figure; staffId?: string; staffIdx?: number; mgr?: boolean }[] = [];
+    for (const fig of this.figures.values()) dyn.push({ depth: this.figureDepth(fig), fig });
+    dyn.push({ depth: MANAGER.i + MANAGER.j, mgr: true });
+    (this.extras.staff ?? []).forEach((id, k) => {
+      dyn.push({ depth: STAFF_DESK_DEPTH - 0.1 - k * 0.01, staffId: id, staffIdx: k });
+    });
+    dyn.sort((a, b) => a.depth - b.depth);
+
+    const drawDyn = (d: (typeof dyn)[number]) => {
+      if (d.fig) this.drawFigure(d.fig);
+      else if (d.mgr) this.drawManager();
+      else if (d.staffId !== undefined) this.drawStaff(d.staffId, d.staffIdx!);
+    };
+    let di = 0;
+    for (const p of this.props) {
+      while (di < dyn.length && dyn[di]!.depth <= p.depth) drawDyn(dyn[di++]!);
+      ctx.drawImage(p.img, p.x, p.y);
+      p.anim?.();
     }
-    items.push({ depth: MANAGER.i + MANAGER.j, draw: () => this.drawManager() });
-    (this.extras.staff ?? []).forEach((id, k) =>
-      items.push({ depth: STAFF_DESK_DEPTH - 0.1 - k * 0.01, draw: () => this.drawStaff(id, k) }),
-    );
-    items.sort((a, b) => a.depth - b.depth);
-    for (const it of items) it.draw();
+    while (di < dyn.length) drawDyn(dyn[di++]!);
 
     for (const fig of this.figures.values()) this.drawBubble(fig);
     this.drawMarkers();
@@ -785,10 +788,16 @@ export class ClubScene {
       if (branches.includes('FPS')) {
         this.back(3.8, 4.9, WALL_H + 1, WALL_H + 11, '#3b3f4c');
         this.back(3.9, 4.8, WALL_H + 3, WALL_H + 9, '#d9574a', false);
+        const [fx, fy] = up(iso(4.35, 0), WALL_H + 6);
+        this.px(fx - 2, fy, 5, 1, '#fff3b8');
+        this.px(fx, fy - 2, 1, 5, '#fff3b8');
       }
       if (branches.includes('CARD')) {
         this.back(9.9, 11.0, WALL_H + 1, WALL_H + 11, '#5a3a22');
         this.back(10.0, 10.9, WALL_H + 3, WALL_H + 9, '#f2b84b', false);
+        const [cx, cy] = up(iso(10.45, 0), WALL_H + 6);
+        this.px(cx - 1, cy - 2, 3, 5, '#fffdf5');
+        this.px(cx, cy - 1, 1, 3, '#c0392b');
       }
     }, { hotspot: 'group' });
   }
@@ -900,6 +909,45 @@ export class ClubScene {
       this.box(10.06, D + 0.9, 0.18, 0.1, 2, '#f2b84b', 5);
       this.box(9.98, D + 0.92, 0.34, 0.05, 3, '#2b2b33', 7);
     }, { hotspot: 'facilities' });
+
+    // Sister-division courtyard stations on the front lawn when opened (V9): tapping opens Group (`group`).
+    const branches = this.extras.branches ?? [];
+    if (branches.includes('FPS')) {
+      add(8.35 + D + 0.7 + 0.6, () => {
+        this.tile(8.25, D + 0.58, 0.96, 0.72, '#cfc8b8');
+        this.box(8.35, D + 0.68, 0.76, 0.24, 6, '#8a6f4e');
+        for (const [ti, tc] of [[8.5, '#d9574a'], [8.86, '#3a7bd5']] as const) {
+          this.box(ti, D + 0.73, 0.08, 0.08, 5, '#4a3b2c', 6);
+          const [tx, ty] = up(iso(ti + 0.04, D + 0.77), 13);
+          this.px(tx - 2, ty - 2, 5, 5, OUT);
+          this.px(tx - 1, ty - 1, 3, 3, '#fffdf5');
+          this.px(tx, ty, 1, 1, tc);
+        }
+      }, {
+        hotspot: 'group',
+        anim: () => {
+          const idx = Math.floor(this.time * 2.4) % 2;
+          const ti = idx === 0 ? 8.54 : 8.9;
+          const [tx, ty] = up(iso(ti, D + 0.77), 15);
+          this.px(tx - 1, ty - 2, 3, 2, '#ffe055');
+        },
+      });
+    }
+    if (branches.includes('CARD')) {
+      add(13.95 + D + 0.7 + 0.6, () => {
+        this.tile(13.85, D + 0.58, 0.86, 0.66, '#cfc8b8');
+        this.box(13.95, D + 0.66, 0.66, 0.46, 6, '#6e4124');
+        this.box(14.01, D + 0.71, 0.54, 0.36, 1, '#236e42', 6);
+      }, {
+        hotspot: 'group',
+        anim: () => {
+          const lift = Math.sin(this.time * 3.2) > 0 ? 1 : 0;
+          const [cx, cy] = up(iso(14.28, D + 0.89), 8 + lift);
+          this.px(cx - 2, cy - 2, 2, 3, '#fffdf5');
+          this.px(cx + 1, cy - 1, 2, 3, '#ffd84d');
+        },
+      });
+    }
 
     // Courtyard trees on left and right.
     add(0.8 + D + 1.0 + 0.6, () => this.tree(0.8, D + 0.95));

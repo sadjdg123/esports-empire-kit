@@ -42,6 +42,27 @@ export function MatchPage({ game, data, act, go, flash, onDone }: PageProps & { 
     if (!player || !hostRef.current || !prep.playerMatch) return;
     let cleanup: (() => void) | null = null;
     let cancelled = false;
+    let flushTimer = 0;
+    let lastUiMs = 0;
+    let pendingSnap: RenderSnapshot | null = null;
+    let pendingLines: string[] = [];
+
+    const flushUi = () => {
+      if (cancelled) return;
+      if (flushTimer) { window.clearTimeout(flushTimer); flushTimer = 0; }
+      lastUiMs = performance.now();
+      if (pendingSnap) {
+        setSnap(pendingSnap);
+        pendingSnap = null;
+      }
+      if (pendingLines.length > 0) {
+        const batch = pendingLines;
+        pendingLines = [];
+        setFeed((f) => [...batch.reverse(), ...f].slice(0, 40));
+      }
+      if (player.over) setFinished(true);
+    };
+
     const names: Record<string, string> = {};
     for (const t of [prep.playerMatch.blue, prep.playerMatch.red]) for (const p of t.players) names[p.id] = p.name;
     void import('../../render/MatchScene').then(({ mountMatch }) => {
@@ -49,15 +70,28 @@ export function MatchPage({ game, data, act, go, flash, onDone }: PageProps & { 
       cleanup = mountMatch(hostRef.current, {
         player, data, colors, names, onFps: setFps, view: view.current,
         onTick: (snaps) => {
-          const last = snaps[snaps.length - 1]!;
-          setSnap(last);
-          const lines = snaps.flatMap((s) => s.newEvents.filter((e) => FEED_TYPES.has(e.type)).map((e) => describeEvent(e, book!, { BLUE: blueClub.name, RED: redClub.name })));
-          if (lines.length) setFeed((f) => [...lines.reverse(), ...f].slice(0, 40));
-          if (player.over) setFinished(true);
+          pendingSnap = snaps[snaps.length - 1]!;
+          for (const s of snaps) {
+            for (const e of s.newEvents) {
+              if (FEED_TYPES.has(e.type)) {
+                pendingLines.push(describeEvent(e, book!, { BLUE: blueClub.name, RED: redClub.name }));
+              }
+            }
+          }
+          const elapsed = performance.now() - lastUiMs;
+          if (player.over || elapsed >= 100) {
+            flushUi();
+          } else if (!flushTimer) {
+            flushTimer = window.setTimeout(flushUi, 100 - elapsed);
+          }
         },
       });
     });
-    return () => { cancelled = true; cleanup?.(); };
+    return () => {
+      cancelled = true;
+      if (flushTimer) window.clearTimeout(flushTimer);
+      cleanup?.();
+    };
   }, [player, prep, data, colors, book, blueClub.name, redClub.name]);
 
   if (!player || !prep.playerMatch) {

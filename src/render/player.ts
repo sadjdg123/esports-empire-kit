@@ -2,10 +2,23 @@
 // last two snapshots for interpolation. No Phaser or DOM here, so watching,
 // skipping and runMatch can be compared in tests.
 
-import type { GameData, MatchInput, MatchResult, RenderSnapshot } from '../core/types';
+import type { GameData, MatchInput, MatchResult, RenderSnapshot, SnapshotUnit } from '../core/types';
 import { createMatch, finalize, getSnapshot, isOver, step, type MatchState } from '../sim';
 
 export type Speed = 1 | 2 | 4;
+
+const UNIT_INDEX = new WeakMap<RenderSnapshot, Map<string, SnapshotUnit>>();
+
+/** O(1) lookup of a unit inside a snapshot, indexed once per snapshot via WeakMap. */
+export function unitById(snap: RenderSnapshot, id: string): SnapshotUnit | undefined {
+  let map = UNIT_INDEX.get(snap);
+  if (!map) {
+    map = new Map<string, SnapshotUnit>();
+    for (const u of snap.units) map.set(u.id, u);
+    UNIT_INDEX.set(snap, map);
+  }
+  return map.get(id);
+}
 
 export class MatchPlayer {
   readonly state: MatchState;
@@ -72,9 +85,9 @@ export class MatchPlayer {
 
 /** Interpolated position of a unit between two snapshots. */
 export function lerpUnit(prev: RenderSnapshot, cur: RenderSnapshot, id: string, alpha: number): { x: number; y: number } | null {
-  const b = cur.units.find((u) => u.id === id);
+  const b = unitById(cur, id);
   if (!b) return null;
-  const a = prev.units.find((u) => u.id === id);
+  const a = unitById(prev, id);
   if (!a || !a.alive || !b.alive) return { x: b.x, y: b.y };
   // A respawn or a dash jumps; do not slide across the map.
   if (Math.hypot(a.x - b.x, a.y - b.y) > 120) return { x: b.x, y: b.y };
